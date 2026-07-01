@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Kärki{% endblock %} · Kärki pesäpalloanalytiikka</title>
+<style>
+:root {
+  --surface-1: #fcfcfb; --page: #f9f9f7;
+  --ink-1: #0b0b0b; --ink-2: #52514e; --ink-3: #898781;
+  --grid: #e1e0d9; --baseline: #c3c2b7; --ring: rgba(11,11,11,0.10);
+  --series-1: #2a78d6;
+  /* diverging percentile ramp: red pole → neutral → blue pole */
+  --pb0: #b52a2a; --pb1: #e34948; --pb2: #f2a09f; --pb3: #c3c2b7;
+  --pb4: #86b6ef; --pb5: #2a78d6; --pb6: #184f95;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-1: #1a1a19; --page: #0d0d0d;
+    --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-3: #898781;
+    --grid: #2c2c2a; --baseline: #383835; --ring: rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --pb0: #ef6b6a; --pb1: #c05252; --pb2: #8a4a49; --pb3: #55544f;
+    --pb4: #2f5583; --pb5: #3987e5; --pb6: #86b6ef;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--ink-1);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+a { color: var(--series-1); text-decoration: none; }
+a:hover { text-decoration: underline; }
+header {
+  background: var(--surface-1); border-bottom: 1px solid var(--grid);
+  padding: 14px 24px; display: flex; gap: 24px; align-items: baseline;
+}
+header .brand { font-weight: 700; font-size: 18px; color: var(--ink-1); }
+header nav a { color: var(--ink-2); margin-right: 16px; }
+main { max-width: 980px; margin: 24px auto; padding: 0 24px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 15px; color: var(--ink-2); font-weight: 600; margin: 28px 0 10px; }
+.sub { color: var(--ink-3); font-size: 13px; margin-bottom: 18px; }
+.card {
+  background: var(--surface-1); border: 1px solid var(--ring);
+  border-radius: 10px; padding: 18px 20px; margin-bottom: 18px;
+}
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th {
+  text-align: right; color: var(--ink-3); font-weight: 600;
+  border-bottom: 1px solid var(--grid); padding: 6px 8px;
+}
+td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--grid);
+     font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child, th.name, td.name { text-align: left; }
+tr:hover td { background: color-mix(in srgb, var(--grid) 40%, transparent); }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.filters a {
+  padding: 3px 10px; border-radius: 999px; border: 1px solid var(--grid);
+  color: var(--ink-2); font-size: 13px;
+}
+.filters a.active { background: var(--series-1); border-color: var(--series-1);
+                    color: #fff; font-weight: 600; }
+/* stat tiles */
+.tiles { display: flex; gap: 12px; flex-wrap: wrap; margin: 14px 0 6px; }
+.tile { background: var(--surface-1); border: 1px solid var(--ring);
+        border-radius: 10px; padding: 12px 16px; min-width: 120px; }
+.tile .label { font-size: 12px; color: var(--ink-3); }
+.tile .value { font-size: 26px; font-weight: 600; }
+/* Savant-style percentile bars */
+.pctrow { display: grid; grid-template-columns: 150px 1fr 64px; gap: 10px;
+          align-items: center; padding: 5px 0; }
+.pctrow .label { font-size: 13px; color: var(--ink-2); text-align: left; }
+.pctrow .value { font-size: 13px; color: var(--ink-1); text-align: right;
+                 font-variant-numeric: tabular-nums; }
+.track { position: relative; height: 10px; border-radius: 5px; background: var(--grid); }
+.fill { position: absolute; inset: 0 auto 0 0; border-radius: 5px 4px 4px 5px; }
+.badge {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  min-width: 24px; height: 24px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff;
+  box-shadow: 0 0 0 2px var(--surface-1);  /* surface ring */
+}
+.b0 { background: var(--pb0); } .b1 { background: var(--pb1); }
+.b2 { background: var(--pb2); } .b3 { background: var(--pb3); }
+.b4 { background: var(--pb4); } .b5 { background: var(--pb5); }
+.b6 { background: var(--pb6); }
+.b2 .inklabel, .b3 .inklabel, .b4 .inklabel { color: var(--ink-1); }
+.badge.b2, .badge.b3, .badge.b4 { color: var(--ink-1); background: var(--surface-1);
+  box-shadow: 0 0 0 2px var(--baseline); }
+/* sparkline */
+.spark line { stroke: var(--grid); stroke-width: 1; }
+.spark polyline { fill: none; stroke: var(--series-1); stroke-width: 2;
+                  stroke-linejoin: round; stroke-linecap: round; }
+.spark circle { fill: var(--series-1); stroke: var(--surface-1); stroke-width: 2; }
+footer { color: var(--ink-3); font-size: 12px; text-align: center; margin: 32px 0; }
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">Kärki</span>
+  <nav>
+    <a href="/">Tilastot</a>
+    <a href="/projections">TAHKO-ennusteet</a>
+  </nav>
+</header>
+<main>{% block content %}{% endblock %}</main>
+<footer>Kärki — pesäpalloanalytiikka · data: pesistulokset.fi API (demo-moodissa synteettinen liiga)</footer>
+</body>
+</html>
