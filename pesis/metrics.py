@@ -111,6 +111,10 @@ def _add_raw_base_splits(line: dict, raw_rows_json: str | None) -> None:
     for i in range(4):
         line[f"kl_base{i}"] = succ[i] / tries[i] if tries[i] else None
         line[f"kl_base{i}_tries"] = tries[i]
+    line["adv1_pct"] = line["kl_base0"]
+    line["adv2_pct"] = line["kl_base1"]
+    line["adv3_pct"] = line["kl_base2"]
+    line["adv_home_pct"] = line["kl_base3"]
     line["money_kl_pct"] = line["kl_base3"]
     line["money_kl_tries"] = line["kl_base3_tries"]
 
@@ -141,10 +145,13 @@ def _add_analytics_indices(lines: list[dict]) -> None:
     league_adv = _safe_div(adv_num, adv_den)
     league_run = _safe_div(run_num, run_den)
     league_out_avoid = 1 - (out_num / out_den) if out_den else None
-    money_num = sum(l.get("money_kl_pct") * l.get("money_kl_tries", 0)
-                    for l in lines if l.get("money_kl_pct") is not None)
-    money_den = sum(l.get("money_kl_tries", 0) for l in lines)
-    league_money = _safe_div(money_num, money_den)
+    base_leagues = {}
+    for i in range(4):
+        base_num = sum((l.get(f"kl_base{i}") or 0) * l.get(f"kl_base{i}_tries", 0)
+                       for l in lines if l.get(f"kl_base{i}") is not None)
+        base_den = sum(l.get(f"kl_base{i}_tries", 0) for l in lines)
+        base_leagues[i] = _safe_div(base_num, base_den)
+    league_money = base_leagues[3]
     for l in lines:
         adv = _safe_div(l["karkilyonnit"] + l["saatot"],
                         l["karki_yritykset"] + l["saatto_yritykset"])
@@ -152,7 +159,11 @@ def _add_analytics_indices(lines: list[dict]) -> None:
         l["adv_plus"] = _index(adv, league_adv)
         l["runner_plus"] = _index(l.get("eten_pct"), league_run)
         l["out_avoid_plus"] = _index(out_avoid, league_out_avoid)
-        l["money_kl_plus"] = _index(l.get("money_kl_pct"), league_money)
+        l["adv1_plus"] = _index(l.get("adv1_pct"), base_leagues[0])
+        l["adv2_plus"] = _index(l.get("adv2_pct"), base_leagues[1])
+        l["adv3_plus"] = _index(l.get("adv3_pct"), base_leagues[2])
+        l["adv_home_plus"] = _index(l.get("adv_home_pct"), league_money)
+        l["money_kl_plus"] = l["adv_home_plus"]
         comps = [l.get("adv_plus"), l.get("runner_plus"), l.get("out_avoid_plus")]
         l["spark_index"] = (round(0.50 * comps[0] + 0.30 * comps[1] + 0.20 * comps[2])
                             if all(c is not None for c in comps) else None)

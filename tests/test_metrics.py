@@ -55,3 +55,27 @@ def test_mallo_indices_are_league_indexed_and_distinct():
     assert lines["B"]["out_avoid_plus"] > lines["A"]["out_avoid_plus"]
     assert lines["B"]["spark_index"] > lines["A"]["spark_index"]
     assert lines["A"]["spark_index"] != lines["A"]["teho_plus"]
+
+
+def test_target_base_advancement_splits_from_raw_rows():
+    conn = db.connect(":memory:")
+    sid = ingest.upsert_season(conn, 2026, "Testisarja")
+    ingest.insert_player_game(conn, sid, _row(
+        1, "A", 1,
+        batpe_succeeded_0=1, batpe_tries_0=4,
+        batpe_succeeded_1=2, batpe_tries_1=4,
+        batpe_succeeded_2=1, batpe_tries_2=4,
+        batpe_succeeded_3=0, batpe_tries_3=4,
+    ))
+    ingest.insert_player_game(conn, sid, _row(
+        2, "B", 1,
+        batpe_succeeded_0=3, batpe_tries_0=4,
+        batpe_succeeded_1=3, batpe_tries_1=4,
+        batpe_succeeded_2=2, batpe_tries_2=4,
+        batpe_succeeded_3=2, batpe_tries_3=4,
+    ))
+    lines = {l["name"]: l for l in metrics.season_lines(conn, sid)}
+    assert lines["A"]["adv1_pct"] == 0.25
+    assert lines["B"]["adv_home_pct"] == 0.5
+    assert lines["B"]["adv1_plus"] > lines["A"]["adv1_plus"]
+    assert lines["B"]["adv_home_plus"] > lines["A"]["adv_home_plus"]

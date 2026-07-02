@@ -242,3 +242,25 @@ series). The corrected framing is:
   percentiles are schedule-length independent;
 - provide a `/baseball` comparison table so translated stats can be browsed
   across a whole season, not only one player page at a time.
+
+## Follow-up: target-base advancement splits
+
+The preserved raw rows can also support the “1% / 2% / 3%” style view of hitter
+advancement by target base. The implementation now aliases the existing
+per-base KL splits into clearer leaderboard metrics:
+
+- **1B/1P ADV%**: success rate when the hitter is trying to move the lead
+  runner to first base;
+- **2B/2P ADV%**: success rate to second;
+- **3B/3P ADV%**: success rate to third;
+- **Home/Koti ADV%**: success rate bringing the lead runner home;
+- matching **ADV+** versions index each target-base split to league average.
+
+These are still hitter advancement splits, not full run-value stats. The next
+step is to combine them with base/out state and run expectancy once play-by-play
+is available.
+
+For baseball equivalence labels, the site should continue treating the current
+MLB analogs as placeholders until the owner supplies the intended baseball
+context for each pesäpallo skill. The translation framework can carry those
+labels and blurbs without changing the underlying percentile method.
