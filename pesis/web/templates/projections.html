@@ -10,9 +10,13 @@ Ei mielivaltaisia "viimeiset N ottelua" -rajauksia.</p>
   <span class="ctl-lab">Sarja</span>
   <div class="sel-wrap">
     <select class="season-sel" onchange="location=this.value">
-      {% for s in seasons %}
-      <option value="?sid={{ s.id }}"
-        {{ 'selected' if s.id == season.id }}>{{ s.series }} {{ s.year }}</option>
+      {% for series_name, group in seasons | groupby('series') %}
+      <optgroup label="{{ series_name }}">
+        {% for s in group %}
+        <option value="?sid={{ s.id }}"
+          {{ 'selected' if s.id == season.id }}>{{ s.year }}</option>
+        {% endfor %}
+      </optgroup>
       {% endfor %}
     </select>
   </div>
