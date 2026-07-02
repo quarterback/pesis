@@ -80,3 +80,43 @@ ingest; only `site/data/` (~44 MB) is committed.
     tables scroll horizontally inside `.tbl-card`).
 12. **About copy** is an AI Finnish translation of the owner's note — worth an
     owner voice pass.
+
+## Segment 2 — translation, automation, PWA (later same session)
+
+Added after the sections above:
+
+- **Baseball translation view** (`#/baseball/<id>`, ⚾ toggle on the player card,
+  📊 back). Built from `pesis/translate.py`'s quantile map, exported per
+  current-season player as `translation` (batting) and `pitching` (lukkari).
+  - Batting shows the **big 4** — AVG, Hits, RBI, Runs — plus K%, headed by a
+    **wRC+ equivalent + tier**. Kunnarit→HR and the 162-game pace were dropped
+    (HRs are structurally rare in pesäpallo; a ~30-game season doesn't
+    extrapolate honestly).
+  - **AVG is deliberately stretched** (mean .250, sd .064, far wider than the
+    real MLB sd) so elite Superpesis (KL% ~.80) reads as a historic ~.400
+    season. If other counting stats later look under-scaled at the top, widen
+    their sds the same way — it's an excellence-translation, not a claim about
+    the real MLB distribution.
+  - **Lukkari (pitcher) translation**: run-prevention percentile → MLB ERA
+    (LRA→ERA, LRA-→ERA-, RP→runs saved) with ace/starter/replacement tiers.
+- **Daily data refresh** — `.github/workflows/refresh-data.yml`: cron re-ingests
+  the current season, re-exports, commits the diff. Keeps the full-history DB in
+  the Actions cache; only activates once merged to the **default branch**.
+- **PWA + mobile**: `manifest.json`, `sw.js` (app-shell cache-first, data
+  network-first), 192/512 icons, theme-color/apple meta. Tables scroll inside
+  their card; header/controls wrap; no horizontal page overflow on phones.
+- **Branding/meta**: site is now **mallo.fi** — canonical + og:url + absolute
+  og:image; description is "The world's first website for advanced analytics and
+  baseball-style metrics for pesäpallo (Finnish baseball)." Wordmark links home;
+  section headers show the full series name; sort pills got a white surface;
+  ⚾/📊/theme toggles are emoji-only.
+
+### Still open after segment 2
+- **Fielding metrics & a combined (batting+pitching+fielding) WAR remain
+  data-blocked** — the raw payload carries only `defensive_position`, no
+  putouts/assists/errors. Needs the API key / play-by-play. (Confirmed with the
+  owner.)
+- Export now ~45 MB. Each translation/data re-export rewrites all 5,387 player
+  files, so data commits are large — a known cost of the committed-static model.
+- PWA/mobile verified locally (390px headless), not yet on real devices or the
+  live mallo.fi deploy.
