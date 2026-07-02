@@ -4,6 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Mallo{% endblock %} · Mallo {{ t("site.tagline") }}</title>
+<meta name="description" content="Mallo - Advanced baseball statistics and projections platform. Explore player performance, team standings, and detailed analytics.">
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{% block og:title %}Mallo{% endblock %} · Mallo {{ t('site.tagline') }}">
+<meta property="og:description" content="Mallo - Advanced baseball statistics and projections platform. Explore player performance, team standings, and detailed analytics.">
+<meta property="og:image" content="/static/favicon.ico">
+<meta property="og:url" content="https://mallo.io/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{% block twitter:title %}Mallo{% endblock %} · Mallo {{ t('site.tagline') }}">
+<meta name="twitter:description" content="Mallo - Advanced baseball statistics and projections platform. Explore player performance, team standings, and detailed analytics.">
+<meta name="twitter:image" content="/static/favicon.ico">
 <style>
 :root {
   --surface-1: #fcfcfb; --page: #f9f9f7;
