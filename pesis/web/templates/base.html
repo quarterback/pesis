@@ -89,6 +89,19 @@ tr:hover td { background: color-mix(in srgb, var(--grid) 40%, transparent); }
 .b2 .inklabel, .b3 .inklabel, .b4 .inklabel { color: var(--ink-1); }
 .badge.b2, .badge.b3, .badge.b4 { color: var(--ink-1); background: var(--surface-1);
   box-shadow: 0 0 0 2px var(--baseline); }
+/* fangraph (playoff odds over time) */
+:root { --cat1: #2a78d6; --cat2: #1baf7a; --cat3: #eda100; --cat4: #008300; }
+@media (prefers-color-scheme: dark) {
+  :root { --cat1: #3987e5; --cat2: #199e70; --cat3: #c98500; --cat4: #008300; }
+}
+.fangraph polyline { fill: none; stroke-width: 2; stroke-linejoin: round;
+                     stroke-linecap: round; }
+.fangraph .muted { stroke: var(--baseline); opacity: .55; stroke-width: 1.5; }
+.fangraph .s0 { stroke: var(--cat1); } .fangraph .s1 { stroke: var(--cat2); }
+.fangraph .s2 { stroke: var(--cat3); } .fangraph .s3 { stroke: var(--cat4); }
+.fangraph .grid { stroke: var(--grid); stroke-width: 1; }
+.fangraph text { font-size: 11px; fill: var(--ink-2); }
+.fangraph .axis { fill: var(--ink-3); }
 /* sparkline */
 .spark line { stroke: var(--grid); stroke-width: 1; }
 .spark polyline { fill: none; stroke: var(--series-1); stroke-width: 2;

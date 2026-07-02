@@ -10,8 +10,9 @@ primary_region = 'cdg'
 [env]
   PESIS_DB_PATH = "/data/pesis.db"
 
-# Persistent DB: create once with
-#   fly volumes create pesis_data --region cdg --size 3 (full 1991→ history is ~1.1 GB)
+# Persistent DB: create the volume ONCE in the Fly web dashboard
+# (app → Volumes → "pesis_data", region cdg, 3 GB — history is ~1.1 GB).
+# After that everything is push-to-deploy; the app backfills itself.
 [mounts]
   source = "pesis_data"
   destination = "/data"

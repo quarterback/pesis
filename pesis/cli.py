@@ -31,7 +31,9 @@ def cmd_ingest_v1(args) -> None:
 
     from . import v1import
     conn = db.connect(args.db)
-    series = ["miehet", "naiset"] if args.series == "both" else [args.series]
+    series = {"both": ["miehet", "naiset"],
+              "all": ["miehet", "naiset", "ykkonen-miehet", "ykkonen-naiset"],
+              }.get(args.series, [args.series])
     catalog = v1import.fetch_catalog()
     years = range(args.from_year or args.year, (args.to_year or args.year) + 1)
     for year in years:
@@ -176,7 +178,10 @@ def main(argv=None) -> None:
     p.add_argument("--from-year", type=int, default=None,
                    help="backfill start (granular data exists from 1991)")
     p.add_argument("--to-year", type=int, default=None)
-    p.add_argument("--series", choices=["miehet", "naiset", "both"], default="both")
+    p.add_argument("--series", default="both",
+                   help="miehet | naiset | ykkonen-miehet | ykkonen-naiset | "
+                        "both (Superpesis) | all (Superpesis + Ykköspesis), "
+                        "or any exact series name from the catalog")
     p.add_argument("--phase", type=int, default=1, help="1 = runkosarja")
     p.set_defaults(func=cmd_ingest_v1)
 

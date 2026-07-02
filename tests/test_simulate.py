@@ -70,3 +70,16 @@ def test_full_season_odds_match_final_table():
     table = simulate.playoff_odds(conn, sid, as_of="2026-12-31", sims=50)
     for i, t in enumerate(table):
         assert t["odds"] == (100.0 if i < simulate.PLAYOFF_SPOTS else 0.0)
+
+
+def test_odds_history_converges_to_final_table():
+    conn = _conn()
+    sid = _season(conn)
+    hist = simulate.odds_history(conn, sid, sims=100, step_days=14)
+    assert len(hist["teams"]) == 10
+    n = len(hist["dates"])
+    assert all(len(v) == n for v in hist["teams"].values())
+    # last cutoff = season fully played -> odds resolve to 100/0
+    finals = sorted((v[-1] for v in hist["teams"].values()), reverse=True)
+    assert finals[:simulate.PLAYOFF_SPOTS] == [100.0] * simulate.PLAYOFF_SPOTS
+    assert set(finals[simulate.PLAYOFF_SPOTS:]) == {0.0}

@@ -45,7 +45,11 @@ _HEADERS = {"User-Agent": "mallo-analytics/0.1 (mallo pesäpallo analytics)",
             "Accept": "application/json",
             "Accept-Encoding": "gzip"}
 
-SERIES_ALIASES = {"miehet": "Miesten Superpesis", "naiset": "Naisten Superpesis"}
+SERIES_ALIASES = {
+    "miehet": "Miesten Superpesis", "naiset": "Naisten Superpesis",
+    "ykkonen-miehet": "Miesten Ykköspesis",
+    "ykkonen-naiset": "Naisten Ykköspesis",
+}
 
 
 def _get(url: str, retries: int = 5):

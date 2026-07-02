@@ -49,19 +49,20 @@ This is a long-running Flask server with a SQLite file on disk — it does
 process, read-only filesystem). Deploy it like the sibling projects, with the
 included `Dockerfile` + `fly.toml`:
 
-```bash
-fly volumes create pesis_data --region cdg --size 3   # once: persistent DB
-fly deploy
-fly ssh console -C "python -m pesis ingest-v1 --from-year 1991 --to-year 2026"  # once: history
-```
+Push-to-deploy, no CLI needed:
 
-The image bakes a current-season snapshot at build time (demo fallback if
-offline) and seeds the volume with it on **first boot only** — an existing
-volume (with the 1991→ historical backfill on it) survives every deploy.
-Inside the container a loop **re-ingests the current season daily**
-(`REFRESH_INTERVAL` seconds, default 86400); SQLite runs in WAL mode so the
-site keeps serving during the refresh, and the web workers notice the DB
-mtime change and drop their caches. No redeploys needed to stay current.
+1. **Once, in the Fly web dashboard**: app → Volumes → create `pesis_data`
+   (region `cdg`, 3 GB — the full 1991→ history is ~1.1 GB and growing).
+2. **Push to GitHub** — Fly builds and deploys.
+
+Everything else is automatic. The image bakes a current-season snapshot at
+build (demo fallback if offline); on first boot with an empty volume the
+site serves that immediately, **backfills 1991→ by itself in the background**
+(~10 min; WAL mode keeps it serving) and marks the volume done so it never
+re-runs. An existing volume survives every deploy. A loop **re-ingests all
+tracked leagues daily** (`REFRESH_INTERVAL` seconds, default 86400); web
+workers notice the DB mtime change and drop their caches. No redeploys
+needed to stay current.
 
 Any Docker host (Railway, Render, a VPS) works the same way:
 `docker build -t mallo . && docker run -p 8080:8080 -v mallo-data:/data -e PESIS_DB_PATH=/data/pesis.db mallo`.

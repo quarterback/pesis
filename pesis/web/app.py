@@ -60,6 +60,50 @@ def sparkline(values: list[float], width: int = 220, height: int = 44,
             "width": width, "height": height}
 
 
+def fangraph(history: dict, width: int = 680, height: int = 260,
+             pad: int = 8, label_w: int = 90, highlights: int = 4) -> dict | None:
+    """Geometry for the playoff-odds-over-time chart (inline SVG).
+
+    Teams finishing with the top odds get categorical colors + direct end
+    labels; the rest render muted — 12 equally-loud lines would be spaghetti.
+    """
+    dates, teams = history.get("dates"), history.get("teams")
+    if not dates or len(dates) < 2 or not teams:
+        return None
+    plot_w = width - label_w
+    step = (plot_w - 2 * pad) / (len(dates) - 1)
+
+    def xy(i, v):
+        return (round(pad + i * step, 1),
+                round(pad + (height - 2 * pad) * (1 - v / 100), 1))
+
+    ranked = sorted(teams, key=lambda t: teams[t][-1], reverse=True)
+    series = []
+    for rank, team in enumerate(ranked):
+        pts = [xy(i, v) for i, v in enumerate(teams[team])]
+        series.append({
+            "team": team,
+            "points": " ".join(f"{x},{y}" for x, y in pts),
+            "end": pts[-1],
+            "slot": rank if rank < highlights else None,
+        })
+    series.reverse()  # draw muted lines first, highlights on top
+
+    # de-collide end labels: several teams often converge to 100%
+    prev = -99.0
+    for s in sorted((s for s in series if s["slot"] is not None),
+                    key=lambda s: s["end"][1]):
+        y = max(12.0, s["end"][1] + 4)
+        if y - prev < 13:
+            y = prev + 13
+        s["label_y"] = min(y, height - 4)
+        prev = s["label_y"]
+
+    return {"series": series, "width": width, "height": height,
+            "first": dates[0], "last": dates[-1],
+            "y0": xy(0, 0)[1], "y100": xy(0, 100)[1], "plot_w": plot_w}
+
+
 def create_app(db_path: str | None = None) -> Flask:
     app = Flask(__name__)
     app.config["DB_PATH"] = db_path or db.DEFAULT_DB_PATH
@@ -94,6 +138,18 @@ def create_app(db_path: str | None = None) -> Flask:
             _lines_cache[season_id] = metrics.season_lines(conn(), season_id)
         # copies: callers (add_percentiles) mutate lines in place
         return [dict(l) for l in _lines_cache[season_id]]
+
+    _odds_cache: dict[int, dict] = {}
+
+    def cached_odds_history(season_id: int) -> dict:
+        stamp = _db_mtime()
+        if stamp != _cache_stamp[0]:
+            _lines_cache.clear()
+            _odds_cache.clear()
+            _cache_stamp[0] = stamp
+        if season_id not in _odds_cache:
+            _odds_cache[season_id] = simulate.odds_history(conn(), season_id)
+        return _odds_cache[season_id]
 
     @app.teardown_appcontext
     def close(_exc):
@@ -270,6 +326,7 @@ def create_app(db_path: str | None = None) -> Flask:
                        if s["series"] == season["series"]]
         return render_template("league.html", table=table, season=season,
                                seasons=all_seasons, as_of=as_of,
+                               graph=fangraph(cached_odds_history(season["id"])),
                                parks=context.park_factors(c, same_series),
                                weather=context.weather_effects(c, same_series))
 

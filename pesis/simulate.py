@@ -185,3 +185,31 @@ def playoff_odds(conn: sqlite3.Connection, season_id: int,
         t["remaining"] = sum(1 for m in remaining
                              if t["team"] in (m["home_team"], m["away_team"]))
     return current
+
+
+def odds_history(conn: sqlite3.Connection, season_id: int, sims: int = 300,
+                 step_days: int = 7, seed: int = 1,
+                 spots: int = PLAYOFF_SPOTS) -> dict:
+    """Playoff odds re-simulated at weekly cutoffs through the season — the
+    FanGraphs-style odds graph. Returns {"dates": [...], "teams":
+    {team: [odds per date]}}. The final cutoff is the last played date, so
+    every line converges to 100 or 0 as the season resolves."""
+    import datetime as dt
+    ms = _matches(conn, season_id)
+    if not ms:
+        return {"dates": [], "teams": {}}
+    start = dt.date.fromisoformat(ms[0]["date"])
+    end = dt.date.fromisoformat(ms[-1]["date"])
+    dates = []
+    d = start + dt.timedelta(days=step_days)
+    while d < end:
+        dates.append(d.isoformat())
+        d += dt.timedelta(days=step_days)
+    dates.append(end.isoformat())
+
+    teams: dict[str, list[float]] = {}
+    for cutoff in dates:
+        for t in playoff_odds(conn, season_id, as_of=cutoff, sims=sims,
+                              seed=seed, spots=spots):
+            teams.setdefault(t["team"], []).append(t["odds"])
+    return {"dates": dates, "teams": teams}
