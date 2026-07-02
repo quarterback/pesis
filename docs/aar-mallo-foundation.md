@@ -25,8 +25,28 @@ Superpesis data. Branch `claude/darko-projection-system-xhwe7r`, PR #1 et seq.*
 - **Similarity** (`similarity.py`), **baseball translation** (`translate.py`
   — rank-preserving quantile map onto MLB distributions, shareable English
   page), web UI (leaderboards, player/team/match pages, search, CSV export,
-  league page, about), CLI, Dockerfile + fly.toml (Fly app `pesis`, cdg,
-  auto-stop off).
+  league page, about — owner's own text, verbatim), CLI, Dockerfile +
+  fly.toml (Fly app `pesis`, cdg, auto-stop off).
+- **Fangraph** (`simulate.odds_history` + `static/charts.js`): playoff odds
+  re-simulated at weekly cutoffs across the season, drawn with **D3 v7**
+  (vendored under `pesis/web/static/`, no CDN; data page-embedded as JSON) —
+  monotone curves, date axis, crosshair hover with an all-teams tooltip,
+  top-4 in categorical colors with de-collided ink end labels, rest muted.
+  Career pages got KL%/TEHO+ mini line charts (small multiples — never a
+  dual axis), replacing the flat sparkline. Percentile bars stay HTML/CSS.
+- **Four leagues**: Ykköspesis (men + women) importable via series aliases;
+  `--series all` covers Superpesis + Ykköspesis; nav builds itself from
+  whatever leagues exist in the DB, so women's and lower-tier leagues are
+  first-class links, never buried behind filters.
+- **Zero-CLI operations** (owner deploys via GitHub Desktop → Fly): the only
+  manual step ever is creating the `pesis_data` volume once in the Fly web
+  dashboard (3 GB; history is ~1.1 GB). `entrypoint.sh` seeds an empty
+  volume from the image's baked current-season snapshot, **runs the 1991→
+  historical backfill by itself in the background** on first boot (marker
+  file on the volume prevents re-runs; skipped when no volume is mounted),
+  and re-ingests all four leagues daily (`REFRESH_INTERVAL`, default 24 h).
+  SQLite runs in WAL so the site serves during writes; web workers watch
+  the DB mtime and drop their season/odds caches when it changes.
 
 ## Validation — what was actually checked
 
@@ -93,13 +113,13 @@ Superpesis data. Branch `claude/darko-projection-system-xhwe7r`, PR #1 et seq.*
 ## Not done (deliberately) / next
 
 - Official API key (owner has emailed): unlocks pre-1991 archive checks,
-  play-by-play (`runnersAtBases` → run expectancy/WPA), stats-definitions
-  confirmation, birth years.
-- Daily auto-refresh (Fly volume + scheduled `ingest-v1`) — data is
-  currently a build-time snapshot per deploy.
+  play-by-play (`runnersAtBases` → run expectancy/WPA, per-match win
+  probability graphs), stats-definitions confirmation, birth years.
 - Refit PARE (beta, prior) on the 1991→ backfill and bake tuned defaults;
-  accuracy page (walk-forward MAE vs naive baselines).
-- Playoffs phases (only runkosarja, phase=1, is ingested), lower divisions,
-  division translation factors.
+  accuracy page (walk-forward MAE vs naive baselines); PARE trajectory
+  charts (projection re-computed after every game — the D3 primitives are
+  ready for it).
+- Playoffs phases (only runkosarja, phase=1, is ingested), tiers below
+  Ykköspesis (suomensarja etc.), division translation factors.
 - FI/EN toggle (hard requirement, string tables), OG/social cards; UI
   redesign is a separate agent's lane — darko.app layout is the reference.

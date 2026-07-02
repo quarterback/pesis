@@ -158,6 +158,10 @@ def create_app(db_path: str | None = None) -> Flask:
     def about():
         return render_template("about.html")
 
+    @app.route("/glossary")
+    def glossary():
+        return render_template("glossary.html")
+
     @app.route("/leaderboard.csv")
     def leaderboard_csv():
         all_seasons = seasons()

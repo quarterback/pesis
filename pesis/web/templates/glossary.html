@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Sanasto{% endblock %}
+{% block content %}
+<h1>Sanasto</h1>
+<p class="sub">Tilastot ja kaavat. K = kunnarit, L = lyödyt juoksut, T = tuodut juoksut,
+V = lyöntivuorot, Y = yritykset.</p>
+
+<h2>Peruslinja</h2>
+<div class="card">
+<table>
+  <thead><tr><th class="name">Tilasto</th><th class="name">Kaava</th><th class="name">Huom.</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Tehot</td><td class="name"><code>K + L + T</code></td><td class="name">perinteinen tuotantoluku</td></tr>
+    <tr><td class="name">KL%</td><td class="name"><code>kärkilyönnit / KLY</code></td><td class="name">kärjen eteneminen per yritys</td></tr>
+    <tr><td class="name">Saatto-%</td><td class="name"><code>saatot / saattoyritykset</code></td><td class="name">takaetenijän vieminen lyöjänä</td></tr>
+    <tr><td class="name">Etenemis-%</td><td class="name"><code>etenemiset / etenemisyritykset</code></td><td class="name">kärki- + takaetenemiset etenijänä</td></tr>
+    <tr><td class="name">Kunnarit/vuoro</td><td class="name"><code>K / V</code></td><td class="name"></td></tr>
+    <tr><td class="name">Lyödyt/vuoro</td><td class="name"><code>L / V</code></td><td class="name"></td></tr>
+    <tr><td class="name">Tuodut/yritys</td><td class="name"><code>T / etenemisyritykset</code></td><td class="name">etenijän tuotto</td></tr>
+    <tr><td class="name">Palo-%</td><td class="name"><code>palot / V</code></td><td class="name">pienempi parempi</td></tr>
+    <tr><td class="name">Haava-%</td><td class="name"><code>haavat / V</code></td><td class="name">pienempi parempi</td></tr>
+    <tr><td class="name">Tehot/vuoro</td><td class="name"><code>(K + L + T) / V</code></td><td class="name"></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Indeksit</h2>
+<div class="card">
+<table>
+  <thead><tr><th class="name">Tilasto</th><th class="name">Kaava</th><th class="name">Huom.</th></tr></thead>
+  <tbody>
+    <tr><td class="name">TEHO+</td><td class="name"><code>100 × (tehot/V) / (sarjan tehot/V)</code></td><td class="name">100 = sarjan keskitaso; kärki ~250–350</td></tr>
+    <tr><td class="name">kTEHO+</td><td class="name"><code>100 × Σ(tehot<sub>ottelu</sub> / kerroin<sub>stadion</sub>) / V / sarjataso</code></td><td class="name">kenttäkorjattu TEHO+</td></tr>
+    <tr><td class="name">Kenttäkerroin (PF)</td><td class="name"><code>100 × (juoksut/ottelu kotona) / (juoksut/ottelu vieraissa)</code></td><td class="name">sama joukkue molemmissa; regressoitu kohti 100:aa</td></tr>
+    <tr><td class="name">Prosenttipiste</td><td class="name"><code>100 × (pienemmät + ½·samat) / n</code></td><td class="name">sarjan vakiopelaajien joukossa (≥40 vuoroa); negatiiviset käännetty</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>PARE-ennusteet</h2>
+<div class="card">
+<table>
+  <thead><tr><th class="name">Tilasto</th><th class="name">Kaava</th><th class="name">Huom.</th></tr></thead>
+  <tbody>
+    <tr><td class="name">eTilasto (esim. eKL%)</td>
+        <td class="name"><code>(Σ β<sup>t</sup>·onnistumiset + κ·sarjataso) / (Σ β<sup>t</sup>·yritykset + κ)</code></td>
+        <td class="name">t = päiviä ottelusta; β ja κ per tilasto, sovitettu historiaan</td></tr>
+    <tr><td class="name">eTEHO+</td><td class="name"><code>100 × ennustettu tehot/V / sarjataso</code></td><td class="name"></td></tr>
+  </tbody>
+</table>
+<p class="sub" style="margin:8px 0 0">e- = ennustettu · k- = kenttäkorjattu.</p>
+</div>
+
+<h2>Sarjataulukko &amp; muut</h2>
+<div class="card">
+<table>
+  <thead><tr><th class="name">Tilasto</th><th class="name">Kaava</th><th class="name">Huom.</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Pisteet</td><td class="name"><code>3 / 2 / 1 / 0</code></td>
+        <td class="name">suora voitto 2–0 / muu voitto / tappio ratkaisussa (supervuoro tai kotiutuslyöntikilpailu) / muu tappio</td></tr>
+    <tr><td class="name">Pudotuspeli-%</td><td class="name"><code>osuus 300+ simulaatiosta, joissa top-4</code></td>
+        <td class="name">joukkueen taso = juoksuero/ottelu, regressoitu</td></tr>
+    <tr><td class="name">Vertailupisteet</td><td class="name"><code>1000 − 100 × d</code></td>
+        <td class="name">d = z-skaalattu euklidinen etäisyys kausilinjojen välillä (+ ikä puolipainolla)</td></tr>
+    <tr><td class="name">wRC+-vastine</td><td class="name"><code>100 + 25 × z(prosenttipiste)</code></td>
+        <td class="name">baseball-käännös: sama prosenttipiste MLB-jakaumasta</td></tr>
+  </tbody>
+</table>
+</div>
+{% endblock %}
