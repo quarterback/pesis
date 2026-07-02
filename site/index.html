@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mallo · pesäpallodata</title>
+<script>
+(function(){
+  var t=localStorage.getItem('mallo-theme');
+  if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+<link rel="stylesheet" href="css/mallo.css">
+</head>
+<body>
+<header>
+  <a class="brand" href="#/">Mallo<i>.</i></a>
+  <nav id="nav"></nav>
+  <div class="hdr-right">
+    <button class="theme-btn" onclick="malloToggleTheme()" title="Toggle light / dark">
+      <span class="icon-sun">☀︎</span>
+      <span class="icon-moon">☽</span>
+    </button>
+  </div>
+</header>
+<main id="main">
+  <div class="loading">Ladataan…</div>
+</main>
+<footer>Mallo · pesäpallodata · <a href="#/glossary">kaavat</a> · <a href="#/about">about</a></footer>
+<script src="js/d3.v7.min.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+<script>
+function malloToggleTheme(){
+  var html=document.documentElement;
+  var cur=html.getAttribute('data-theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  var next=cur==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  try{localStorage.setItem('mallo-theme',next);}catch(e){}
+}
+</script>
+</body>
+</html>
