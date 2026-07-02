@@ -299,6 +299,17 @@ def create_app(db_path: str | None = None) -> Flask:
                                season=season, seasons=all_seasons, sort=sort,
                                sort_options=sort_options)
 
+
+    @app.route("/lukkari")
+    def lukkari():
+        all_seasons = seasons()
+        if not all_seasons:
+            return render_template("empty.html")
+        season = pick_season(all_seasons)
+        rows = metrics.lukkari_lines(conn(), season["id"], min_games=1)
+        return render_template("lukkari.html", rows=rows, season=season,
+                               seasons=all_seasons)
+
     @app.route("/league")
     def league():
         all_seasons = seasons()

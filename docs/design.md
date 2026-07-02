@@ -179,6 +179,10 @@ The first WAR-style scaffold is now live from aggregate rows:
 
 This is not the final RE24/PBP version. It is intentionally the bridge value stat: additive, playing-time sensitive, replacement-based, and calibrated to pesäpallo rather than MLB constants.
 
+### Shipped follow-up: lukkari run-prevention stats
+
+Because pesäpallo uses one primary lukkari for most games and the current rows do not yet include pitch-level outcomes, the first lukkari layer is deliberately team run-prevention based rather than pretending to be MLB pitcher WAR. The `/lukkari` page uses preserved raw position markers (`L` / `lukkari`) to identify lukkari games and publishes **LRA** (runs allowed per lukkari game), **LRA−** (100 = league average, lower better), and **RP** (runs prevented versus average over the same workload). This should be replaced or enriched by PBP/pitch-event measures once `/online/{match}/events` is ingested.
+
 ### Roadmap, in dependency order
 
 1. **Real backfill** (needs key): confirm `ingest.FIELD_MAP` against

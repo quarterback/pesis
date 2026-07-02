@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ t("nav.lukkari") }} {{ season.year }}{% endblock %}
+{% block content %}
+<h1>{{ t("nav.lukkari") }} · {{ season.series }} {{ season.year }}</h1>
+<p class="sub">FI: Ensimmäinen ERA-tyylinen lukkaritaulukko. LRA = lukkariotteluiden päästetyt juoksut / ottelu, LRA− = sarjaindeksi (100 = keskiarvo, pienempi parempi), RP = juoksut estetty verrattuna sarjan keskivertolukkariin. EN: First ERA-style lukkari table. LRA = runs allowed per lukkari game, LRA− = league index (100 average, lower is better), RP = runs prevented vs league average.</p>
+<div class="filters">
+  {% for s in seasons %}
+  <a href="?sid={{ s.id }}" class="{{ 'active' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
+  {% endfor %}
+</div>
+<div class="card">
+{% if rows %}
+<table>
+  <thead>
+    <tr><th>#</th><th class="name">{{ t("th.player") }}</th><th class="name">{{ t("th.team") }}</th><th>LG</th><th>RA</th><th>LRA</th><th>LRA−</th><th>RP</th></tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td class="name"><a href="/player/{{ r.player_id }}">{{ r.name }}</a></td>
+      <td class="name"><a href="/team/{{ r.team }}">{{ r.team }}</a></td>
+      <td>{{ r.lukkari_games }}</td>
+      <td>{{ r.runs_allowed }}</td>
+      <td>{{ '%.2f'|format(r.lra) }}</td>
+      <td>{{ r.lra_minus }}</td>
+      <td><strong>{{ r.lukkari_rp }}</strong></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="sub">No lukkari-position data is available for this season yet. The importer preserves raw position fields, so this page will populate when rows contain <code>L</code> / <code>lukkari</code> position markers.</p>
+{% endif %}
+</div>
+{% endblock %}

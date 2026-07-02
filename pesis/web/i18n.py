@@ -16,6 +16,7 @@ S: dict[str, dict[str, str]] = {
     "site.tagline": {"fi": "pesäpalloanalytiikka", "en": "pesäpallo analytics"},
     "nav.projections": {"fi": "PARE-ennusteet", "en": "PARE projections"},
     "nav.standings": {"fi": "Sarjataulukko", "en": "Standings"},
+    "nav.lukkari": {"fi": "Lukkarit", "en": "Lukkaris"},
     "nav.baseball": {"fi": "Baseball-käännös", "en": "Baseball translation"},
     "nav.search": {"fi": "Haku", "en": "Search"},
     "nav.glossary": {"fi": "Sanasto", "en": "Glossary"},
@@ -74,6 +75,7 @@ S: dict[str, dict[str, str]] = {
     "stat.money_kl_plus": {"fi": "KOTI-KL+", "en": "HOME-AH+"},
     "stat.money_kl_pct": {"fi": "Kotiutus-KL%", "en": "Lead-runner home AH%"},
     "gl.mallo": {"fi": "Mallo-analytiikka", "en": "Mallo analytics"},
+    "gl.lukkari": {"fi": "Lukkari-analytiikka", "en": "Lukkari analytics"},
     "gl.mallo_sub": {"fi": "Nämä rivit rakennetaan tulospalvelun säilytetystä ottelukohtaisesta datasta, mutta ne eivät toista julkaistuja laskureita. 100 = sarjakeskiarvo, yli 100 parempi.",
                      "en": "These rows are built from the preserved match-level data, but they do not repeat published counters. 100 = league average; above 100 is better."},
 

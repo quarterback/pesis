@@ -441,6 +441,99 @@ def base_kl_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
     return out
 
 
+
+def _raw_source(raw_text: str | None) -> dict:
+    """Return the preserved upstream row, unwrapping the v1 bridge payload."""
+    if not raw_text:
+        return {}
+    import json as _json
+    try:
+        raw = _json.loads(raw_text or "{}")
+    except (TypeError, ValueError):
+        return {}
+    return raw.get("_v1", raw) if isinstance(raw, dict) else {}
+
+
+def _is_lukkari_raw(src: dict) -> bool:
+    """Best-effort lukkari detector from preserved raw position fields.
+
+    The normalized schema intentionally kept defensive position in ``raw`` until
+    the official definitions are confirmed. Current/observed payloads can expose
+    it under short scorecard labels (``L``) or longer names (``lukkari``).
+    """
+    keys = ("up", "UP", "position", "defensive_position", "fielding_position",
+            "role", "player_position", "place")
+    for key in keys:
+        val = src.get(key)
+        if val is None:
+            continue
+        text = str(val).strip().upper()
+        if text == "L" or "LUKKARI" in text:
+            return True
+    return False
+
+
+def _runs_allowed_for_row(row: sqlite3.Row) -> int | None:
+    """Runs allowed by the player's team in this match row."""
+    if row["home_runs"] is None or row["away_runs"] is None:
+        return None
+    if row["home"] is not None:
+        return row["away_runs"] if row["home"] else row["home_runs"]
+    if row["team"] == row["home_team"]:
+        return row["away_runs"]
+    if row["team"] == row["away_team"]:
+        return row["home_runs"]
+    return None
+
+
+def lukkari_lines(conn: sqlite3.Connection, season_id: int,
+                  min_games: int = 3) -> list[dict]:
+    """Lukkari run-prevention lines from existing match/player rows.
+
+    This is an ERA-style bridge until pitch/play-by-play data is ingested. A
+    lukkari gets credit for team runs allowed in games where his raw position is
+    marked as lukkari. ``lra`` is lukkari runs allowed per game, ``lra_minus`` is
+    indexed to league average (100 = average, lower is better), and
+    ``lukkari_rp`` is runs prevented versus average over that workload.
+    """
+    rows = conn.execute(
+        """SELECT pg.player_id, p.name, pg.team, pg.home, pg.raw,
+                  m.home_team, m.away_team, m.home_runs, m.away_runs
+           FROM player_games pg
+           JOIN players p ON p.id = pg.player_id
+           JOIN matches m ON m.id = pg.match_id
+           WHERE pg.season_id = ?""",
+        (season_id,),
+    ).fetchall()
+    out: dict[int, dict] = {}
+    for r in rows:
+        src = _raw_source(r["raw"])
+        if not _is_lukkari_raw(src):
+            continue
+        ra = _runs_allowed_for_row(r)
+        if ra is None:
+            continue
+        line = out.setdefault(r["player_id"], {
+            "player_id": r["player_id"], "name": r["name"],
+            "team": r["team"], "lukkari_games": 0, "runs_allowed": 0,
+        })
+        line["lukkari_games"] += 1
+        line["runs_allowed"] += ra
+        if r["team"]:
+            line["team"] = r["team"]
+    lines = [l for l in out.values() if l["lukkari_games"] >= min_games]
+    total_games = sum(l["lukkari_games"] for l in lines)
+    total_ra = sum(l["runs_allowed"] for l in lines)
+    league_lra = total_ra / total_games if total_games else None
+    for l in lines:
+        l["lra"] = l["runs_allowed"] / l["lukkari_games"] if l["lukkari_games"] else None
+        l["lra_minus"] = (round(100 * l["lra"] / league_lra)
+                          if l["lra"] is not None and league_lra else None)
+        l["lukkari_rp"] = (round((league_lra - l["lra"]) * l["lukkari_games"], 1)
+                           if l["lra"] is not None and league_lra else None)
+    lines.sort(key=lambda l: (l["lukkari_rp"] is not None, l["lukkari_rp"]), reverse=True)
+    return lines
+
 def game_log(conn: sqlite3.Connection, player_id: int,
              season_id: int) -> list[dict]:
     """Per-match lines for the player page's game log."""

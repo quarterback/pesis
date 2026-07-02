@@ -306,3 +306,21 @@ roadmapped play-by-play run-expectancy model from `runnersAtBases`/RE24-style
 state changes. Until that endpoint is ingested, the aggregate model is still a
 real value stat because it is additive, playing-time sensitive, replacement-based,
 and calibrated to pesäpallo's own run environment rather than MLB constants.
+
+
+## Follow-up: first lukkari run-prevention layer
+
+The sport under-publishes lukkari-specific statistics, and the current normalized
+rows still do not expose pitch-by-pitch outcomes. The first implementation is
+therefore honest about its limitation: it identifies games where the preserved
+raw row marks a player as `L` / `lukkari`, assigns that lukkari the team runs
+allowed in those games, and publishes:
+
+- **LRA** — lukkari runs allowed per game, an ERA-style rate.
+- **LRA−** — league-indexed LRA where 100 is average and lower is better.
+- **RP** — runs prevented compared with an average lukkari over the same number
+  of lukkari games.
+
+This is not a final lukkari model. It is a surfacing layer for the data already
+preserved in `player_games.raw`, meant to be replaced/enriched by pitch and
+base-state event data when play-by-play is imported.

@@ -88,3 +88,27 @@ def test_value_stats_accumulate_above_replacement():
     assert lines["B"]["vyk"] > lines["A"]["vyk"]
     assert lines["B"]["raa"] > lines["A"]["raa"]
     assert lines["B"]["jyk"] != lines["B"]["teho_plus"]
+
+
+def test_lukkari_lines_use_raw_position_and_runs_allowed():
+    conn = db.connect(":memory:")
+    sid = ingest.upsert_season(conn, 2026, "Testisarja")
+    ingest.insert_match(conn, sid, {"id": 1, "date": "2026-06-01",
+                                   "home_team": "A", "away_team": "B",
+                                   "home_runs": 2, "away_runs": 5})
+    ingest.insert_match(conn, sid, {"id": 2, "date": "2026-06-02",
+                                   "home_team": "A", "away_team": "B",
+                                   "home_runs": 3, "away_runs": 4})
+    ingest.insert_player_game(conn, sid, _row(1, "L A", 1, team="A", opponent="B",
+                                             home=1, up="L"))
+    ingest.insert_player_game(conn, sid, _row(1, "L A", 2, team="A", opponent="B",
+                                             home=1, up="L"))
+    ingest.insert_player_game(conn, sid, _row(2, "L B", 1, team="B", opponent="A",
+                                             home=0, position="lukkari"))
+    ingest.insert_player_game(conn, sid, _row(2, "L B", 2, team="B", opponent="A",
+                                             home=0, position="lukkari"))
+    lines = {l["name"]: l for l in metrics.lukkari_lines(conn, sid, min_games=1)}
+    assert lines["L A"]["runs_allowed"] == 9
+    assert lines["L B"]["runs_allowed"] == 5
+    assert lines["L B"]["lra_minus"] < lines["L A"]["lra_minus"]
+    assert lines["L B"]["lukkari_rp"] > lines["L A"]["lukkari_rp"]
