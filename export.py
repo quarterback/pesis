@@ -39,6 +39,14 @@ def rows_to_dicts(rows) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def row_no_raw(r) -> dict:
+    """A player_games row as a dict without the heavy upstream `raw` payload,
+    which the static frontend never reads (only the metrics layer consumes it)."""
+    d = dict(r)
+    d.pop("raw", None)
+    return d
+
+
 def main():
     conn = db.connect()
     print("Exporting…")
@@ -208,7 +216,7 @@ def main():
             "pct_stats": PCT_STATS,
             "base_kl": base_kl,
             "base_keys": BASE_KL_KEYS,
-            "log": [dict(g) for g in game_log],
+            "log": [row_no_raw(g) for g in game_log],
             "comps": [],
         })
         done += 1
@@ -230,7 +238,7 @@ def main():
             (mid,)).fetchall()
         sides: dict = {}
         for l in lines:
-            sides.setdefault(l["team"], []).append(dict(l))
+            sides.setdefault(l["team"], []).append(row_no_raw(l))
         dump(OUT / "matches" / f"{mid}.json", {"match": dict(m), "sides": sides})
 
     print(f"  {len(all_matches)} match box scores")

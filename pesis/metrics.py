@@ -83,6 +83,7 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
             if line["turns_at_bat"] else None
         )
         _add_raw_base_splits(line, r["raw_rows"] if "raw_rows" in r.keys() else None)
+        line.pop("raw_rows", None)  # intermediate only — never serialized/consumed downstream
         lines.append(line)
 
     league_tpt = _league_tehot_per_turn(lines)
