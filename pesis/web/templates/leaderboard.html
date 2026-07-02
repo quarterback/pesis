@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ season.series }} {{ season.year }}{% endblock %}
 {% block content %}
-<h1>{{ season.series }} {{ season.year }}</h1>
-<p class="sub">Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).</p>
+<div class="page-hd">
+  <h1>{{ season.series }} {{ season.year }}</h1>
+  <p class="sub">Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).</p>
+</div>
 
 <div class="controls">
   <span class="ctl-lab">Sarja</span>
@@ -20,23 +22,20 @@
   </div>
 </div>
 
-<div class="filters">
-  <span class="ctl-lab" style="align-self:center;flex-shrink:0">Järjestä</span>
+<div class="toolbar">
+  <span class="ctl-lab">Järjestä</span>
   {% for s in stats %}
-  <a href="?stat={{ s }}&sid={{ season.id }}"
-     class="{{ 'active' if s == stat }}">{{ s }}</a>
+  <a href="?stat={{ s }}&sid={{ season.id }}" class="{{ 'active' if s == stat }}">{{ s }}</a>
   {% endfor %}
+  <span style="flex:1"></span>
+  <a class="csv-link" href="/leaderboard.csv?stat={{ stat }}&sid={{ season.id }}">↓ CSV</a>
 </div>
-
-<p class="sub" style="margin-bottom:14px">
-  <a href="/leaderboard.csv?stat={{ stat }}&sid={{ season.id }}">↓ CSV</a>
-</p>
 
 <div class="lbwrap">
   <table class="lb">
     <thead>
       <tr>
-        <th style="width:34px">#</th>
+        <th style="width:36px">#</th>
         <th class="name">Pelaaja</th>
         <th class="name">Joukkue</th>
         <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
@@ -53,7 +52,7 @@
       <tr>
         <td>
           {% if loop.first %}<span class="rk">1</span>
-          {% else %}{{ loop.index }}{% endif %}
+          {% else %}<span style="color:var(--ink3);font-size:12px">{{ loop.index }}</span>{% endif %}
         </td>
         <td class="name"><a class="pl" href="/player/{{ l.player_id }}">{{ l.name }}</a></td>
         <td class="name"><a href="/team/{{ l.team }}" style="color:var(--ink3);font-size:12px">{{ l.team }}</a></td>
@@ -69,7 +68,7 @@
           <div class="tehocell">
             <span class="tv">{{ l.teho_plus }}</span>
             {% if l.teho_plus %}
-            {% set bw = [(l.teho_plus * 56 // (maxtp or 200)), 56]|min %}
+            {% set bw = [(l.teho_plus * 52 // (maxtp or 200)), 52]|min %}
             <span class="teho-bar" style="width:{{ [bw, 3]|max }}px"></span>
             {% endif %}
           </div>
