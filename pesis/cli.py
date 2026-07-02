@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from . import context, db, demo, metrics, similarity, simulate, tahko, translate
+from . import context, db, demo, metrics, projection, similarity, simulate, translate
 
 
 def cmd_demo(args) -> None:
@@ -24,6 +24,30 @@ def cmd_ingest(args) -> None:
     api = PesisApi()
     n = ingest_series(conn, api, args.year, args.series_id, args.series_name)
     print(f"ingested {n} player-game rows for {args.series_name} {args.year}")
+
+
+def cmd_ingest_v1(args) -> None:
+    import time as _time
+
+    from . import v1import
+    conn = db.connect(args.db)
+    series = {"both": ["miehet", "naiset"],
+              "all": ["miehet", "naiset", "ykkonen-miehet", "ykkonen-naiset"],
+              }.get(args.series, [args.series])
+    catalog = v1import.fetch_catalog()
+    years = range(args.from_year or args.year, (args.to_year or args.year) + 1)
+    for year in years:
+        for s in series:
+            try:
+                stats = v1import.import_series(conn, year, s, phase=args.phase,
+                                               catalog=catalog)
+            except LookupError as exc:
+                print(f"{year} {s}: skipped ({exc})")
+                continue
+            print(f"{year} {s}: {stats['rows']} player-game rows, "
+                  f"{stats['matches']} matches, {stats['players']} players",
+                  flush=True)
+            _time.sleep(1)  # be polite on multi-season backfills
 
 
 def _season_id(conn, year: int | None) -> int:
@@ -50,18 +74,18 @@ def cmd_leaderboard(args) -> None:
 
 def cmd_project(args) -> None:
     conn = db.connect(args.db)
-    league = tahko.latest_league_means(conn)
+    league = projection.latest_league_means(conn)
     if args.player:
-        proj = tahko.project_player(conn, args.player, league=league)
+        proj = projection.project_player(conn, args.player, league=league)
         print(json.dumps(proj, indent=2, ensure_ascii=False))
         return
     ids = [r[0] for r in conn.execute(
         "SELECT DISTINCT player_id FROM player_games").fetchall()]
-    projs = [tahko.project_player(conn, pid, league=league) for pid in ids]
+    projs = [projection.project_player(conn, pid, league=league) for pid in ids]
     projs = [p for p in projs if p["teho_plus_proj"] is not None]
     projs.sort(key=lambda p: p["teho_plus_proj"], reverse=True)
     fmt = "{:<3} {:<22} {:>4} {:>10} {:>8}"
-    print(fmt.format("#", "player", "age", "TEHO+proj", "KL%proj"))
+    print(fmt.format("#", "player", "age", "eTEHO+", "KL%proj"))
     for i, p in enumerate(projs[:args.limit], 1):
         print(fmt.format(i, p["name"][:22], p["age"] or "-",
                          p["teho_plus_proj"], f"{p['stats']['kl_pct']['rate']:.3f}"))
@@ -69,9 +93,9 @@ def cmd_project(args) -> None:
 
 def cmd_fit(args) -> None:
     conn = db.connect(args.db)
-    league = tahko.latest_league_means(conn)
-    for spec in tahko.DEFAULT_SPECS:
-        tuned = tahko.fit_decay(conn, spec, league_mean=league.get(spec.name, 0.0))
+    league = projection.latest_league_means(conn)
+    for spec in projection.DEFAULT_SPECS:
+        tuned = projection.fit_decay(conn, spec, league_mean=league.get(spec.name, 0.0))
         print(f"{spec.name:<14} beta={tuned.beta:<6} prior_strength={tuned.prior_strength}")
 
 
@@ -80,12 +104,12 @@ def cmd_standings(args) -> None:
     sid = _season_id(conn, args.year)
     rows = (simulate.playoff_odds(conn, sid, as_of=args.as_of, seed=args.seed)
             if args.as_of else simulate.standings(conn, sid))
-    cols = "{:<3} {:<12} {:>3} {:>3} {:>3} {:>3} {:>4} {:>6}"
-    header = cols.format("#", "team", "G", "W", "T", "L", "pts", "diff")
+    cols = "{:<3} {:<12} {:>3} {:>3} {:>3} {:>3} {:>3} {:>4} {:>6}"
+    header = cols.format("#", "team", "G", "W", "Ws", "Ls", "L", "pts", "diff")
     print(header + ("   playoff%" if args.as_of else ""))
     for i, t in enumerate(rows, 1):
-        line = cols.format(i, t["team"], t["games"], t["wins"], t["ties"],
-                           t["losses"], t["points"], t["run_diff"])
+        line = cols.format(i, t["team"], t["games"], t["wins"], t["super_wins"],
+                           t["super_losses"], t["losses"], t["points"], t["run_diff"])
         if args.as_of:
             line += f"   {t['odds']:>6.1f}"
         print(line)
@@ -148,13 +172,26 @@ def main(argv=None) -> None:
     p.add_argument("--series-name", required=True)
     p.set_defaults(func=cmd_ingest)
 
+    p = sub.add_parser("ingest-v1",
+                       help="keyless import of real data via v1.pesistulokset.fi")
+    p.add_argument("--year", type=int, default=2026)
+    p.add_argument("--from-year", type=int, default=None,
+                   help="backfill start (granular data exists from 1991)")
+    p.add_argument("--to-year", type=int, default=None)
+    p.add_argument("--series", default="both",
+                   help="miehet | naiset | ykkonen-miehet | ykkonen-naiset | "
+                        "both (Superpesis) | all (Superpesis + Ykköspesis), "
+                        "or any exact series name from the catalog")
+    p.add_argument("--phase", type=int, default=1, help="1 = runkosarja")
+    p.set_defaults(func=cmd_ingest_v1)
+
     p = sub.add_parser("leaderboard", help="print a season leaderboard")
     p.add_argument("--stat", default="teho_plus")
     p.add_argument("--year", type=int, default=None)
     p.add_argument("--limit", type=int, default=25)
     p.set_defaults(func=cmd_leaderboard)
 
-    p = sub.add_parser("project", help="TAHKO projections (all players or one)")
+    p = sub.add_parser("project", help="PARE projections (all players or one)")
     p.add_argument("--player", type=int, default=None)
     p.add_argument("--limit", type=int, default=25)
     p.set_defaults(func=cmd_project)

@@ -25,6 +25,9 @@ WIND_BUCKETS = ((0.0, 2.0, "tyyni (0–2 m/s)"),
                 (2.0, 5.0, "kohtalainen (2–5 m/s)"),
                 (5.0, 99.0, "kova (5+ m/s)"))
 
+# real pesistulokset data records wind as a 0/1 flag, not m/s
+FLAG_BUCKETS = ((0.0, 0.5, "tuuleton"), (0.5, 99.0, "tuulinen"))
+
 
 def park_factors(conn: sqlite3.Connection,
                  season_ids: list[int] | None = None) -> list[dict]:
@@ -58,11 +61,16 @@ def weather_effects(conn: sqlite3.Connection,
 
     Joins player-games to their match's weather. Returns one row per bucket
     with per-turn kunnari rate and runs per match — enough to see (and later
-    model) the wind's effect on the long ball.
+    model) the wind's effect on the long ball. Detects flag-style (0/1) wind
+    data and switches to two buckets.
     """
     where, params = _season_filter(season_ids, alias="m")
+    max_wind = conn.execute(
+        f"SELECT MAX(wind) FROM matches m WHERE wind IS NOT NULL {where}",
+        params).fetchone()[0]
+    buckets = FLAG_BUCKETS if (max_wind is not None and max_wind <= 1) else WIND_BUCKETS
     out = []
-    for lo, hi, label in WIND_BUCKETS:
+    for lo, hi, label in buckets:
         r = conn.execute(
             f"""SELECT COUNT(DISTINCT m.id) AS games,
                        SUM(pg.kunnarit) AS k, SUM(pg.turns_at_bat) AS turns,

@@ -1,36 +1,44 @@
 {% extends "base.html" %}
-{% block title %}TAHKO-ennusteet{% endblock %}
+{% block title %}PARE-ennusteet{% endblock %}
 {% block content %}
-<div class="headwrap">
-  <h1 class="lead">TAHKO-ennusteet</h1>
-  <p class="sub">Päivittyvä arvio jokaisen pelaajan todellisesta tasosta: koko urahistoria
-  eksponentiaalisesti painotettuna + regressio sarjakeskiarvoon. Ei mielivaltaisia
-  "viimeiset N ottelua" -rajauksia.</p>
+<h1>PARE-ennusteet</h1>
+<p class="sub">Päivittyvä arvio jokaisen pelaajan todellisesta tasosta: koko urahistoria
+eksponentiaalisesti painotettuna + regressio sarjakeskiarvoon.
+Ei mielivaltaisia "viimeiset N ottelua" -rajauksia.</p>
+
+<div class="controls" style="margin-top:16px">
+  <span class="ctl-lab">Sarja</span>
+  <div class="seg">
+    {% for s in seasons %}
+    <a href="?sid={{ s.id }}" class="{{ 'on' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
+    {% endfor %}
+  </div>
 </div>
+
 <div class="lbwrap">
   <table class="lb">
     <thead>
       <tr>
-        <th>#</th>
+        <th style="width:34px">#</th>
         <th class="name">Pelaaja</th>
         <th>Ikä</th>
-        <th>KL% (enn.)</th>
-        <th>Saatto% (enn.)</th>
-        <th>Etenemis% (enn.)</th>
-        <th>Palo% (enn.)</th>
-        <th>TEHO+ (enn.)</th>
+        <th>eKL%</th>
+        <th>eSaatto%</th>
+        <th>eEtenemis%</th>
+        <th>ePalo%</th>
+        <th>eTEHO+</th>
       </tr>
     </thead>
     <tbody>
       {% for p in projs %}
-      <tr class="{{ 'top' if loop.first }}">
-        <td><span class="rk">{{ loop.index }}</span></td>
+      <tr>
+        <td>{% if loop.first %}<span class="rk">1</span>{% else %}{{ loop.index }}{% endif %}</td>
         <td class="name"><a class="pl" href="/player/{{ p.player_id }}">{{ p.name }}</a></td>
-        <td class="num">{{ p.age or "—" }}</td>
-        <td class="num">{{ p.stats.kl_pct.rate | rate }}</td>
-        <td class="num">{{ p.stats.saatto_pct.rate | rate }}</td>
-        <td class="num">{{ p.stats.eten_pct.rate | rate }}</td>
-        <td class="num">{{ p.stats.palo_rate.rate | rate }}</td>
+        <td>{{ p.age or "—" }}</td>
+        <td>{{ p.stats.kl_pct.rate | rate }}</td>
+        <td>{{ p.stats.saatto_pct.rate | rate }}</td>
+        <td>{{ p.stats.eten_pct.rate | rate }}</td>
+        <td>{{ p.stats.palo_rate.rate | rate }}</td>
         <td>
           <div class="tehocell">
             <span class="tv">{{ p.teho_plus_proj }}</span>

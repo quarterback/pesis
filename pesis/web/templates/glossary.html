@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Kaavat{% endblock %}
+{% block content %}
+<h1>Kaavat</h1>
+<p class="sub">Jokainen tilasto selitettynä — laskentakaava ja tulkintaohje.</p>
+
+<h2 class="sech" style="margin-top:20px">Perustilastot</h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:420px">
+      <thead>
+        <tr>
+          <th class="name" style="padding-left:16px">Tilasto</th>
+          <th class="name">Kaava</th>
+          <th class="name">Huomio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="yr" style="padding-left:16px">Tehot</td><td><code>K + L + T</code></td><td>perinteinen tuotantoluku</td></tr>
+        <tr><td class="yr" style="padding-left:16px">KL%</td><td><code>kärkilyönnit / KLY</code></td><td>kärjen eteneminen per yritys</td></tr>
+        <tr><td class="yr" style="padding-left:16px">Saatto-%</td><td><code>saatot / saattoyritykset</code></td><td>takaetenijän vieminen lyöjänä</td></tr>
+        <tr><td class="yr" style="padding-left:16px">Etenemis-%</td><td><code>etenemiset / etenemisyritykset</code></td><td>kärki- + takaetenemiset etenijänä</td></tr>
+        <tr><td class="yr" style="padding-left:16px">Kunnarit/vuoro</td><td><code>K / V</code></td><td></td></tr>
+        <tr><td class="yr" style="padding-left:16px">Lyödyt/vuoro</td><td><code>L / V</code></td><td></td></tr>
+        <tr><td class="yr" style="padding-left:16px">Tuodut/yritys</td><td><code>T / etenemisyritykset</code></td><td>etenijän tuotto</td></tr>
+        <tr><td class="yr" style="padding-left:16px">Palo-%</td><td><code>palot / V</code></td><td>pienempi parempi</td></tr>
+        <tr><td class="yr" style="padding-left:16px">Tehot/vuoro</td><td><code>(K + L + T) / V</code></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2 class="sech">Indeksit</h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:420px">
+      <thead>
+        <tr>
+          <th class="name" style="padding-left:16px">Tilasto</th>
+          <th class="name">Kaava</th>
+          <th class="name">Huomio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="yr" style="padding-left:16px">TEHO+</td>
+          <td><code>100 × (tehot/V) / (sarjan tehot/V)</code></td>
+          <td>100 = sarjan keskitaso; kärki ~250–350</td>
+        </tr>
+        <tr>
+          <td class="yr" style="padding-left:16px">kTEHO+</td>
+          <td><code>100 × Σ(tehot<sub>ottelu</sub> / kerroin<sub>stadion</sub>) / V / sarjataso</code></td>
+          <td>kenttäkorjattu TEHO+</td>
+        </tr>
+        <tr>
+          <td class="yr" style="padding-left:16px">Kenttäkerroin (PF)</td>
+          <td><code>100 × (juoksut/ottelu kotona) / (juoksut/ottelu vieraissa)</code></td>
+          <td>sama joukkue molemmissa; regressoitu kohti 100:aa</td>
+        </tr>
+        <tr>
+          <td class="yr" style="padding-left:16px">Prosenttipiste</td>
+          <td><code>100 × (pienemmät + ½·samat) / n</code></td>
+          <td>sarjan vakiopelaajien joukossa (≥40 vuoroa)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2 class="sech">PARE <span class="secsub">— Painotettu ja Regressoitu Ennuste</span></h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:420px">
+      <thead>
+        <tr>
+          <th class="name" style="padding-left:16px">Tilasto</th>
+          <th class="name">Kaava</th>
+          <th class="name">Huomio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="yr" style="padding-left:16px">eTilasto (esim. eKL%)</td>
+          <td><code>(Σ β<sup>t</sup>·onnistumiset + κ·sarjataso) / (Σ β<sup>t</sup>·yritykset + κ)</code></td>
+          <td>t = päiviä ottelusta; β ja κ per tilasto, sovitettu historiaan</td>
+        </tr>
+        <tr>
+          <td class="yr" style="padding-left:16px">eTEHO+</td>
+          <td><code>100 × ennustettu tehot/V / sarjataso</code></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="legend" style="padding:10px 16px">e- = ennustettu · k- = kenttäkorjattu.</p>
+</div>
+
+<h2 class="sech">Muut</h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:420px">
+      <thead>
+        <tr>
+          <th class="name" style="padding-left:16px">Tilasto</th>
+          <th class="name">Kaava</th>
+          <th class="name">Huomio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="yr" style="padding-left:16px">Pisteet</td>
+          <td><code>3 / 2 / 1 / 0</code></td>
+          <td>suora voitto 2–0 / muu voitto / tappio ratkaisussa / muu tappio</td>
+        </tr>
+        <tr>
+          <td class="yr" style="padding-left:16px">Pudotuspeli-%</td>
+          <td><code>osuus 300+ simulaatiosta, joissa top-4</code></td>
+          <td>joukkueen taso = juoksuero/ottelu, regressoitu</td>
+        </tr>
+        <tr>
+          <td class="yr" style="padding-left:16px">Vertailupisteet</td>
+          <td><code>1000 − 100 × d</code></td>
+          <td>d = z-skaalattu euklidinen etäisyys kausilinjojen välillä (+ ikä puolipainolla)</td>
+        </tr>
+        <tr>
+          <td class="yr" style="padding-left:16px">wRC+-vastine</td>
+          <td><code>100 + 25 × z(prosenttipiste)</code></td>
+          <td>baseball-käännös: sama prosenttipiste MLB-jakaumasta</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

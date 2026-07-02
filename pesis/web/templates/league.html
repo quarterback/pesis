@@ -1,29 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Sarjataulukko {{ season.year }}{% endblock %}
 {% block content %}
-<div class="controls">
-  <span class="ctl-lab">Kausi</span>
+<h1>{{ season.series }} {{ season.year }}</h1>
+<p class="sub">
+  {% if as_of %}Tilanne {{ as_of }} · pudotuspeliprosentit 300+ simuloinnista (4 paikkaa).
+  {% else %}Koko kausi. Lisää <code style="font-family:ui-monospace,monospace;font-size:11px;background:var(--track);padding:2px 5px;border-radius:4px">?as_of=YYYY-MM-DD</code> nähdäksesi pudotuspelitodennäköisyydet.{% endif %}
+</p>
+
+<div class="controls" style="margin-top:16px">
+  <span class="ctl-lab">Sarja</span>
   <div class="seg">
     {% for s in seasons %}
-    <a href="?year={{ s.year }}{% if as_of %}&amp;as_of={{ as_of }}{% endif %}"
-       class="{{ 'on' if s.year == season.year }}">{{ s.year }}</a>
+    <a href="?sid={{ s.id }}{% if as_of %}&as_of={{ as_of }}{% endif %}"
+       class="{{ 'on' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
     {% endfor %}
   </div>
 </div>
-<div class="headwrap">
-  <h1 class="lead">{{ season.series }} {{ season.year }}</h1>
-  <p class="sub">
-    {% if as_of %}Tilanne {{ as_of }} · pudotuspeliprosentit 2000 simuloinnista (4 paikkaa).
-    {% else %}Koko kausi. Lisää <code style="font-family:ui-monospace,'SF Mono',monospace;font-size:11px;background:var(--track);padding:2px 5px;border-radius:4px">?as_of=YYYY-MM-DD</code> osoitteeseen nähdäksesi pudotuspelitodennäköisyydet kesken kauden.{% endif %}
-  </p>
-</div>
 
-<div class="section">
-  <div class="card">
-    <table class="gentable">
+{% if graph_json %}
+<h2 class="sech">Pudotuspelitodennäköisyydet kaudella</h2>
+<div class="card" style="position:relative;min-height:180px">
+  <div id="fangraph" style="width:100%;height:200px"></div>
+</div>
+{% endif %}
+
+<h2 class="sech">Sarjataulukko</h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:420px">
       <thead>
         <tr>
-          <th>#</th><th class="name">Joukkue</th>
+          <th style="padding-left:16px">#</th>
+          <th class="name">Joukkue</th>
           <th>O</th><th>V</th><th>T</th><th>H</th>
           <th>Pisteet</th><th>Juoksut</th><th>±</th>
           {% if as_of %}<th>Jäljellä</th><th>Pudotuspelit-%</th>{% endif %}
@@ -32,8 +40,8 @@
       <tbody>
         {% for t in table %}
         <tr>
-          <td>{{ loop.index }}</td>
-          <td class="name">{{ t.team }}</td>
+          <td style="padding-left:16px">{{ loop.index }}</td>
+          <td class="name"><a href="/team/{{ t.team }}">{{ t.team }}</a></td>
           <td>{{ t.games }}</td><td>{{ t.wins }}</td><td>{{ t.ties }}</td><td>{{ t.losses }}</td>
           <td><strong>{{ t.points }}</strong></td>
           <td>{{ t.runs_for }}–{{ t.runs_against }}</td>
@@ -46,17 +54,17 @@
   </div>
 </div>
 
-<div class="section">
-  <h2 class="sech">Kenttäkertoimet <span class="secsub">(100 = neutraali juoksuympäristö)</span></h2>
-  <div class="card">
-    <table class="gentable">
+<h2 class="sech">Kenttäkertoimet <span class="secsub">(100 = neutraali juoksuympäristö)</span></h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:320px">
       <thead>
-        <tr><th class="name">Stadion</th><th>Ottelut</th><th>Juoksua/ottelu</th><th>PF</th></tr>
+        <tr><th class="name" style="padding-left:16px">Stadion</th><th>Ottelut</th><th>Juoksua/ottelu</th><th>PF</th></tr>
       </thead>
       <tbody>
         {% for p in parks %}
         <tr>
-          <td class="name">{{ p.stadium }}</td>
+          <td class="name" style="padding-left:16px">{{ p.stadium }}</td>
           <td>{{ p.games }}</td>
           <td>{{ p.runs_per_game }}</td>
           <td><strong>{{ p.pf }}</strong></td>
@@ -67,17 +75,17 @@
   </div>
 </div>
 
-<div class="section">
-  <h2 class="sech">Tuuli ja kunnarit</h2>
-  <div class="card">
-    <table class="gentable">
+<h2 class="sech">Tuuli ja kunnarit</h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:320px">
       <thead>
-        <tr><th class="name">Tuuli</th><th>Ottelut</th><th>Kunnarit/vuoro</th><th>Juoksua/ottelu</th></tr>
+        <tr><th class="name" style="padding-left:16px">Tuuli</th><th>Ottelut</th><th>Kunnarit/vuoro</th><th>Juoksua/ottelu</th></tr>
       </thead>
       <tbody>
         {% for w in weather %}
         <tr>
-          <td class="name">{{ w.wind }}</td>
+          <td class="name" style="padding-left:16px">{{ w.wind }}</td>
           <td>{{ w.games }}</td>
           <td>{{ w.kunnari_rate }}</td>
           <td>{{ w.runs_per_game }}</td>
@@ -85,7 +93,18 @@
         {% endfor %}
       </tbody>
     </table>
-    <p class="legend" style="margin-top:12px">Sää joka ottelusta suoraan tulospalvelun datasta — kenttäkertoimia tai säävaikutuksia ei ole aiemmin julkaistu pesäpallosta.</p>
   </div>
+  <p class="legend" style="padding:10px 16px">Sää joka ottelusta suoraan tulospalvelun datasta — kenttäkertoimia tai säävaikutuksia ei ole aiemmin julkaistu pesäpallosta.</p>
 </div>
+{% endblock %}
+{% block scripts %}
+{% if graph_json %}
+<script src="/static/d3.v7.min.js"></script>
+<script src="/static/charts.js"></script>
+<script type="application/json" id="fg-data">{{ graph_json | safe }}</script>
+<script>
+const fgData = JSON.parse(document.getElementById("fg-data").textContent);
+renderFangraph(document.getElementById("fangraph"), fgData);
+</script>
+{% endif %}
 {% endblock %}

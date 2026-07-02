@@ -1,61 +1,71 @@
 {% extends "base.html" %}
-{% block title %}Tilastot {{ season.year }}{% endblock %}
+{% block title %}{{ season.series }} {{ season.year }}{% endblock %}
 {% block content %}
+<h1>{{ season.series }} {{ season.year }}</h1>
+<p class="sub">Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).</p>
+
 <div class="controls">
-  <span class="ctl-lab">Kausi</span>
+  <span class="ctl-lab">Sarja</span>
   <div class="seg">
     {% for s in seasons %}
-    <a href="?stat={{ stat }}&amp;year={{ s.year }}" class="{{ 'on' if s.year == season.year }}">{{ s.year }}</a>
+    <a href="?stat={{ stat }}&sid={{ s.id }}"
+       class="{{ 'on' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
     {% endfor %}
   </div>
 </div>
-<div class="headwrap">
-  <h1 class="lead">{{ season.series }} {{ season.year }}</h1>
-  <p class="sub">Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).</p>
-</div>
-<div class="toglabel">Järjestä</div>
-<div class="toggles">
+
+<div class="filters">
+  <span class="ctl-lab" style="align-self:center;flex-shrink:0">Järjestä</span>
   {% for s in stats %}
-  <a href="?stat={{ s }}&amp;year={{ season.year }}" class="tog {{ 'on' if s == stat }}">{{ s }}</a>
+  <a href="?stat={{ s }}&sid={{ season.id }}"
+     class="{{ 'active' if s == stat }}">{{ s }}</a>
   {% endfor %}
 </div>
+
+<p class="sub" style="margin-bottom:14px">
+  <a href="/leaderboard.csv?stat={{ stat }}&sid={{ season.id }}">↓ CSV</a>
+</p>
+
 <div class="lbwrap">
   <table class="lb">
     <thead>
       <tr>
-        <th>#</th>
+        <th style="width:34px">#</th>
         <th class="name">Pelaaja</th>
         <th class="name">Joukkue</th>
         <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
         <th>Tehot</th><th>KL%</th>
-        {% if stat not in ['teho_plus', 'kl_pct', 'kunnarit', 'lyodyt', 'tuodut', 'tehot'] %}
+        {% if stat not in ('teho_plus','kl_pct','kunnarit','lyodyt','tuodut','tehot') %}
         <th>{{ stat }}</th>
         {% endif %}
         <th>TEHO+</th>
       </tr>
     </thead>
     <tbody>
-      {% set maxtp = lines[0].teho_plus if lines else 210 %}
+      {% set maxtp = (lines[0].teho_plus or 200) if lines else 200 %}
       {% for l in lines %}
-      {% set bw = [(l.teho_plus * 100 // (maxtp or 210)), 100]|min %}
-      <tr class="{{ 'top' if loop.first }}">
-        <td><span class="rk">{{ loop.index }}</span></td>
+      <tr>
+        <td>
+          {% if loop.first %}<span class="rk">1</span>
+          {% else %}{{ loop.index }}{% endif %}
+        </td>
         <td class="name"><a class="pl" href="/player/{{ l.player_id }}">{{ l.name }}</a></td>
-        <td class="name team">{{ l.team }}</td>
-        <td class="num">{{ l.games }}</td>
-        <td class="num">{{ l.turns_at_bat }}</td>
-        <td class="num">{{ l.kunnarit }}</td>
-        <td class="num">{{ l.lyodyt }}</td>
-        <td class="num">{{ l.tuodut }}</td>
-        <td class="num">{{ l.tehot }}</td>
-        <td class="num">{{ l.kl_pct | rate }}</td>
-        {% if stat not in ['teho_plus', 'kl_pct', 'kunnarit', 'lyodyt', 'tuodut', 'tehot'] %}
-        <td class="num"><strong>{{ l[stat] | rate if l[stat] is float else l[stat] }}</strong></td>
+        <td class="name"><a href="/team/{{ l.team }}" style="color:var(--ink3);font-size:12px">{{ l.team }}</a></td>
+        <td>{{ l.games }}</td>
+        <td>{{ l.turns_at_bat }}</td>
+        <td>{{ l.kunnarit }}</td><td>{{ l.lyodyt }}</td><td>{{ l.tuodut }}</td>
+        <td>{{ l.tehot }}</td>
+        <td>{{ l.kl_pct | rate }}</td>
+        {% if stat not in ('teho_plus','kl_pct','kunnarit','lyodyt','tuodut','tehot') %}
+        <td><strong>{{ l[stat] | rate if l[stat] is float else l[stat] }}</strong></td>
         {% endif %}
         <td>
           <div class="tehocell">
             <span class="tv">{{ l.teho_plus }}</span>
-            <span class="bar"><i style="width:{{ bw }}%"></i></span>
+            {% if l.teho_plus %}
+            {% set bw = [(l.teho_plus * 56 // (maxtp or 200)), 56]|min %}
+            <span class="teho-bar" style="width:{{ [bw, 3]|max }}px"></span>
+            {% endif %}
           </div>
         </td>
       </tr>

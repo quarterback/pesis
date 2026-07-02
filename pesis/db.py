@@ -1,7 +1,7 @@
 """SQLite schema for the analytics store.
 
 One row of ``player_games`` per player per match — the grain both the metrics
-layer and TAHKO projections operate on. Normalized columns cover the core
+layer and the projections operate on. Normalized columns cover the core
 pesäpallo stat line; the full upstream payload is kept in ``raw`` (JSON) so new
 metrics never require a re-fetch.
 
@@ -53,7 +53,10 @@ CREATE TABLE IF NOT EXISTS matches (
     rain        INTEGER,            -- 0/1
     attendance  INTEGER,
     home_runs   INTEGER,
-    away_runs   INTEGER
+    away_runs   INTEGER,
+    periods_home INTEGER,           -- period points incl. tiebreak (periods can be DRAWN: 1-0, 0-1 occur)
+    periods_away INTEGER,
+    tiebreak    INTEGER             -- 1 if supervuoro/kotiutuslyöntikilpailu was played
 );
 
 CREATE INDEX IF NOT EXISTS idx_matches_season ON matches(season_id, date);
@@ -93,5 +96,15 @@ def connect(path: str | None = None) -> sqlite3.Connection:
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
+    # WAL lets the nightly refresh write while the web app keeps reading
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA)
+    # additive migrations for DBs created before a column existed
+    for ddl in ("ALTER TABLE matches ADD COLUMN periods_home INTEGER",
+                "ALTER TABLE matches ADD COLUMN periods_away INTEGER",
+                "ALTER TABLE matches ADD COLUMN tiebreak INTEGER"):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError:
+            pass  # column already there
     return conn
