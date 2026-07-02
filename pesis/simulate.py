@@ -7,10 +7,18 @@ margins); simulating the unplayed schedule a few thousand times yields
 playoff odds. Deliberately model-light: once projection-aggregated rosters exist
 this is where they plug in.
 
-Points: 2 for a win, 1 for a tie, 0 for a loss. (Real Superpesis resolves
-even matches with a supervuoro for 2–1 points; the demo league has no
-periods, so ties stand. The real ingest keeps per-jakso scores in the match
-payload, so the true rule can land here later.)
+Points — the real Superpesis rule, validated EXACTLY against the official
+result-board 3p/2p/1p/0p counts for both 2026 leagues (24/24 teams):
+    3  clean win, both periods won (2–0)
+    2  any other win: via supervuoro/kotiutuslyöntikilpailu (2–1, or 1–0/0–1
+       decided in the tiebreak) or with a drawn period (1–0 without tiebreak
+       — periods CAN be drawn)
+    1  loss where a tiebreak was actually played
+    0  straight loss (0–2, or 0–1 with a drawn period and no tiebreak)
+Matches are decided by JAKSOT, not total runs — a team can win while losing
+the run count, which is why standings must never be computed from run
+totals. The synthetic demo league has no periods; those matches fall back to
+a simple 2/1/0 win/tie/loss on runs.
 """
 
 from __future__ import annotations
@@ -30,30 +38,59 @@ def _matches(conn: sqlite3.Connection, season_id: int) -> list[sqlite3.Row]:
         (season_id,)).fetchall()
 
 
+def _blank(team: str) -> dict:
+    return {"team": team, "games": 0, "wins": 0, "super_wins": 0,
+            "super_losses": 0, "ties": 0, "losses": 0, "points": 0,
+            "runs_for": 0, "runs_against": 0}
+
+
+def _score_match(home: dict, away: dict, m: sqlite3.Row) -> None:
+    hr, ar = m["home_runs"], m["away_runs"]
+    for side, rf, ra in ((home, hr, ar), (away, ar, hr)):
+        side["games"] += 1
+        side["runs_for"] += rf
+        side["runs_against"] += ra
+
+    ph, pa = m["periods_home"], m["periods_away"]
+    if ph is not None and pa is not None and ph != pa:
+        winner, loser = (home, away) if ph > pa else (away, home)
+        winner["wins"] += 1
+        loser["losses"] += 1
+        if max(ph, pa) == 2 and min(ph, pa) == 0:   # clean 2-0
+            winner["points"] += 3
+        else:
+            winner["points"] += 2
+            winner["super_wins"] += 1
+        if m["tiebreak"]:
+            loser["super_losses"] += 1
+            loser["points"] += 1
+        return
+
+    # no period data (demo league): simple 2/1/0 on runs
+    if hr > ar:
+        home["wins"] += 1
+        home["points"] += 2
+        away["losses"] += 1
+    elif hr < ar:
+        away["wins"] += 1
+        away["points"] += 2
+        home["losses"] += 1
+    else:
+        home["ties"] += 1
+        away["ties"] += 1
+        home["points"] += 1
+        away["points"] += 1
+
+
 def standings(conn: sqlite3.Connection, season_id: int,
               as_of: str | None = None) -> list[dict]:
     table: dict[str, dict] = {}
     for m in _matches(conn, season_id):
         for team in (m["home_team"], m["away_team"]):
-            table.setdefault(team, {"team": team, "games": 0, "wins": 0,
-                                    "ties": 0, "losses": 0, "points": 0,
-                                    "runs_for": 0, "runs_against": 0})
+            table.setdefault(team, _blank(team))
         if as_of and m["date"] > as_of:
             continue
-        home, away = table[m["home_team"]], table[m["away_team"]]
-        hr, ar = m["home_runs"], m["away_runs"]
-        for side, rf, ra in ((home, hr, ar), (away, ar, hr)):
-            side["games"] += 1
-            side["runs_for"] += rf
-            side["runs_against"] += ra
-            if rf > ra:
-                side["wins"] += 1
-                side["points"] += 2
-            elif rf == ra:
-                side["ties"] += 1
-                side["points"] += 1
-            else:
-                side["losses"] += 1
+        _score_match(table[m["home_team"]], table[m["away_team"]], m)
     out = sorted(table.values(),
                  key=lambda t: (t["points"], t["runs_for"] - t["runs_against"]),
                  reverse=True)
@@ -91,10 +128,24 @@ def playoff_odds(conn: sqlite3.Connection, season_id: int,
     current = standings(conn, season_id, as_of)
     strength = _strengths(current)
     sigma = _margin_sigma(conn, season_id, as_of)
+    played = [m for m in _matches(conn, season_id)
+              if not (as_of and m["date"] > as_of)]
     remaining = [m for m in _matches(conn, season_id)
                  if as_of and m["date"] > as_of]
     base_points = {t["team"]: t["points"] for t in current}
     base_diff = {t["team"]: t["run_diff"] for t in current}
+
+    # real rule (3/2/1/0) applies when the season records periods; empirical
+    # shares of clean wins and tiebreaks calibrate the simulated outcomes
+    period_matches = [m for m in played
+                      if m["periods_home"] is not None and m["periods_away"] is not None
+                      and m["periods_home"] != m["periods_away"]]
+    use_periods = bool(period_matches)
+    n_pm = len(period_matches) or 1
+    p_clean = sum(1 for m in period_matches
+                  if max(m["periods_home"], m["periods_away"]) == 2
+                  and min(m["periods_home"], m["periods_away"]) == 0) / n_pm
+    p_tiebreak = sum(1 for m in period_matches if m["tiebreak"]) / n_pm
 
     made = {t["team"]: 0 for t in current}
     for _ in range(sims):
@@ -104,7 +155,18 @@ def playoff_odds(conn: sqlite3.Connection, season_id: int,
             mu = strength[m["home_team"]] - strength[m["away_team"]] + HOME_EDGE
             margin = rng.gauss(mu, sigma)
             runs = max(-25, min(25, round(margin)))
-            if runs > 0:
+            if use_periods:
+                winner, loser = ((m["home_team"], m["away_team"]) if margin >= 0
+                                 else (m["away_team"], m["home_team"]))
+                roll = rng.random()
+                if roll < p_clean:
+                    points[winner] += 3
+                elif roll < p_clean + p_tiebreak:
+                    points[winner] += 2
+                    points[loser] += 1
+                else:                      # won with a drawn period, no tiebreak
+                    points[winner] += 2
+            elif runs > 0:
                 points[m["home_team"]] += 2
             elif runs < 0:
                 points[m["away_team"]] += 2

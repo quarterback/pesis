@@ -4,8 +4,10 @@
 <h1>{{ season.series }} {{ season.year }}</h1>
 <p class="sub">
   {% if as_of %}Tilanne {{ as_of }} · pudotuspeliprosentit 2000 simuloinnista (4 paikkaa).
-  {% else %}Koko kausi. Lisää <code>?as_of=YYYY-MM-DD</code> osoitteeseen nähdäksesi
-  pudotuspelitodennäköisyydet kesken kauden.{% endif %}
+  {% else %}Pisteet: 3 suora voitto · 2 voitto supervuorossa tai
+  kotiutuslyöntikilpailussa · 1 tappio niissä · 0 suora tappio. Lisää
+  <code>?as_of=YYYY-MM-DD</code> osoitteeseen nähdäksesi pudotuspelitodennäköisyydet
+  kesken kauden.{% endif %}
 </p>
 
 <div class="filters">
@@ -18,8 +20,10 @@
 <div class="card">
 <table>
   <thead>
-    <tr><th>#</th><th class="name">Joukkue</th><th>O</th><th>V</th><th>T</th><th>H</th>
-        <th>Pisteet</th><th>Juoksut</th><th>±</th>
+    <tr><th>#</th><th class="name">Joukkue</th><th>O</th><th>V</th>
+        <th title="voitto supervuorossa / kotiutuslyöntikilpailussa">Vs</th>
+        <th title="tappio supervuorossa / kotiutuslyöntikilpailussa">Ts</th>
+        <th>T</th><th>Pisteet</th><th>Juoksut</th><th>±</th>
         {% if as_of %}<th>Jäljellä</th><th>Pudotuspelit-%</th>{% endif %}</tr>
   </thead>
   <tbody>
@@ -27,7 +31,9 @@
     <tr>
       <td>{{ loop.index }}</td>
       <td class="name">{{ t.team }}</td>
-      <td>{{ t.games }}</td><td>{{ t.wins }}</td><td>{{ t.ties }}</td><td>{{ t.losses }}</td>
+      <td>{{ t.games }}</td><td>{{ t.wins }}</td>
+      <td>{{ t.super_wins }}</td><td>{{ t.super_losses }}</td>
+      <td>{{ t.losses }}</td>
       <td><strong>{{ t.points }}</strong></td>
       <td>{{ t.runs_for }}–{{ t.runs_against }}</td>
       <td>{{ "%+d" | format(t.run_diff) }}</td>

@@ -53,7 +53,10 @@ CREATE TABLE IF NOT EXISTS matches (
     rain        INTEGER,            -- 0/1
     attendance  INTEGER,
     home_runs   INTEGER,
-    away_runs   INTEGER
+    away_runs   INTEGER,
+    periods_home INTEGER,           -- period points incl. tiebreak (periods can be DRAWN: 1-0, 0-1 occur)
+    periods_away INTEGER,
+    tiebreak    INTEGER             -- 1 if supervuoro/kotiutuslyöntikilpailu was played
 );
 
 CREATE INDEX IF NOT EXISTS idx_matches_season ON matches(season_id, date);
@@ -94,4 +97,12 @@ def connect(path: str | None = None) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    # additive migrations for DBs created before a column existed
+    for ddl in ("ALTER TABLE matches ADD COLUMN periods_home INTEGER",
+                "ALTER TABLE matches ADD COLUMN periods_away INTEGER",
+                "ALTER TABLE matches ADD COLUMN tiebreak INTEGER"):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError:
+            pass  # column already there
     return conn

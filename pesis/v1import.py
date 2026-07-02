@@ -27,24 +27,43 @@ Field semantics (upstream → normalized):
 
 from __future__ import annotations
 
+import gzip
+import http.client
 import json
 import re
 import sqlite3
+import time
+import urllib.error
 import urllib.request
 
 from . import ingest
 
 V1_BASE = "https://v1.pesistulokset.fi"
+# gzip matters: payloads are multi-MB and long chunked transfers are the
+# main failure mode — compressed they are ~10x smaller
 _HEADERS = {"User-Agent": "karki-analytics/0.1 (kärki pesäpallo analytics)",
-            "Accept": "application/json"}
+            "Accept": "application/json",
+            "Accept-Encoding": "gzip"}
 
 SERIES_ALIASES = {"miehet": "Miesten Superpesis", "naiset": "Naisten Superpesis"}
 
 
-def _get(url: str):
-    req = urllib.request.Request(url, headers=_HEADERS)
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return resp.read().decode("utf-8")
+def _get(url: str, retries: int = 5):
+    """GET with gzip + retries — transient truncated reads happen on the big
+    payloads; a build-time bake must survive them."""
+    for attempt in range(retries + 1):
+        try:
+            req = urllib.request.Request(url, headers=_HEADERS)
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                body = resp.read()
+                if resp.headers.get("Content-Encoding") == "gzip":
+                    body = gzip.decompress(body)
+                return body.decode("utf-8")
+        except (http.client.IncompleteRead, urllib.error.URLError,
+                TimeoutError, gzip.BadGzipFile):
+            if attempt == retries:
+                raise
+            time.sleep(1 + attempt)
 
 
 def fetch_catalog() -> dict:
@@ -112,6 +131,20 @@ def _match_runs(result: dict) -> tuple[int | None, int | None]:
     return home, away
 
 
+def _match_periods(result: dict) -> tuple[int | None, int | None, int | None]:
+    """(periods_home, periods_away, tiebreak_played). Periods can be DRAWN
+    (results like 1-0 and 0-1 occur); a tiebreak (supervuoro and/or
+    kotiutuslyöntikilpailu) is detected from its run fields being present —
+    the loser's 1 point depends on it."""
+    if not result:
+        return None, None, None
+    d = result.get("details") or result
+    tiebreak = int(any(d.get(k) is not None for k in (
+        "runs_home_super_inning", "runs_away_super_inning",
+        "runs_home_scoring_contest", "runs_away_scoring_contest")))
+    return d.get("periods_home"), d.get("periods_away"), tiebreak
+
+
 def import_payload(conn: sqlite3.Connection, payload: dict, year: int,
                    series_label: str) -> dict:
     """Load one stats-tool response into the store. Pure — testable offline."""
@@ -151,6 +184,7 @@ def import_payload(conn: sqlite3.Connection, payload: dict, year: int,
     n_matches = 0
     for mid, m in matches.items():
         home_runs, away_runs = _match_runs(m.get("result"))
+        periods_home, periods_away, tiebreak = _match_periods(m.get("result"))
         stadium = (m.get("stadium") or {}).get("name")
         weather = match_weather.get(mid, {})
         ingest.insert_match(conn, season_id, {
@@ -158,6 +192,8 @@ def import_payload(conn: sqlite3.Connection, payload: dict, year: int,
             "home_team": team_name(m.get("home")),
             "away_team": team_name(m.get("away")),
             "stadium": stadium, "home_runs": home_runs, "away_runs": away_runs,
+            "periods_home": periods_home, "periods_away": periods_away,
+            "tiebreak": tiebreak,
             **weather,
         })
         n_matches += 1
