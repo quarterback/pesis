@@ -11,7 +11,7 @@ import sqlite3
 
 from flask import Flask, abort, g, render_template, request
 
-from .. import db, metrics, tahko
+from .. import context, db, metrics, similarity, simulate, tahko, translate
 
 PCT_STATS = [
     ("kl_pct", "Kärkilyönti-%"),
@@ -23,8 +23,9 @@ PCT_STATS = [
     ("tehot_per_turn", "Tehot / vuoro"),
 ]
 
-LEADERBOARD_STATS = ["teho_plus", "tehot", "kl_pct", "saatto_pct", "eten_pct",
-                     "kunnarit", "lyodyt", "tuodut", "palo_rate"]
+LEADERBOARD_STATS = ["teho_plus", "teho_plus_adj", "tehot", "kl_pct",
+                     "saatto_pct", "eten_pct", "kunnarit", "lyodyt", "tuodut",
+                     "palo_rate"]
 
 
 def pct_bucket(pct: int | None) -> int | None:
@@ -104,6 +105,37 @@ def create_app(db_path: str | None = None) -> Flask:
         projs.sort(key=lambda p: p["teho_plus_proj"], reverse=True)
         return render_template("projections.html", projs=projs[:50])
 
+    @app.route("/about")
+    def about():
+        return render_template("about.html")
+
+    @app.route("/player/<int:player_id>/baseball")
+    def baseball(player_id: int):
+        t = translate.translate_player(conn(), player_id,
+                                       year=request.args.get("year", type=int))
+        if not t:
+            abort(404)
+        return render_template("baseball.html", t=t)
+
+    @app.route("/league")
+    def league():
+        all_seasons = seasons()
+        if not all_seasons:
+            return render_template("empty.html")
+        year = request.args.get("year", type=int) or all_seasons[0]["year"]
+        season = next((s for s in all_seasons if s["year"] == year), all_seasons[0])
+        c = conn()
+        as_of = request.args.get("as_of") or None
+        if as_of:
+            table = simulate.playoff_odds(c, season["id"], as_of=as_of)
+        else:
+            table = simulate.standings(c, season["id"])
+        # mid-season default demo: suggest a cutoff that leaves games to play
+        return render_template("league.html", table=table, season=season,
+                               seasons=all_seasons, as_of=as_of,
+                               parks=context.park_factors(c),
+                               weather=context.weather_effects(c))
+
     @app.route("/player/<int:player_id>")
     def player(player_id: int):
         c = conn()
@@ -121,6 +153,7 @@ def create_app(db_path: str | None = None) -> Flask:
         spark = sparkline([s["kl_pct"] for s in career])
         return render_template("player.html", player=row, career=career,
                                line=line, proj=proj, spark=spark,
-                               pct_stats=PCT_STATS)
+                               pct_stats=PCT_STATS,
+                               comps=similarity.comps(c, player_id))
 
     return app

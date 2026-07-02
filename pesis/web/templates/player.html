@@ -2,7 +2,8 @@
 {% block title %}{{ player.name }}{% endblock %}
 {% block content %}
 <h1>{{ player.name }}</h1>
-<p class="sub">{{ line.team }}{% if line.age %} · {{ line.age }} v{% endif %} · kausi {{ line.year }}</p>
+<p class="sub">{{ line.team }}{% if line.age %} · {{ line.age }} v{% endif %} · kausi {{ line.year }}
+· <a href="/player/{{ player.id }}/baseball">Baseball translation 🇺🇸</a></p>
 
 <div class="tiles">
   <div class="tile"><div class="label">Ottelut</div><div class="value">{{ line.games }}</div></div>
@@ -50,7 +51,8 @@
 <table>
   <thead>
     <tr><th>Kausi</th><th>Ikä</th><th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-        <th>Tehot</th><th>KL%</th><th>Saatto%</th><th>Etenemis%</th><th>Palo%</th><th>TEHO+</th></tr>
+        <th>Tehot</th><th>KL%</th><th>Saatto%</th><th>Etenemis%</th><th>Palo%</th>
+        <th>TEHO+</th><th title="kenttäkerroinkorjattu">TEHO+adj</th></tr>
   </thead>
   <tbody>
     {% for s in career %}
@@ -61,12 +63,30 @@
       <td>{{ s.tehot }}</td>
       <td>{{ s.kl_pct | rate }}</td><td>{{ s.saatto_pct | rate }}</td>
       <td>{{ s.eten_pct | rate }}</td><td>{{ s.palo_rate | rate }}</td>
-      <td>{{ s.teho_plus }}</td>
+      <td>{{ s.teho_plus }}</td><td>{{ s.teho_plus_adj or "—" }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 </div>
+
+{% if comps %}
+<h2>Vertailukelpoiset kaudet <span style="font-weight:400;color:var(--ink-3)">(1000 = identtinen)</span></h2>
+<div class="card">
+<table>
+  <thead><tr><th>Pisteet</th><th class="name">Pelaaja</th><th>Kausi</th><th>Ikä</th><th>TEHO+</th></tr></thead>
+  <tbody>
+    {% for c in comps %}
+    <tr>
+      <td>{{ c.score }}</td>
+      <td class="name"><a href="/player/{{ c.player_id }}">{{ c.name }}</a></td>
+      <td>{{ c.year }}</td><td>{{ c.age }}</td><td>{{ c.teho_plus }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
 
 <h2>TAHKO-ennuste ({{ proj.as_of }})</h2>
 <div class="card">

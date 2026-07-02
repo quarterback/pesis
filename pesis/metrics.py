@@ -13,6 +13,12 @@ Key definitions
     TEHO+        100 × (player tehot per turn) / (league tehot per turn):
                  era/league-adjusted production index in the spirit of OPS+ —
                  100 is league average, 150 is an MVP season.
+    TEHO+adj     TEHO+ with each game's production deflated/inflated by the
+                 run environment it happened in (the stadium's kenttäkerroin).
+                 A short season is rich in recorded context — park, weather,
+                 opponent — so the product principle is to *adjust* observed
+                 stats for context rather than merely distrust them. Park is
+                 the first adjustment; weather and opponent follow.
 """
 
 from __future__ import annotations
@@ -30,6 +36,7 @@ RATES = {
     "eten_pct": ("etenemiset", "eteneminen_yritykset"),
     "kunnari_rate": ("kunnarit", "turns_at_bat"),
     "lyoty_rate": ("lyodyt", "turns_at_bat"),
+    "tuotu_rate": ("tuodut", "eteneminen_yritykset"),
     "haava_rate": ("haavat", "turns_at_bat"),
     "palo_rate": ("palot", "turns_at_bat"),
 }
@@ -73,7 +80,37 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
             round(100 * line["tehot_per_turn"] / league_tpt)
             if line["tehot_per_turn"] is not None and league_tpt else None
         )
+    _add_park_adjusted(conn, season_id, lines)
     return lines
+
+
+def _add_park_adjusted(conn: sqlite3.Connection, season_id: int,
+                       lines: list[dict]) -> None:
+    """Attach teho_plus_adj: per-game tehot deflated by the venue's park
+    multiplier, re-indexed so the adjusted league average is 100. Without
+    match/stadium data every multiplier is 1.0 and adj == raw."""
+    from .context import park_factors
+    pf = {p["stadium"]: p["pf"] / 100 for p in park_factors(conn)}
+    mult = {m["id"]: pf.get(m["stadium"], 1.0) for m in conn.execute(
+        "SELECT id, stadium FROM matches WHERE season_id = ?", (season_id,))}
+
+    adj_tehot: dict[int, float] = {}
+    for r in conn.execute(
+            """SELECT player_id, match_id,
+                      kunnarit + lyodyt + tuodut AS tehot
+               FROM player_games WHERE season_id = ?""", (season_id,)):
+        adj_tehot[r["player_id"]] = (adj_tehot.get(r["player_id"], 0.0)
+                                     + r["tehot"] / mult.get(r["match_id"], 1.0))
+
+    total_turns = sum(l["turns_at_bat"] for l in lines)
+    league_adj = (sum(adj_tehot.values()) / total_turns) if total_turns else None
+    for line in lines:
+        turns = line["turns_at_bat"]
+        if not turns or not league_adj:
+            line["teho_plus_adj"] = None
+            continue
+        line["teho_plus_adj"] = round(
+            100 * (adj_tehot.get(line["player_id"], 0.0) / turns) / league_adj)
 
 
 def _league_tehot_per_turn(lines: list[dict]) -> float | None:

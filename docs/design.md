@@ -82,10 +82,72 @@ from *known latent talent*, and `tests/test_tahko.py` asserts the projections
 recover it (truth–projection correlation), that small samples shrink harder,
 and that recent evidence outweighs old.
 
+### Product principle: contextualize, don't just shrink
+
+A 28–33 game season could be framed as "too noisy to trust" — that is the
+wrong frame (owner decision, 2026-07). The same short season is unusually
+*rich in recorded context*: every match row carries park, weather,
+temperature, attendance and opponent, and the PBP carries base states. So
+observed stats stay the headline, **adjusted for the context they happened
+in** (TEHO+adj is the first: park-adjusted; weather- and opponent-adjusted
+come next). TAHKO remains the forward-looking companion, not a replacement
+for what actually happened.
+
+### Shipped since v0 (Tier A — per-game rows + match context)
+
+- **TEHO+adj** (`metrics._add_park_adjusted`): per-game production deflated
+  by the venue's kenttäkerroin, re-indexed to league-average 100 — the first
+  context-adjusted headline stat. Next adjustments: wind/temperature, then
+  opponent strength.
+
+- **Park factors & weather effects** (`context.py`): first published
+  kenttäkertoimet for the sport; per-stadium run environment (shrunken,
+  100 = neutral) and kunnari rate by wind bucket. The demo league bakes known
+  park/wind effects and the tests recover them. Upgrade path: team-based
+  home/road PF once real multi-season data exists.
+- **Similarity scores** (`similarity.py`): B-Ref-style comps — nearest
+  neighbor over z-scored rates + age, 1000 = identical, own seasons excluded.
+- **Standings + playoff odds** (`simulate.py`): run-diff strength (shrunken)
+  → Normal margin model → Monte Carlo over the remaining schedule. Plug in
+  TAHKO-aggregated rosters later. Real Superpesis points rules (2–1 supervuoro
+  splits) pending real per-jakso data.
+- **Pesis → baseball translation** (`translate.py`, `/player/<id>/baseball`):
+  rank-preserving quantile map from Superpesis percentiles onto MLB
+  qualified-hitter distributions (KL%→AVG, kunnarit→HR, lyödyt→RBI,
+  tuodut→R, palot→K%), TEHO+↔wRC+ carried 1:1, 162-game paces, and an
+  English pesäpallo primer. Deliberately in English — it's the shareable
+  artifact for baseball audiences. MLB reference distributions are era
+  approximations; refresh them against FanGraphs occasionally.
+
+### UI requirements for the design pass
+
+- **Site-wide FI/EN language toggle is a hard requirement** — the audience
+  that makes this project interesting (baseball analytics people) doesn't
+  read Finnish. The baseball-translation and About pages are already English;
+  everything else needs string tables, not per-page forks.
+- Keep the baseball translation page standalone-shareable (self-explanatory
+  with the primer on-page, no context needed from the rest of the site).
+- Layout reference: darko.app's current site — hero cards over the table
+  (best record / finals favorite / lottery odds), Standard↔Detailed toggle,
+  a distribution sidebar next to leaderboards, CSV download on every table.
+  Our `/league` and leaderboard pages should grow toward that shape.
+- **Schedule-length honesty**: Superpesis plays 28–33 regular-season games
+  (33 in 2025) — one MLB month. Any cross-sport pace/counting display must
+  carry the extrapolation factor; rate stats and percentiles are the primary
+  framing.
+- **The short season is a translation asset, not just a caveat** (owner
+  observation, 2026-07): baseball fans already have trained intuition for
+  month-sized samples (Player of the Month, April paces, hot streaks), so
+  "a Superpesis season ≈ one MLB month" makes the whole translation land
+  *better* than a same-length-season sport would. Lean into that framing on
+  shareable pages.
+
 ### Roadmap, in dependency order
 
 1. **Real backfill** (needs key): confirm `ingest.FIELD_MAP` against
    `/public/stats-definitions`, ingest Superpesis 1990→, refit betas/priors.
+   Wire `/public/match` payloads into `ingest.insert_match` (stadium,
+   weather, attendance, per-jakso scores).
 2. **Per-base kärkilyönti profile** — the API splits KL by target base;
    percentile fingerprint per base (Savant's "sprint speed vs arm strength"
    feel).

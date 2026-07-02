@@ -41,6 +41,23 @@ CREATE TABLE IF NOT EXISTS seasons (
     UNIQUE (year, series)
 );
 
+CREATE TABLE IF NOT EXISTS matches (
+    id          INTEGER PRIMARY KEY,
+    season_id   INTEGER NOT NULL REFERENCES seasons(id),
+    date        TEXT NOT NULL,
+    home_team   TEXT NOT NULL,
+    away_team   TEXT NOT NULL,
+    stadium     TEXT,
+    temperature REAL,               -- °C
+    wind        REAL,               -- m/s
+    rain        INTEGER,            -- 0/1
+    attendance  INTEGER,
+    home_runs   INTEGER,
+    away_runs   INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_matches_season ON matches(season_id, date);
+
 CREATE TABLE IF NOT EXISTS player_games (
     player_id            INTEGER NOT NULL REFERENCES players(id),
     season_id            INTEGER NOT NULL REFERENCES seasons(id),

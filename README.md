@@ -23,9 +23,29 @@ pip install -r requirements.txt
 python -m pesis demo          # build a seeded synthetic league (data/pesis.db)
 python -m pesis leaderboard   # CLI leaderboard
 python -m pesis project       # TAHKO projections for everyone
+python -m pesis standings --as-of 2026-06-15   # standings + playoff odds
+python -m pesis parks         # park factors (kenttäkertoimet) + weather effects
+python -m pesis comps --player 1               # similarity scores (B-Ref style)
+python -m pesis mlb --player 1                 # pesis → baseball translation
 python -m pesis runserver     # web UI at http://localhost:5000
 python -m pytest -q           # test suite
 ```
+
+## Deploying
+
+This is a long-running Flask server with a SQLite file on disk — it does
+**not** fit static/serverless hosts like Netlify or Vercel (no persistent
+process, read-only filesystem). Deploy it like the sibling projects, with the
+included `Dockerfile` + `fly.toml`:
+
+```bash
+fly launch --copy-config   # first time; accept or rename the app
+fly deploy
+```
+
+The image bakes the demo league at build time so a fresh deploy serves
+content immediately. Any Docker host (Railway, Render, a VPS) works the same
+way: `docker build -t karki . && docker run -p 8080:8080 karki`.
 
 ## Real data
 
@@ -53,5 +73,9 @@ Before a full backfill, confirm `ingest.FIELD_MAP` against
 | `pesis/demo.py` | seeded synthetic league (also the test harness) |
 | `pesis/metrics.py` | rate stats, league baselines, TEHO+, percentiles |
 | `pesis/tahko.py` | TAHKO projections: decay + empirical-Bayes + aging |
-| `pesis/web/` | Flask UI: leaderboards, player pages, projections |
+| `pesis/context.py` | park factors (kenttäkertoimet) + weather effects |
+| `pesis/similarity.py` | B-Ref-style similarity scores / player comps |
+| `pesis/simulate.py` | standings + Monte Carlo playoff odds |
+| `pesis/translate.py` | pesis → baseball quantile translation (shareable EN pages) |
+| `pesis/web/` | Flask UI: leaderboards, player pages, projections, league, about |
 | `docs/design.md` | the full design doc: data source, metrics, model, roadmap |
