@@ -290,7 +290,7 @@ function makeTable(mount, cfg) {
     const sizeOpts = PAGE_SIZES.map(s => `<option value="${s}"${s===pageSize?' selected':''}>${s}</option>`).join('');
 
     mount.innerHTML = `
-      <table><thead><tr>${thead}</tr></thead><tbody>${body}</tbody></table>
+      <div class="tbl-card"><table><thead><tr>${thead}</tr></thead><tbody>${body}</tbody></table></div>
       <div class="pager">
         <span class="pinfo">${from}–${to} / ${total}</span>
         <span class="psize">Näytä <select class="sel">${sizeOpts}</select></span>
@@ -478,7 +478,6 @@ async function showProjections(sid) {
     rows += `<tr${i===0?' class="leader"':''}>
       <td><span class="rank">${i===0?'1':i+1}</span></td>
       <td class="name"><a class="player" href="#/player/${p.player_id}">${p.name}</a></td>
-      <td class="num">${p.age||'—'}</td>
       <td class="num">${rate(p.stats?.kl_pct?.rate)}</td>
       <td class="num">${rate(p.stats?.saatto_pct?.rate)}</td>
       <td class="num">${rate(p.stats?.eten_pct?.rate)}</td>
@@ -504,7 +503,7 @@ async function showProjections(sid) {
       <thead><tr>
         <th style="width:34px">#</th>
         <th class="name">Pelaaja</th>
-        <th>Ikä</th><th>eKL%</th><th>eSaatto%</th>
+        <th>eKL%</th><th>eSaatto%</th>
         <th>eEtenemis%</th><th>ePalo%</th><th class="extra">eTEHO+</th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -642,7 +641,6 @@ async function showPlayer(pid) {
   for (const s of career) {
     careerRows += `<tr>
       <td class="name">${s.year}</td>
-      <td class="num">${s.age||'—'}</td>
       <td class="num">${s.games}</td><td class="num">${s.turns_at_bat}</td>
       <td class="num strong">${s.vyk??'—'}</td>
       <td class="num">${s.spark_index??'—'}</td>
@@ -728,7 +726,7 @@ async function showPlayer(pid) {
           <div class="card" style="padding:0;overflow:hidden">
             <table>
               <thead><tr>
-                <th class="name">Kausi</th><th>Ikä</th><th>O</th><th>Vuorot</th>
+                <th class="name">Kausi</th><th>O</th><th>Vuorot</th>
                 <th>VYK</th><th>SPARK</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th>KOTI-KL+</th>
                 <th class="extra">TEHO+</th><th title="kenttäkorjattu">kTEHO+</th>
               </tr></thead>

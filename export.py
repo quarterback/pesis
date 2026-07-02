@@ -41,6 +41,20 @@ def rows_to_dicts(rows) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+# Only the fields each view actually reads — keeps the historical export small.
+ROSTER_FIELDS = ["player_id", "name", "games", "turns_at_bat", "pos",
+                 "spark_index", "adv_plus", "runner_plus", "out_avoid_plus", "teho_plus"]
+CAREER_FIELDS = ["year", "age", "games", "turns_at_bat", "vyk", "spark_index",
+                 "adv_plus", "runner_plus", "out_avoid_plus", "money_kl_plus",
+                 "teho_plus", "teho_plus_adj"]
+LEADERBOARD_PLAYER_FIELDS = (["player_id", "name", "team", "games", "turns_at_bat",
+                              "pos", "raa"] + LEADERBOARD_STATS)
+
+
+def slim(d: dict, fields) -> dict:
+    return {k: d.get(k) for k in fields}
+
+
 def main():
     conn = db.connect()
     print("Exporting…")
@@ -49,6 +63,7 @@ def main():
     all_seasons = rows_to_dicts(conn.execute(
         "SELECT id, year, series FROM seasons ORDER BY year DESC, series"
     ).fetchall())
+    max_year = max((s["year"] for s in all_seasons), default=0)
     nav_seasons = rows_to_dicts(conn.execute(
         """SELECT id, year, series FROM seasons s
            WHERE year = (SELECT MAX(year) FROM seasons WHERE series = s.series)
@@ -75,9 +90,10 @@ def main():
             continue
         lines = cached_lines(sid)
 
-        # Leaderboard: all players with percentiles added
-        lb_lines = [dict(l) for l in lines]
-        metrics.add_percentiles(lb_lines)
+        # Leaderboard: qualified players only (the board hides the rest), slimmed
+        # to the fields the table/pills/CSV/position-filter actually read.
+        lb_lines = [slim(l, LEADERBOARD_PLAYER_FIELDS)
+                    for l in lines if l["turns_at_bat"] >= metrics.QUALIFY_TURNS]
         dump(OUT / "leaderboard" / f"{sid}.json", {
             "season": season,
             "stats": LEADERBOARD_STATS,
@@ -96,21 +112,23 @@ def main():
             "weather": context.weather_effects(conn, same_series),
         })
 
-        # Projections
-        league_rates = metrics.league_rates(cached_lines(sid))
-        pids = [r[0] for r in conn.execute(
-            "SELECT DISTINCT player_id FROM player_games WHERE season_id = ?",
-            (sid,)).fetchall()]
-        projs = []
-        for pid in pids:
-            p = projection.project_player(conn, pid, league=league_rates)
-            if (p["teho_plus_proj"] is not None
-                    and p["stats"]["kl_pct"]["effective_n"] >= 20):
-                projs.append(p)
-        projs.sort(key=lambda p: p["teho_plus_proj"], reverse=True)
-        dump(OUT / "projections" / f"{sid}.json", {
-            "season": season, "projections": projs[:50],
-        })
+        # Projections (PARE) — forward-looking, only meaningful for the current
+        # season, so skip the expensive projection pass for historical years.
+        if season["year"] == max_year:
+            league_rates = metrics.league_rates(cached_lines(sid))
+            pids = [r[0] for r in conn.execute(
+                "SELECT DISTINCT player_id FROM player_games WHERE season_id = ?",
+                (sid,)).fetchall()]
+            projs = []
+            for pid in pids:
+                p = projection.project_player(conn, pid, league=league_rates)
+                if (p["teho_plus_proj"] is not None
+                        and p["stats"]["kl_pct"]["effective_n"] >= 20):
+                    projs.append(p)
+            projs.sort(key=lambda p: p["teho_plus_proj"], reverse=True)
+            dump(OUT / "projections" / f"{sid}.json", {
+                "season": season, "projections": projs[:50],
+            })
 
         # Lukkari (pitcher) run-prevention leaderboard
         dump(OUT / "lukkari" / f"{sid}.json", {
@@ -131,7 +149,7 @@ def main():
             slug = slugify(team)
             dump(OUT / "teams" / f"{slug}-{sid}.json", {
                 "team": team, "slug": slug, "season": season,
-                "roster": roster, "standing": standing,
+                "roster": [slim(l, ROSTER_FIELDS) for l in roster], "standing": standing,
             })
 
         print(f"  season {season['year']} {season['series']}  "
@@ -189,7 +207,11 @@ def main():
         if not line:
             continue
 
-        proj = projection.project_player(conn, pid, league=league_rates_cached(sid))
+        # PARE projection is forward-looking — only compute it for players whose
+        # latest season is the current one (skips the expensive pass for retired
+        # players and every historical season line).
+        proj = (projection.project_player(conn, pid, league=league_rates_cached(sid))
+                if current["year"] == max_year else None)
 
         career_json = [
             {"year": s["year"], "kl_pct": s["kl_pct"], "teho_plus": s["teho_plus"]}
@@ -203,7 +225,7 @@ def main():
 
         dump(out_path, {
             "player": dict(row),
-            "career": career,
+            "career": [slim(s, CAREER_FIELDS) for s in career],
             "line": line,
             "proj": proj,
             "career_json": career_json,
