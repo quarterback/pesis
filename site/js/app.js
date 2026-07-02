@@ -191,7 +191,7 @@ async function showLeaderboard(sid, stat) {
       <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a></td>
       <td class="name team"><a href="#/team/${encodeURIComponent(l.team)}?sid=${sid}">${l.team||'—'}</a></td>
       <td class="num">${l.games}</td><td class="num">${l.turns_at_bat}</td>
-      <td class="num strong">${l.spark_index??'—'}</td>
+      <td><div class="teho-cell"><span class="val">${l.spark_index??'—'}</span><span class="bar"><i style="width:${Math.min(Math.round((l.spark_index||0)/2.5),100)}%"></i></span></div></td>
       <td class="num">${l.teho_plus??'—'}</td>
       ${featCell}
     </tr>`;
@@ -484,6 +484,8 @@ async function showPlayer(pid) {
         <div class="tile hero"><div class="label">TEHO+</div><div class="value">${line.teho_plus||'—'}</div></div>
         ${projTile}
       </div>
+      <h2>Mallo-indeksit ${line.year} <span class="muted">(100 = sarjan keskiarvo)</span></h2>
+      <div class="card"><div id="index-bars"></div></div>
       <h2>Prosenttipisteet ${line.year} <span class="muted">(sarjan vakiopelaajien joukossa)</span></h2>
       <div class="card">
         ${pctBars}
@@ -525,6 +527,18 @@ async function showPlayer(pid) {
         </div>
       </div>
     </div>`;
+
+  const ibEl = document.getElementById('index-bars');
+  if (ibEl && typeof renderIndexBars === 'function') {
+    renderIndexBars(ibEl, [
+      {label:'SPARK',    value: line.spark_index,    full:'SPARK — kärjenrakentajan kokonaisindeksi'},
+      {label:'ADV+',     value: line.adv_plus,       full:'Etenemisarvo lyöjänä'},
+      {label:'RUN+',     value: line.runner_plus,    full:'Etenijän arvo'},
+      {label:'OUT+',     value: line.out_avoid_plus, full:'Palojen välttäminen'},
+      {label:'KOTI-KL+', value: line.money_kl_plus,  full:'Kotiutuskärkilyönnit'},
+      {label:'TEHO+',    value: line.teho_plus,      full:'Tuotanto per vuoro'},
+    ]);
+  }
 
   if (career?.length > 1 && typeof renderCareer === 'function') {
     const klEl = document.getElementById('career-kl');
@@ -735,7 +749,7 @@ async function route() {
 
     if (page === '' || page === 'leaderboard') {
       const sid = parseInt(params.sid || defaultSid, 10);
-      const stat = params.stat || 'teho_plus';
+      const stat = params.stat || 'spark_index';
       await showLeaderboard(sid, stat);
 
     } else if (page === 'projections') {

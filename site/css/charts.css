@@ -64,6 +64,27 @@
   pointer-events: none;
 }
 
+/* Mallo index bars */
+.fg-bar { rx: 3px; }
+.fg-base {
+  stroke: var(--ink3);
+  stroke-width: 1px;
+  stroke-dasharray: 3 3;
+}
+.fg-baselabel {
+  fill: var(--ink3);
+  font: 600 9.5px var(--font-mono);
+}
+.fg-cat {
+  fill: var(--ink2);
+  font: 600 11px var(--font-mono);
+  letter-spacing: .04em;
+}
+.fg-val {
+  fill: var(--ink-strong);
+  font: 700 12px var(--font-mono);
+}
+
 /* D3 axis */
 .axis path,
 .axis line {
