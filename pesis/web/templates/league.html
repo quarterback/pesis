@@ -3,78 +3,116 @@
 {% block content %}
 <h1>{{ season.series }} {{ season.year }}</h1>
 <p class="sub">
-  {% if as_of %}{{ t("lg.asof_sub").replace("{d}", as_of) }}
-  {% else %}{{ t("lg.points_rule") }} {{ t("lg.asof_hint") }}{% endif %}
+  {% if as_of %}Tilanne {{ as_of }} · pudotuspeliprosentit 300+ simuloinnista (4 paikkaa).
+  {% else %}Koko kausi. Lisää <code style="font-family:ui-monospace,monospace;font-size:11px;background:var(--track);padding:2px 5px;border-radius:4px">?as_of=YYYY-MM-DD</code> nähdäksesi pudotuspelitodennäköisyydet.{% endif %}
 </p>
 
-<div class="filters">
-  {% for s in seasons %}
-  <a href="?sid={{ s.id }}{% if as_of %}&amp;as_of={{ as_of }}{% endif %}"
-     class="{{ 'active' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
-  {% endfor %}
-</div>
-
-<div class="card">
-<table>
-  <thead>
-    <tr><th>#</th><th class="name">{{ t("th.team") }}</th><th>{{ t("th.games") }}</th><th>{{ t("th.wins") }}</th>
-        <th>{{ t("th.super_wins") }}</th>
-        <th>{{ t("th.super_losses") }}</th>
-        <th>{{ t("th.losses") }}</th><th>{{ t("th.points") }}</th><th>{{ t("th.runs") }}</th><th>±</th>
-        {% if as_of %}<th>{{ t("th.remaining") }}</th><th>{{ t("th.playoff_pct") }}</th>{% endif %}</tr>
-  </thead>
-  <tbody>
-    {% for row in table %}
-    <tr>
-      <td>{{ loop.index }}</td>
-      <td class="name">{{ row.team }}</td>
-      <td>{{ row.games }}</td><td>{{ row.wins }}</td>
-      <td>{{ row.super_wins }}</td><td>{{ row.super_losses }}</td>
-      <td>{{ row.losses }}</td>
-      <td><strong>{{ row.points }}</strong></td>
-      <td>{{ row.runs_for }}–{{ row.runs_against }}</td>
-      <td>{{ "%+d" | format(row.run_diff) }}</td>
-      {% if as_of %}<td>{{ row.remaining }}</td><td><strong>{{ row.odds }}</strong></td>{% endif %}
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="controls" style="margin-top:16px">
+  <span class="ctl-lab">Sarja</span>
+  <div class="sel-wrap">
+    <select class="season-sel" onchange="location=this.value">
+      {% for series_name, group in seasons | groupby('series') %}
+      <optgroup label="{{ series_name }}">
+        {% for s in group %}
+        <option value="?sid={{ s.id }}{% if as_of %}&as_of={{ as_of }}{% endif %}"
+          {{ 'selected' if s.id == season.id }}>{{ s.year }}</option>
+        {% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+  </div>
 </div>
 
 {% if graph_json %}
-<h2>{{ t("lg.fangraph_title") }} <span style="font-weight:400;color:var(--ink-3)">{{ t("lg.fangraph_note") }}</span></h2>
-<div class="card">
-  <div id="fangraph"></div>
-  <p class="sub" style="margin:8px 0 0">{{ t("lg.fangraph_sub") }}</p>
+<h2 class="sech">Pudotuspelitodennäköisyydet kaudella</h2>
+<div class="card" style="position:relative;min-height:180px">
+  <div id="fangraph" style="width:100%;height:200px"></div>
 </div>
 {% endif %}
 
-<h2>{{ t("lg.parks_title") }} <span style="font-weight:400;color:var(--ink-3)">{{ t("lg.parks_note") }}</span></h2>
-<div class="card">
-<table>
-  <thead><tr><th class="name">{{ t("th.stadium") }}</th><th>{{ t("tm.matches") }}</th><th>{{ t("lg.rpg") }}</th><th>PF</th></tr></thead>
-  <tbody>
-    {% for p in parks %}
-    <tr><td class="name">{{ p.stadium }}</td><td>{{ p.games }}</td>
-        <td>{{ p.runs_per_game }}</td><td><strong>{{ p.pf }}</strong></td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+<h2 class="sech">Sarjataulukko</h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:420px">
+      <thead>
+        <tr>
+          <th style="padding-left:16px">#</th>
+          <th class="name">Joukkue</th>
+          <th>O</th><th>V</th><th>T</th><th>H</th>
+          <th>Pisteet</th><th>Juoksut</th><th>±</th>
+          {% if as_of %}<th>Jäljellä</th><th>Pudotuspelit-%</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in table %}
+        <tr>
+          <td style="padding-left:16px">{{ loop.index }}</td>
+          <td class="name"><a href="/team/{{ t.team }}">{{ t.team }}</a></td>
+          <td>{{ t.games }}</td><td>{{ t.wins }}</td><td>{{ t.ties }}</td><td>{{ t.losses }}</td>
+          <td><strong>{{ t.points }}</strong></td>
+          <td>{{ t.runs_for }}–{{ t.runs_against }}</td>
+          <td>{{ "%+d" | format(t.run_diff) }}</td>
+          {% if as_of %}<td>{{ t.remaining }}</td><td><strong>{{ t.odds }}</strong></td>{% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<h2>{{ t("lg.weather_title") }}</h2>
-<div class="card">
-<table>
-  <thead><tr><th class="name">{{ t("lg.wind") }}</th><th>{{ t("tm.matches") }}</th><th>{{ t("lg.k_per_turn") }}</th><th>{{ t("lg.rpg") }}</th></tr></thead>
-  <tbody>
-    {% for w in weather %}
-    <tr><td class="name">{{ w.wind }}</td><td>{{ w.games }}</td>
-        <td>{{ w.kunnari_rate }}</td><td>{{ w.runs_per_game }}</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
-<p class="sub" style="margin:10px 0 0">{{ t("lg.weather_sub") }}</p>
+<h2 class="sech">Kenttäkertoimet <span class="secsub">(100 = neutraali juoksuympäristö)</span></h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:320px">
+      <thead>
+        <tr><th class="name" style="padding-left:16px">Stadion</th><th>Ottelut</th><th>Juoksua/ottelu</th><th>PF</th></tr>
+      </thead>
+      <tbody>
+        {% for p in parks %}
+        <tr>
+          <td class="name" style="padding-left:16px">{{ p.stadium }}</td>
+          <td>{{ p.games }}</td>
+          <td>{{ p.runs_per_game }}</td>
+          <td><strong>{{ p.pf }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+
+<h2 class="sech">Tuuli ja kunnarit</h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:320px">
+      <thead>
+        <tr><th class="name" style="padding-left:16px">Tuuli</th><th>Ottelut</th><th>Kunnarit/vuoro</th><th>Juoksua/ottelu</th></tr>
+      </thead>
+      <tbody>
+        {% for w in weather %}
+        <tr>
+          <td class="name" style="padding-left:16px">{{ w.wind }}</td>
+          <td>{{ w.games }}</td>
+          <td>{{ w.kunnari_rate }}</td>
+          <td>{{ w.runs_per_game }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="legend" style="padding:10px 16px">Sää joka ottelusta suoraan tulospalvelun datasta — kenttäkertoimia tai säävaikutuksia ei ole aiemmin julkaistu pesäpallosta.</p>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if graph_json %}
+<script src="/static/d3.v7.min.js"></script>
+<script src="/static/charts.js"></script>
+<script type="application/json" id="fg-data">{{ graph_json | safe }}</script>
+<script>
+const fgData = JSON.parse(document.getElementById("fg-data").textContent);
+renderFangraph(document.getElementById("fangraph"), fgData);
+</script>
+{% endif %}
 {% endblock %}
 {% block scripts %}
 {% if graph_json %}

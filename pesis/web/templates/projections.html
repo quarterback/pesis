@@ -1,36 +1,59 @@
 {% extends "base.html" %}
-{% block title %}{{ t("proj.title") }}{% endblock %}
+{% block title %}PARE-ennusteet{% endblock %}
 {% block content %}
-<h1>{{ t("proj.title") }} · {{ season.series }} {{ season.year }}</h1>
-<p class="sub">{{ t("proj.sub") }}</p>
+<h1>PARE-ennusteet</h1>
+<p class="sub">Päivittyvä arvio jokaisen pelaajan todellisesta tasosta: koko urahistoria
+eksponentiaalisesti painotettuna + regressio sarjakeskiarvoon.
+Ei mielivaltaisia "viimeiset N ottelua" -rajauksia.</p>
 
-<div class="filters">
-  {% for s in seasons %}
-  <a href="?sid={{ s.id }}" class="{{ 'active' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
-  {% endfor %}
+<div class="controls" style="margin-top:16px">
+  <span class="ctl-lab">Sarja</span>
+  <div class="sel-wrap">
+    <select class="season-sel" onchange="location=this.value">
+      {% for series_name, group in seasons | groupby('series') %}
+      <optgroup label="{{ series_name }}">
+        {% for s in group %}
+        <option value="?sid={{ s.id }}"
+          {{ 'selected' if s.id == season.id }}>{{ s.year }}</option>
+        {% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+  </div>
 </div>
 
-<div class="card">
-<table>
-  <thead>
-    <tr><th>#</th><th class="name">{{ t("th.player") }}</th><th>{{ t("th.age") }}</th>
-        <th>eKL%</th><th>eSaatto%</th><th>eEtenemis%</th>
-        <th>ePalo%</th><th>eTEHO+</th></tr>
-  </thead>
-  <tbody>
-    {% for p in projs %}
-    <tr>
-      <td>{{ loop.index }}</td>
-      <td class="name"><a href="/player/{{ p.player_id }}">{{ p.name }}</a></td>
-      <td>{{ p.age or "—" }}</td>
-      <td>{{ p.stats.kl_pct.rate | rate }}</td>
-      <td>{{ p.stats.saatto_pct.rate | rate }}</td>
-      <td>{{ p.stats.eten_pct.rate | rate }}</td>
-      <td>{{ p.stats.palo_rate.rate | rate }}</td>
-      <td><strong>{{ p.teho_plus_proj }}</strong></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="lbwrap">
+  <table class="lb">
+    <thead>
+      <tr>
+        <th style="width:34px">#</th>
+        <th class="name">Pelaaja</th>
+        <th>Ikä</th>
+        <th>eKL%</th>
+        <th>eSaatto%</th>
+        <th>eEtenemis%</th>
+        <th>ePalo%</th>
+        <th>eTEHO+</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in projs %}
+      <tr>
+        <td>{% if loop.first %}<span class="rk">1</span>{% else %}{{ loop.index }}{% endif %}</td>
+        <td class="name"><a class="pl" href="/player/{{ p.player_id }}">{{ p.name }}</a></td>
+        <td>{{ p.age or "—" }}</td>
+        <td>{{ p.stats.kl_pct.rate | rate }}</td>
+        <td>{{ p.stats.saatto_pct.rate | rate }}</td>
+        <td>{{ p.stats.eten_pct.rate | rate }}</td>
+        <td>{{ p.stats.palo_rate.rate | rate }}</td>
+        <td>
+          <div class="tehocell">
+            <span class="tv">{{ p.teho_plus_proj }}</span>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}

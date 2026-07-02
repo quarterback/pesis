@@ -1,0 +1,3 @@
+- [Mallo rebase approach](mallo-rebase.md) — upstream merges pulled via GitHub API direct-download, not git merge, to avoid template conflicts.
+- [Mallo CSS: b-classes on children](mallo-css-pct.md) — percentile fill/badge b0–b6 classes go directly on .fill and .badge elements; CSS uses `.fill.b0`, `.badge.b0` selectors.
+- [App module imports](mallo-app-imports.md) — upstream app.py uses `projection` (PARE) not `tahko`; `traj_svg`/`sparkline` removed; D3 via `career_json` + `/static/charts.js`.

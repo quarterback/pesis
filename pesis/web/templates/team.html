@@ -5,51 +5,75 @@
 <p class="sub">{{ season.series }} {{ season.year }}</p>
 
 {% if standing %}
-<div class="tiles">
-  <div class="tile"><div class="label">{{ t("tm.matches") }}</div><div class="value">{{ standing.games }}</div></div>
-  <div class="tile"><div class="label">{{ t("tm.wl") }}</div><div class="value">{{ standing.wins }}–{{ standing.losses }}</div></div>
-  <div class="tile"><div class="label">{{ t("th.points") }}</div><div class="value">{{ standing.points }}</div></div>
-  <div class="tile"><div class="label">{{ t("tm.rundiff") }}</div><div class="value">{{ "%+d" | format(standing.run_diff) }}</div></div>
+<div class="tiles" style="margin-top:16px">
+  <div class="tile"><div class="label">Ottelut</div><div class="value">{{ standing.games }}</div></div>
+  <div class="tile"><div class="label">V–H</div><div class="value">{{ standing.wins }}–{{ standing.losses }}</div></div>
+  <div class="tile hero"><div class="label">Pisteet</div><div class="value">{{ standing.points }}</div></div>
+  <div class="tile"><div class="label">Juoksuero</div><div class="value">{{ "%+d" | format(standing.run_diff) }}</div></div>
 </div>
 {% endif %}
 
-<h2>{{ t("tm.players") }}</h2>
-<div class="card">
-<table>
-  <thead>
-    <tr><th class="name">{{ t("th.player") }}</th><th>{{ t("th.games") }}</th><th>{{ t("th.turns") }}</th><th>K</th><th>L</th><th>T</th>
-        <th>Tehot</th><th>KL%</th><th>TEHO+</th></tr>
-  </thead>
-  <tbody>
-    {% for l in roster %}
-    <tr>
-      <td class="name"><a href="/player/{{ l.player_id }}">{{ l.name }}</a></td>
-      <td>{{ l.games }}</td><td>{{ l.turns_at_bat }}</td>
-      <td>{{ l.kunnarit }}</td><td>{{ l.lyodyt }}</td><td>{{ l.tuodut }}</td>
-      <td>{{ l.tehot }}</td><td>{{ l.kl_pct | rate }}</td><td>{{ l.teho_plus }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<h2 class="sech" style="margin-top:{{ '4px' if standing else '20px' }}">Pelaajat</h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:420px">
+      <thead>
+        <tr>
+          <th class="name" style="padding-left:16px">Pelaaja</th>
+          <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
+          <th>Tehot</th><th>KL%</th><th>TEHO+</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in roster %}
+        <tr>
+          <td class="name" style="padding-left:16px">
+            <a href="/player/{{ l.player_id }}">{{ l.name }}</a>
+          </td>
+          <td>{{ l.games }}</td><td>{{ l.turns_at_bat }}</td>
+          <td>{{ l.kunnarit }}</td><td>{{ l.lyodyt }}</td><td>{{ l.tuodut }}</td>
+          <td>{{ l.tehot }}</td>
+          <td>{{ l.kl_pct | rate }}</td>
+          <td><strong>{{ l.teho_plus or "—" }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<h2>{{ t("tm.matches") }}</h2>
-<div class="card">
-<table>
-  <thead><tr><th>{{ t("th.date") }}</th><th class="name">{{ t("pl.home") | capitalize }}</th><th class="name">{{ t("pl.away") | capitalize }}</th>
-             <th>{{ t("th.result") }}</th><th>{{ t("th.periods") }}</th><th class="name">{{ t("th.stadium") }}</th></tr></thead>
-  <tbody>
-    {% for m in matches %}
-    <tr>
-      <td><a href="/match/{{ m.id }}">{{ m.date }}</a></td>
-      <td class="name">{{ m.home_team }}</td>
-      <td class="name">{{ m.away_team }}</td>
-      <td>{{ m.home_runs }}–{{ m.away_runs }}</td>
-      <td>{% if m.periods_home is not none %}{{ m.periods_home }}–{{ m.periods_away }}{% if m.tiebreak %} k{% endif %}{% else %}—{% endif %}</td>
-      <td class="name">{{ m.stadium or "—" }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<h2 class="sech">Ottelut</h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:400px">
+      <thead>
+        <tr>
+          <th class="name" style="padding-left:16px">Päivä</th>
+          <th class="name">Koti</th>
+          <th class="name">Vieras</th>
+          <th>Tulos</th><th>Erät</th>
+          <th class="name">Stadion</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in matches %}
+        <tr>
+          <td class="yr" style="padding-left:16px">
+            <a href="/match/{{ m.id }}">{{ m.date }}</a>
+          </td>
+          <td class="name">{{ m.home_team }}</td>
+          <td class="name">{{ m.away_team }}</td>
+          <td>{{ m.home_runs }}–{{ m.away_runs }}</td>
+          <td>
+            {% if m.periods_home is not none %}
+            {{ m.periods_home }}–{{ m.periods_away }}{% if m.tiebreak %} k{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="name" style="color:var(--ink3);font-size:12px">{{ m.stadium or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}

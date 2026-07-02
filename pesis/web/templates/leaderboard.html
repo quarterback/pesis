@@ -1,43 +1,81 @@
 {% extends "base.html" %}
-{% block title %}{{ t("nav.stats") }} {{ season.year }}{% endblock %}
+{% block title %}{{ season.series }} {{ season.year }}{% endblock %}
 {% block content %}
-<h1>{{ season.series }} {{ season.year }}</h1>
-<p class="sub">{{ t("lb.sub") }}</p>
+<div class="page-hd">
+  <h1>{{ season.series }} {{ season.year }}</h1>
+  <p class="sub">Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).</p>
+</div>
 
-<div class="filters">
+<div class="controls">
+  <span class="ctl-lab">Sarja</span>
+  <div class="sel-wrap">
+    <select class="season-sel" onchange="location=this.value">
+      {% for series_name, group in seasons | groupby('series') %}
+      <optgroup label="{{ series_name }}">
+        {% for s in group %}
+        <option value="?stat={{ stat }}&sid={{ s.id }}"
+          {{ 'selected' if s.id == season.id }}>{{ s.year }}</option>
+        {% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+<div class="toolbar">
+  <span class="ctl-lab">Järjestä</span>
   {% for s in stats %}
-  <a href="?stat={{ s }}&amp;sid={{ season.id }}" class="{{ 'active' if s == stat }}">{{ s }}</a>
+  <a href="?stat={{ s }}&sid={{ season.id }}" class="{{ 'active' if s == stat }}">{{ s }}</a>
   {% endfor %}
-</div>
-<div class="filters">
-  {% for s in seasons %}
-  <a href="?stat={{ stat }}&amp;sid={{ s.id }}" class="{{ 'active' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
-  {% endfor %}
+  <span style="flex:1"></span>
+  <a class="csv-link" href="/leaderboard.csv?stat={{ stat }}&sid={{ season.id }}">↓ CSV</a>
 </div>
 
-<p class="sub"><a href="/leaderboard.csv?stat={{ stat }}&amp;sid={{ season.id }}">{{ t("lb.csv") }}</a></p>
-<div class="card">
-<table>
-  <thead>
-    <tr><th>#</th><th class="name">{{ t("th.player") }}</th><th class="name">{{ t("th.team") }}</th>
-        <th>{{ t("th.games") }}</th><th>{{ t("th.turns") }}</th><th>K</th><th>L</th><th>T</th><th>Tehot</th>
-        <th>KL%</th><th>TEHO+</th><th>{{ stat }}</th></tr>
-  </thead>
-  <tbody>
-    {% for l in lines %}
-    <tr>
-      <td>{{ loop.index }}</td>
-      <td class="name"><a href="/player/{{ l.player_id }}">{{ l.name }}</a></td>
-      <td class="name"><a href="/team/{{ l.team }}">{{ l.team }}</a></td>
-      <td>{{ l.games }}</td><td>{{ l.turns_at_bat }}</td>
-      <td>{{ l.kunnarit }}</td><td>{{ l.lyodyt }}</td><td>{{ l.tuodut }}</td>
-      <td>{{ l.tehot }}</td>
-      <td>{{ l.kl_pct | rate }}</td>
-      <td>{{ l.teho_plus }}</td>
-      <td><strong>{{ l[stat] | rate if l[stat] is float else l[stat] }}</strong></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="lbwrap">
+  <table class="lb">
+    <thead>
+      <tr>
+        <th style="width:36px">#</th>
+        <th class="name">Pelaaja</th>
+        <th class="name">Joukkue</th>
+        <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
+        <th>Tehot</th><th>KL%</th>
+        {% if stat not in ('teho_plus','kl_pct','kunnarit','lyodyt','tuodut','tehot') %}
+        <th>{{ stat }}</th>
+        {% endif %}
+        <th>TEHO+</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set maxtp = (lines[0].teho_plus or 200) if lines else 200 %}
+      {% for l in lines %}
+      <tr>
+        <td>
+          {% if loop.first %}<span class="rk">1</span>
+          {% else %}<span style="color:var(--ink3);font-size:12px">{{ loop.index }}</span>{% endif %}
+        </td>
+        <td class="name"><a class="pl" href="/player/{{ l.player_id }}">{{ l.name }}</a></td>
+        <td class="name"><a href="/team/{{ l.team }}" style="color:var(--ink3);font-size:12px">{{ l.team }}</a></td>
+        <td>{{ l.games }}</td>
+        <td>{{ l.turns_at_bat }}</td>
+        <td>{{ l.kunnarit }}</td><td>{{ l.lyodyt }}</td><td>{{ l.tuodut }}</td>
+        <td>{{ l.tehot }}</td>
+        <td>{{ l.kl_pct | rate }}</td>
+        {% if stat not in ('teho_plus','kl_pct','kunnarit','lyodyt','tuodut','tehot') %}
+        <td><strong>{{ l[stat] | rate if l[stat] is float else l[stat] }}</strong></td>
+        {% endif %}
+        <td>
+          <div class="tehocell">
+            <span class="tv">{{ l.teho_plus }}</span>
+            {% if l.teho_plus %}
+            {% set bw = [(l.teho_plus * 52 // (maxtp or 200)), 52]|min %}
+            <span class="teho-bar" style="width:{{ [bw, 3]|max }}px"></span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}
