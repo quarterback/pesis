@@ -182,6 +182,7 @@ function renderNav() {
   html += `<a href="#/?sid=${statsSid}"${onStats?' class="active"':''}>Tilastot</a>`;
   html += `<a href="#/projections?sid=${defaultSid}"${page==='#/projections'?' class="active"':''}>PARE-ennusteet</a>`;
   html += `<a href="#/league?sid=${defaultSid}"${page==='#/league'?' class="active"':''}>Sarjataulukko</a>`;
+  html += `<a href="#/glossary"${page==='#/glossary'?' class="active"':''}>Kaava</a>`;
   html += `<a href="#/about"${page==='#/about'?' class="active"':''}>About</a>`;
   nav.innerHTML = html;
 }
@@ -697,26 +698,26 @@ async function showTeam(teamRaw, sid) {
 function showAbout() {
   main().innerHTML = `
     <div class="page">
-      <h1>About</h1>
+      <h1>Tietoa</h1>
       <div class="prose">
-        <p class="lead">Like my entire Finnish baseball fandom, this site came together mostly as an
-        accident. I've been wondering for a very long time what advanced metrics in pesäpallo, released
-        to the actual public, would look like. The sport is inherently noisy for a bat &amp; ball sport
-        (only around 30ish games per year) but the best players rise to the occasion and you can make
-        sense of it all very quickly.</p>
-        <p>So I've decided to use the pesistulokset data service metrics and come up with the
-        first-ever analytics site for pesis. Does anyone need this? Probably not. But I know lots of
-        pesis fans also watch baseball, NFL and other sports, they might bet on games, they might be
-        fans of fantasy sports. I know for a fact this is true — I've played in two different fantasy
-        leagues with Finns for NFL and MLB.</p>
-        <p>So maybe for us it's overdue. If you're new to pesis, this is a chance for you to start to
-        contextualize it. As an avid watcher, my translation layer between baseball and pesis is my
-        favorite thing to do, because both sports help you appreciate the other because they are truly
-        cousins in a way that nothing else is. Not quite as close as American football is to Canadian
-        football, but certainly the only thing closer to baseball than softball is Finnish baseball.
-        Alas, you'll watch and learn.</p>
+        <p class="lead">Koko suomalaisen pesäpallofanitukseni tavoin tämäkin sivusto syntyi enimmäkseen
+        vahingossa. Olen pitkään miettinyt, miltä pesäpallon edistyneet mittarit näyttäisivät, jos ne
+        julkaistaisiin kaikkien nähtäville. Laji on maila-pallopeliksi luonnostaan hälyistä (vain noin
+        30 ottelua kaudessa), mutta parhaat pelaajat nousevat esiin ja kokonaisuudesta saa nopeasti
+        tolkun.</p>
+        <p>Niinpä päätin käyttää pesistulokset-palvelun tilastoja ja rakentaa ensimmäisen pesäpallon
+        analytiikkasivuston. Tarvitseeko tätä kukaan? Luultavasti ei. Mutta tiedän, että moni pesisfani
+        seuraa myös baseballia, NFL:ää ja muita lajeja — he saattavat lyödä vetoa otteluista tai pelata
+        fantasialiigoja. Tiedän tämän varmasti: olen itse pelannut kahdessa eri fantasialiigassa
+        suomalaisten kanssa, NFL:ssä ja MLB:ssä.</p>
+        <p>Ehkä tämä on siis meille myöhässä. Jos pesäpallo on sinulle uutta, tässä on tilaisuus alkaa
+        hahmottaa sitä. Innokkaana katsojana lempipuuhaani on baseballin ja pesäpallon välinen
+        käännöskerros, sillä molemmat lajit auttavat arvostamaan toista — ne ovat serkuksia tavalla,
+        jollaista ei löydy mistään muualta. Eivät aivan yhtä lähellä kuin amerikkalainen ja kanadalainen
+        jalkapallo, mutta pehmopalloa lukuun ottamatta mikään ei ole baseballia lähempänä kuin
+        pesäpallo. No, katsomalla oppii.</p>
         <p>
-          <a href="https://blog.ronbronson.com/my-pesapallo-story">My pesäpallo story</a> ·
+          <a href="https://blog.ronbronson.com/my-pesapallo-story">Pesäpallotarinani</a> ·
           <a href="https://www.superpesis.fi/ajankohtaista/superpesis-yhdysvaltalainen-ron-bronson-toteutti-unelmansa-ja-matkusti-suomeen-katsomaan-pesapalloa">Superpesis: Ron Bronson toteutti unelmansa</a>
         </p>
       </div>

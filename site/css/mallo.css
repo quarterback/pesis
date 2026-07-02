@@ -12,18 +12,16 @@
    ============================================================================ */
 
 /* ----------------------------------------------------------------------------
-   FONTS — Fontspace faces plug in here. Uncomment the @font-face blocks, point
-   them at your downloaded files, and the two variables cascade everywhere.
-   Until then the stack falls back to the system stand-ins below.
+   FONTS — Fontshare faces (loaded via <link> to api.fontshare.com in index.html):
+   Clash Display (heavy grotesque) for the wordmark / titles / big stat numbers,
+   Satoshi for body/UI. Numbers/labels keep a system monospace so stat columns
+   align on tabular figures (Fontshare has no strong tabular mono). No Google
+   Fonts. System stacks remain as fallbacks if Fontshare fails to load.
    ---------------------------------------------------------------------------- */
-/*
-@font-face { font-family:"Mallo Display"; src:url("/static/fonts/display.woff2") format("woff2"); font-weight:700 900; font-display:swap; }
-@font-face { font-family:"Mallo Mono";    src:url("/static/fonts/mono.woff2")    format("woff2"); font-weight:400 700; font-display:swap; }
-*/
 :root{
-  --font-display:/* "Mallo Display", */ "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono:   /* "Mallo Mono",    */ ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-  --font-body:   "Helvetica Neue", Helvetica, system-ui, sans-serif;
+  --font-display: "Red Hat Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-body:    "Plus Jakarta Sans", "Helvetica Neue", Helvetica, system-ui, sans-serif;
 
   /* Brand palette (fixed across themes) */
   --apricot:#f9dbbd; --candy:#ffa5ab; --rose:#da627d; --berry:#a53860; --bordeaux:#450920;
@@ -117,9 +115,9 @@ a:hover{ text-decoration:underline; }
    ---------------------------------------------------------------------------- */
 header{ background:var(--bar); border-bottom:1px solid var(--line-hd);
         padding:16px 26px; display:flex; align-items:center; justify-content:space-between; }
-header .brand{ font-family:var(--font-display); font-weight:800; font-size:24px;
-               letter-spacing:-.035em; color:var(--ink-strong); line-height:1; }
-header .brand .dot{ color:var(--brand-dot); }               /* the "." after Mallo */
+header .brand{ font-family:var(--font-display); font-weight:900; font-style:italic; font-size:25px;
+               letter-spacing:-.03em; color:var(--ink-strong); line-height:1; }
+header .brand .dot{ color:var(--brand-dot); font-style:italic; }   /* the "." after Mallo */
 header .navwrap{ display:flex; align-items:center; gap:22px; }
 header nav{ display:flex; gap:20px; }
 header nav a{ color:var(--nav-ink); font-size:13px; }
