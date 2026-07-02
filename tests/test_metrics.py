@@ -38,6 +38,17 @@ def test_teho_plus_is_league_indexed():
     assert by_name == {"A": 67, "B": 133}
 
 
+def test_value_stats_accumulate_above_replacement():
+    conn, sid = _build()
+    lines = {l["name"]: l for l in metrics.season_lines(conn, sid)}
+    # B out-produces A, so its runs/wins above replacement are higher
+    assert lines["B"]["jyk"] > lines["A"]["jyk"]
+    assert lines["B"]["vyk"] > lines["A"]["vyk"]
+    assert lines["B"]["raa"] > lines["A"]["raa"]
+    # value stats are counting/accumulating, distinct from the TEHO+ rate index
+    assert lines["B"]["jyk"] != lines["B"]["teho_plus"]
+
+
 def test_percentiles_flip_for_negative_stats():
     conn, sid = _build()
     lines = metrics.season_lines(conn, sid)
