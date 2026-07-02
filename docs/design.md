@@ -111,6 +111,13 @@ and that recent evidence outweighs old.
   everything else needs string tables, not per-page forks.
 - Keep the baseball translation page standalone-shareable (self-explanatory
   with the primer on-page, no context needed from the rest of the site).
+- Layout reference: darko.app's current site — hero cards over the table
+  (best record / finals favorite / lottery odds), Standard↔Detailed toggle,
+  a distribution sidebar next to leaderboards, CSV download on every table.
+  Our `/league` and leaderboard pages should grow toward that shape.
+- **Schedule-length honesty**: Superpesis plays ~30 regular-season games
+  (one MLB month). Any cross-sport pace/counting display must carry the
+  extrapolation factor; rate stats and percentiles are the primary framing.
 
 ### Roadmap, in dependency order
 

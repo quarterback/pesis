@@ -59,6 +59,11 @@ WRC_TIERS = ((75, "replacement level"), (90, "bench bat"),
              (110, "league-average regular"), (125, "solid starter"),
              (140, "All-Star"), (160, "MVP candidate"))
 MLB_SEASON_GAMES = 162
+# A Superpesis regular season is ~30 games — almost exactly one month of MLB
+# baseball. The 162-game pace is therefore a ~5.5× extrapolation and is
+# presented as pace trivia, not a projection; the quantile-mapped rate stats
+# above it are the real translation (they're schedule-length-free).
+SUPERPESIS_SEASON_GAMES = 30
 
 
 def _quantile_value(pct: int, mean: float, sd: float, direction: int) -> float:
@@ -108,6 +113,7 @@ def translate_player(conn: sqlite3.Connection, player_id: int,
         "HR": round(line["kunnarit"] * MLB_SEASON_GAMES / games),
         "RBI": round(line["lyodyt"] * MLB_SEASON_GAMES / games),
         "R": round(line["tuodut"] * MLB_SEASON_GAMES / games),
+        "extrapolation": round(MLB_SEASON_GAMES / max(games, 1), 1),
     }
     wrc = line["teho_plus"]
     return {"player_id": player_id, "name": line["name"], "team": line["team"],
