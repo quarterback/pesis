@@ -89,24 +89,35 @@ tr:hover td { background: color-mix(in srgb, var(--grid) 40%, transparent); }
 .b2 .inklabel, .b3 .inklabel, .b4 .inklabel { color: var(--ink-1); }
 .badge.b2, .badge.b3, .badge.b4 { color: var(--ink-1); background: var(--surface-1);
   box-shadow: 0 0 0 2px var(--baseline); }
-/* fangraph (playoff odds over time) */
+/* D3 charts */
 :root { --cat1: #2a78d6; --cat2: #1baf7a; --cat3: #eda100; --cat4: #008300; }
 @media (prefers-color-scheme: dark) {
   :root { --cat1: #3987e5; --cat2: #199e70; --cat3: #c98500; --cat4: #008300; }
 }
-.fangraph polyline { fill: none; stroke-width: 2; stroke-linejoin: round;
-                     stroke-linecap: round; }
-.fangraph .muted { stroke: var(--baseline); opacity: .55; stroke-width: 1.5; }
-.fangraph .s0 { stroke: var(--cat1); } .fangraph .s1 { stroke: var(--cat2); }
-.fangraph .s2 { stroke: var(--cat3); } .fangraph .s3 { stroke: var(--cat4); }
-.fangraph .grid { stroke: var(--grid); stroke-width: 1; }
-.fangraph text { font-size: 11px; fill: var(--ink-2); }
-.fangraph .axis { fill: var(--ink-3); }
-/* sparkline */
-.spark line { stroke: var(--grid); stroke-width: 1; }
-.spark polyline { fill: none; stroke: var(--series-1); stroke-width: 2;
-                  stroke-linejoin: round; stroke-linecap: round; }
-.spark circle { fill: var(--series-1); stroke: var(--surface-1); stroke-width: 2; }
+.fg-line { fill: none; stroke-width: 2; stroke-linejoin: round;
+           stroke-linecap: round; }
+.fg-muted { stroke: var(--baseline); opacity: .5; stroke-width: 1.5; }
+.fg-dot { stroke: var(--surface-1); stroke-width: 2; }
+.fg-label { font-size: 11px; font-weight: 600; fill: var(--ink-1); }
+.fg-cross { stroke: var(--baseline); stroke-width: 1; }
+.axis text { font-size: 11px; fill: var(--ink-3); }
+.axis line, .axis path { stroke: var(--grid); }
+.axis .domain { display: none; }
+.chart-tip {
+  position: absolute; pointer-events: none; z-index: 10;
+  background: var(--surface-1); color: var(--ink-1);
+  border: 1px solid var(--grid); border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; line-height: 1.6;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12); min-width: 130px;
+}
+.chart-tip .d { color: var(--ink-3); margin-bottom: 2px; }
+.chart-tip b { float: right; margin-left: 14px;
+               font-variant-numeric: tabular-nums; }
+.chart-tip .k { display: inline-block; width: 8px; height: 8px;
+                border-radius: 4px; margin-right: 6px; }
+.minis { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 700px) { .minis { grid-template-columns: 1fr; } }
+.mini .label { font-size: 12px; color: var(--ink-3); margin-bottom: 2px; }
 footer { color: var(--ink-3); font-size: 12px; text-align: center; margin: 32px 0; }
 </style>
 </head>
@@ -126,5 +137,6 @@ footer { color: var(--ink-3); font-size: 12px; text-align: center; margin: 32px 
   </nav>
 </header>
 <main>{% block content %}{% endblock %}</main>
+{% block scripts %}{% endblock %}
 </body>
 </html>

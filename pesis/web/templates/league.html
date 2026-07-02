@@ -44,31 +44,13 @@
 </table>
 </div>
 
-{% if graph %}
+{% if graph_json %}
 <h2>Pudotuspelitodennäköisyys kauden aikana <span style="font-weight:400;color:var(--ink-3)">(simuloitu viikoittain)</span></h2>
 <div class="card">
-  <svg class="fangraph" width="{{ graph.width }}" height="{{ graph.height }}"
-       role="img" aria-label="Pudotuspelitodennäköisyydet viikoittain">
-    <line class="grid" x1="0" y1="{{ graph.y100 }}" x2="{{ graph.plot_w }}" y2="{{ graph.y100 }}"/>
-    <line class="grid" x1="0" y1="{{ (graph.y0 + graph.y100) / 2 }}" x2="{{ graph.plot_w }}" y2="{{ (graph.y0 + graph.y100) / 2 }}"/>
-    <line class="grid" x1="0" y1="{{ graph.y0 }}" x2="{{ graph.plot_w }}" y2="{{ graph.y0 }}"/>
-    <text class="axis" x="2" y="{{ graph.y100 - 3 }}">100%</text>
-    <text class="axis" x="2" y="{{ graph.y0 + 12 }}">0%</text>
-    {% for s in graph.series %}
-    <polyline class="{{ 's' ~ s.slot if s.slot is not none else 'muted' }}"
-              points="{{ s.points }}"><title>{{ s.team }}</title></polyline>
-    {% endfor %}
-    {% for s in graph.series if s.slot is not none %}
-    <circle cx="{{ s.end[0] }}" cy="{{ s.end[1] }}" r="3" class="s{{ s.slot }}"
-            style="fill: var(--cat{{ s.slot + 1 }}); stroke: var(--surface-1); stroke-width: 2"/>
-    <text x="{{ s.end[0] + 8 }}" y="{{ s.label_y }}"
-          style="fill: var(--ink-1); font-weight: 600">{{ s.team }}</text>
-    {% endfor %}
-    <text class="axis" x="0" y="{{ graph.height - 2 }}">{{ graph.first }}</text>
-    <text class="axis" x="{{ graph.plot_w - 70 }}" y="{{ graph.height - 2 }}">{{ graph.last }}</text>
-  </svg>
+  <div id="fangraph"></div>
   <p class="sub" style="margin:8px 0 0">Neljä parasta väreissä, muut harmaina.
-  Jokainen piste = kauden tilanne sinä päivänä, 300 simulointia jäljellä olleesta ohjelmasta.</p>
+  Jokainen piste = kauden tilanne sinä päivänä, 300 simulointia jäljellä olleesta ohjelmasta.
+  Vie hiiri käyrien päälle nähdäksesi kaikkien joukkueiden todennäköisyydet.</p>
 </div>
 {% endif %}
 
@@ -99,4 +81,15 @@
 <p class="sub" style="margin:10px 0 0">Sää joka ottelusta suoraan tulospalvelun datasta —
 kenttäkertoimia tai säävaikutuksia ei ole aiemmin julkaistu pesäpallosta.</p>
 </div>
+{% endblock %}
+{% block scripts %}
+{% if graph_json %}
+<script src="/static/d3.v7.min.js"></script>
+<script src="/static/charts.js"></script>
+<script type="application/json" id="fangraph-data">{{ graph_json | safe }}</script>
+<script>
+renderFangraph(document.getElementById("fangraph"),
+               JSON.parse(document.getElementById("fangraph-data").textContent));
+</script>
+{% endif %}
 {% endblock %}

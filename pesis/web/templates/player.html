@@ -54,15 +54,13 @@
 </div>
 {% endif %}
 
-{% if spark %}
-<h2>Kärkilyönti-% urakehitys</h2>
+{% if career | length > 1 %}
+<h2>Urakehitys</h2>
 <div class="card">
-  <svg class="spark" width="{{ spark.width }}" height="{{ spark.height }}"
-       role="img" aria-label="Kärkilyöntiprosentti kausittain">
-    <line x1="0" y1="{{ spark.height - 5 }}" x2="{{ spark.width }}" y2="{{ spark.height - 5 }}"/>
-    <polyline points="{{ spark.points }}"/>
-    <circle cx="{{ spark.end[0] }}" cy="{{ spark.end[1] }}" r="4"/>
-  </svg>
+  <div class="minis">
+    <div class="mini"><div class="label">Kärkilyönti-%</div><div id="career-kl"></div></div>
+    <div class="mini"><div class="label">TEHO+</div><div id="career-teho"></div></div>
+  </div>
 </div>
 {% endif %}
 
@@ -152,4 +150,18 @@
 <p class="sub" style="margin:10px 0 0">Ennuste = eksponentiaalisesti painotettu havainto regressoituna
 sarjakeskiarvoon. Pieni otos → lähellä keskiarvoa; iso otos → lähellä havaittua.</p>
 </div>
+{% endblock %}
+{% block scripts %}
+{% if career | length > 1 %}
+<script src="/static/d3.v7.min.js"></script>
+<script src="/static/charts.js"></script>
+<script type="application/json" id="career-data">{{ career_json | safe }}</script>
+<script>
+const seasons = JSON.parse(document.getElementById("career-data").textContent);
+renderCareer(document.getElementById("career-kl"), seasons, "kl_pct",
+             { label: "KL%", fmt: d3.format(".3f") });
+renderCareer(document.getElementById("career-teho"), seasons, "teho_plus",
+             { label: "TEHO+", fmt: d3.format("d") });
+</script>
+{% endif %}
 {% endblock %}

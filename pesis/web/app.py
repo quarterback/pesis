@@ -1,8 +1,8 @@
 """Flask UI: FanGraphs-style leaderboards, Savant-style player pages.
 
-Server-rendered, no JS chart library — percentile bars are HTML/CSS, the
-career sparkline is inline SVG built here. Reads the same SQLite store the
-CLI writes.
+Percentile bars are HTML/CSS; time-series charts (the playoff-odds fangraph,
+career minis) are D3, vendored under static/ and fed page-embedded JSON.
+Reads the same SQLite store the CLI writes.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import sqlite3
 
 import csv
 import io
+import json
 import os
 
 from flask import Flask, Response, abort, g, render_template, request
@@ -40,68 +41,6 @@ def pct_bucket(pct: int | None) -> int | None:
         if pct < ceiling:
             return i
     return 6
-
-
-def sparkline(values: list[float], width: int = 220, height: int = 44,
-              pad: int = 5) -> dict | None:
-    """Points for an inline-SVG line (2px stroke, ringed end dot)."""
-    vals = [v for v in values if v is not None]
-    if len(vals) < 2:
-        return None
-    lo, hi = min(vals), max(vals)
-    span = (hi - lo) or 1.0
-    step = (width - 2 * pad) / (len(values) - 1)
-    pts = [
-        (round(pad + i * step, 1),
-         round(height - pad - (height - 2 * pad) * (v - lo) / span, 1))
-        for i, v in enumerate(values) if v is not None
-    ]
-    return {"points": " ".join(f"{x},{y}" for x, y in pts), "end": pts[-1],
-            "width": width, "height": height}
-
-
-def fangraph(history: dict, width: int = 680, height: int = 260,
-             pad: int = 8, label_w: int = 90, highlights: int = 4) -> dict | None:
-    """Geometry for the playoff-odds-over-time chart (inline SVG).
-
-    Teams finishing with the top odds get categorical colors + direct end
-    labels; the rest render muted — 12 equally-loud lines would be spaghetti.
-    """
-    dates, teams = history.get("dates"), history.get("teams")
-    if not dates or len(dates) < 2 or not teams:
-        return None
-    plot_w = width - label_w
-    step = (plot_w - 2 * pad) / (len(dates) - 1)
-
-    def xy(i, v):
-        return (round(pad + i * step, 1),
-                round(pad + (height - 2 * pad) * (1 - v / 100), 1))
-
-    ranked = sorted(teams, key=lambda t: teams[t][-1], reverse=True)
-    series = []
-    for rank, team in enumerate(ranked):
-        pts = [xy(i, v) for i, v in enumerate(teams[team])]
-        series.append({
-            "team": team,
-            "points": " ".join(f"{x},{y}" for x, y in pts),
-            "end": pts[-1],
-            "slot": rank if rank < highlights else None,
-        })
-    series.reverse()  # draw muted lines first, highlights on top
-
-    # de-collide end labels: several teams often converge to 100%
-    prev = -99.0
-    for s in sorted((s for s in series if s["slot"] is not None),
-                    key=lambda s: s["end"][1]):
-        y = max(12.0, s["end"][1] + 4)
-        if y - prev < 13:
-            y = prev + 13
-        s["label_y"] = min(y, height - 4)
-        prev = s["label_y"]
-
-    return {"series": series, "width": width, "height": height,
-            "first": dates[0], "last": dates[-1],
-            "y0": xy(0, 0)[1], "y100": xy(0, 100)[1], "plot_w": plot_w}
 
 
 def create_app(db_path: str | None = None) -> Flask:
@@ -324,9 +263,12 @@ def create_app(db_path: str | None = None) -> Flask:
         # mid-season default demo: suggest a cutoff that leaves games to play
         same_series = [s["id"] for s in all_seasons
                        if s["series"] == season["series"]]
+        history = cached_odds_history(season["id"])
         return render_template("league.html", table=table, season=season,
                                seasons=all_seasons, as_of=as_of,
-                               graph=fangraph(cached_odds_history(season["id"])),
+                               graph_json=(json.dumps(history)
+                                           if len(history.get("dates", [])) > 1
+                                           else None),
                                parks=context.park_factors(c, same_series),
                                weather=context.weather_effects(c, same_series))
 
@@ -344,7 +286,9 @@ def create_app(db_path: str | None = None) -> Flask:
         metrics.add_percentiles(season_lines)
         line = next(l for l in season_lines if l["player_id"] == player_id)
         proj = projection.project_player(c, player_id)
-        spark = sparkline([s["kl_pct"] for s in career])
+        career_json = json.dumps([
+            {"year": s["year"], "kl_pct": s["kl_pct"], "teho_plus": s["teho_plus"]}
+            for s in career])
         base_lines = metrics.base_kl_lines(c, current["season_id"])
         metrics.add_percentiles(base_lines, stats=tuple(metrics.BASE_KL_LABELS))
         base_kl = next((b for b in base_lines if b["player_id"] == player_id), None)
@@ -352,7 +296,7 @@ def create_app(db_path: str | None = None) -> Flask:
                            for k in metrics.BASE_KL_LABELS):
             base_kl = None  # no per-base data (demo league)
         return render_template("player.html", player=row, career=career,
-                               line=line, proj=proj, spark=spark,
+                               line=line, proj=proj, career_json=career_json,
                                pct_stats=PCT_STATS,
                                base_kl=base_kl,
                                base_labels=metrics.BASE_KL_LABELS,
