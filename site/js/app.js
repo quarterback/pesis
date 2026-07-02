@@ -34,8 +34,25 @@ const STAT_LABEL = {
   kl_base0:'1 % (1→2)', kl_base1:'2 % (2→3)',
   kl_base2:'3 % (3→koti)', kl_base3:'K % (kotiutus)',
   teho_plus:'TEHO+', teho_plus_adj:'kTEHO+',
+  vyk:'VYK', jyk:'JYK', raa:'RAA',
   tehot:'Tehot', kunnarit:'Kunnarit', lyodyt:'Lyödyt', tuodut:'Tuodut',
 };
+
+// Finnish fielding code → baseball position (shown next to every player).
+// null = jokeri (no fielding position) → DH.
+const POS_MAP = {
+  L:'P', S:'C', '1V':'1B', '2V':'2B', '3V':'3B',
+  '3P':'LSS', '2P':'RSS', '3K':'LF', '2K':'RF', J:'DH',
+};
+const POS_ORDER = ['P','C','1B','2B','3B','LSS','RSS','LF','RF','DH'];
+function posLabel(code) { return code ? (POS_MAP[code] || code) : 'DH'; }
+
+// Contact address assembled at runtime — no literal email (and no "@") lives in
+// the source, so source/regex scrapers come up empty; only a JS-executing client
+// ever sees the real address.
+function contactAddr() {
+  return ['ron', ['ronbronson', 'com'].join('.')].join(String.fromCharCode(64));
+}
 
 async function fetchJSON(url) {
   if (_cache[url]) return _cache[url];
@@ -59,6 +76,7 @@ function qs(params) {
 function main() { return document.getElementById('main'); }
 
 function loading() {
+  if (typeof closeSarja === 'function') closeSarja();
   main().innerHTML = '<div class="empty"><div class="big">Ladataan…</div></div>';
 }
 
@@ -87,6 +105,92 @@ function seasonSelHtml(allSeasons, curSid, baseHash, extraParam) {
     <select class="sel" onchange="location.hash=this.value.slice(1)">${opts}</select>`;
 }
 
+/* ── Leaderboard controls: Sarja (division) + sex + Kausi ─────────────────── */
+// We only import Superpesis and Ykköspesis — no lower tiers.
+const TIERS = ['Superpesis', 'Ykköspesis'];
+
+function parseSeries(series) {
+  if (series.startsWith('Miesten ')) return { sex: 'M', tier: series.slice(8) };
+  if (series.startsWith('Naisten ')) return { sex: 'N', tier: series.slice(8) };
+  return { sex: null, tier: series };
+}
+
+function leaderboardControls(sid, view) {
+  const seasons = META.seasons;
+  const cur = seasons.find(s => s.id === sid) || seasons[0];
+  const { sex: curSex, tier: curTier } = parseSeries(cur.series);
+  const curYear = cur.year;
+  const vq = view === 'lukkari' ? '&view=lukkari' : '';  // preserve view across series/season switches
+  const find = (sex, tier, year) => seasons.find(s => {
+    const p = parseSeries(s.series);
+    return p.sex === sex && p.tier === tier && s.year === year;
+  });
+
+  // Sarja popover: Miehet / Naiset columns × available tiers
+  const col = (sex, label) => {
+    const items = TIERS.map(tier => {
+      const m = find(sex, tier, curYear);
+      if (!m) return '';   // tier not imported for this sex/year — omit entirely
+      const on = sex === curSex && tier === curTier ? ' class="on"' : '';
+      return `<button${on} onclick="location.hash='/?sid=${m.id}${vq}'">${tier}</button>`;
+    }).join('');
+    return `<div class="col"><div class="colh">${label}</div>${items}</div>`;
+  };
+  const sarja = `<span class="lab">Sarja</span>
+    <div class="dropwrap">
+      <button class="seldrop" type="button" onclick="toggleSarja(event)">${curTier}<span class="caret"></span></button>
+      <div class="menu" id="sarjaMenu" style="display:none">${col('M','Miehet')}${col('N','Naiset')}</div>
+    </div>`;
+
+  // Lyöjät / Lukkarit — batting vs pitching leaderboard
+  const modeSeg = `<div class="seg">
+    <a href="#/?sid=${sid}"${view!=='lukkari'?' class="on"':''}>Lyöjät</a>
+    <a href="#/?sid=${sid}&view=lukkari"${view==='lukkari'?' class="on"':''}>Lukkarit</a>
+  </div>`;
+
+  // Miehet / Naiset segmented — same tier, other sex
+  const seg = ['M', 'N'].map(sex => {
+    const m = find(sex, curTier, curYear);
+    const label = sex === 'M' ? 'Miehet' : 'Naiset';
+    if (!m) return `<a class="disabled" aria-disabled="true" style="opacity:.4;pointer-events:none">${label}</a>`;
+    return `<a href="#/?sid=${m.id}${vq}"${sex===curSex?' class="on"':''}>${label}</a>`;
+  }).join('');
+
+  // Kausi — years available for the current series (sex + tier)
+  const years = seasons
+    .filter(s => { const p = parseSeries(s.series); return p.sex === curSex && p.tier === curTier; })
+    .sort((a, b) => b.year - a.year);
+  const yearOpts = years.map(s =>
+    `<option value="#/?sid=${s.id}${vq}"${s.id===sid?' selected':''}>${s.year}</option>`).join('');
+
+  return `<div class="controls">
+    ${sarja}
+    ${modeSeg}
+    <div class="seg">${seg}</div>
+    <span class="spacer"></span>
+    <span class="lab">Kausi</span>
+    <select class="sel" onchange="location.hash=this.value.slice(1)">${yearOpts}</select>
+  </div>`;
+}
+
+function closeSarja() {
+  const m = document.getElementById('sarjaMenu');
+  if (m) m.style.display = 'none';
+  const b = document.getElementById('menuback');
+  if (b) b.remove();
+}
+
+window.toggleSarja = function (e) {
+  e.stopPropagation();
+  const m = document.getElementById('sarjaMenu');
+  if (!m) return;
+  if (m.style.display !== 'none') { closeSarja(); return; }
+  m.style.display = 'flex';
+  const b = document.createElement('div');
+  b.className = 'menuback'; b.id = 'menuback'; b.onclick = closeSarja;
+  document.body.appendChild(b);
+};
+
 /* ── Nav ─────────────────────────────────────────────────────────────────── */
 function renderNav() {
   const nav = document.getElementById('nav');
@@ -95,12 +199,11 @@ function renderNav() {
   const page = hash.split('?')[0];
   const curSid = parseInt(qs('sid') || '0', 10);
 
-  let html = '';
-  for (const s of META.nav_seasons) {
-    const isOn = (page === '#/' || page === '#/leaderboard') && curSid === s.id;
-    html += `<a href="#/?sid=${s.id}"${isOn?' class="active"':''}>${s.series}</a>`;
-  }
   const defaultSid = META.nav_seasons[0]?.id || '';
+  const statsSid = curSid || defaultSid;
+  const onStats = page === '#/' || page === '#/leaderboard' || page === '#/player' || page === '#/team';
+  let html = '';
+  html += `<a href="#/?sid=${statsSid}"${onStats?' class="active"':''}>Tilastot</a>`;
   html += `<a href="#/projections?sid=${defaultSid}"${page==='#/projections'?' class="active"':''}>PARE-ennusteet</a>`;
   html += `<a href="#/league?sid=${defaultSid}"${page==='#/league'?' class="active"':''}>Sarjataulukko</a>`;
   html += `<a href="#/glossary"${page==='#/glossary'?' class="active"':''}>Kaava</a>`;
@@ -137,25 +240,101 @@ function pctBar(pct, label, val) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   Interactive table — click-to-sort columns (toggle direction) + pagination
+══════════════════════════════════════════════════════════════════════════ */
+const PAGE_SIZES = [10, 20, 50];
+function makeTable(mount, cfg) {
+  const byKey = {};
+  cfg.columns.forEach(c => (byKey[c.key] = c));
+  let sortKey = cfg.sort.key, sortDir = cfg.sort.dir || -1;   // -1 desc, +1 asc
+  let pageSize = cfg.pageSize || 20, page = 0;
+
+  function sortRows() {
+    const col = byKey[sortKey];
+    const rows = [...cfg.rows];
+    rows.sort((a, b) => {
+      let av = col.get(a), bv = col.get(b);
+      if (typeof av === 'string' || typeof bv === 'string') {
+        av = (av || '').toString().toLowerCase(); bv = (bv || '').toString().toLowerCase();
+        return av < bv ? -sortDir : av > bv ? sortDir : 0;
+      }
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;   // nulls always last
+      if (bv == null) return -1;
+      return av < bv ? -sortDir : av > bv ? sortDir : 0;
+    });
+    return rows;
+  }
+
+  function render() {
+    const rows = sortRows();
+    const total = rows.length;
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    if (page >= pages) page = pages - 1;
+    const start = page * pageSize;
+    const pageRows = rows.slice(start, start + pageSize);
+
+    const thead = cfg.columns.map(c => {
+      const on = c.key === sortKey;
+      const arrow = on ? (sortDir < 0 ? ' ↓' : ' ↑') : '';
+      const cls = [c.sortable === false ? '' : 'sortable', c.thClass || '', on ? 'sorted' : '']
+        .filter(Boolean).join(' ');
+      return `<th class="${cls}" data-k="${c.key}">${c.label}${arrow}</th>`;
+    }).join('');
+    const body = pageRows.map((r, i) => {
+      const gi = start + i;
+      const tds = cfg.columns.map(c => c.cell(r, gi)).join('');
+      return `<tr class="${cfg.rowClass ? cfg.rowClass(r, gi) : ''}">${tds}</tr>`;
+    }).join('');
+    const from = total ? start + 1 : 0, to = Math.min(start + pageSize, total);
+    const sizeOpts = PAGE_SIZES.map(s => `<option value="${s}"${s===pageSize?' selected':''}>${s}</option>`).join('');
+
+    mount.innerHTML = `
+      <div class="tbl-card"><table><thead><tr>${thead}</tr></thead><tbody>${body}</tbody></table></div>
+      <div class="pager">
+        <span class="pinfo">${from}–${to} / ${total}</span>
+        <span class="psize">Näytä <select class="sel">${sizeOpts}</select></span>
+        <span class="pnav">
+          <button class="pbtn pprev"${page<=0?' disabled':''}>‹ Edell.</button>
+          <span class="ppage">${page+1} / ${pages}</span>
+          <button class="pbtn pnext"${page>=pages-1?' disabled':''}>Seur. ›</button>
+        </span>
+      </div>`;
+
+    mount.querySelectorAll('th.sortable').forEach(th => th.onclick = () => {
+      const k = th.dataset.k;
+      if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = -1; }
+      page = 0; render();
+    });
+    mount.querySelector('.psize select').onchange = e => { pageSize = +e.target.value; page = 0; render(); };
+    mount.querySelector('.pprev').onclick = () => { if (page > 0) { page--; render(); } };
+    mount.querySelector('.pnext').onclick = () => { if (page < pages - 1) { page++; render(); } };
+  }
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    LEADERBOARD
 ══════════════════════════════════════════════════════════════════════════ */
-async function showLeaderboard(sid, stat) {
+async function showLeaderboard(sid, stat, posFilter) {
+  posFilter = posFilter || '';
   const data = await fetchJSON(`data/leaderboard/${sid}.json`);
   const season = data.season;
   const players = data.players;
-  const STATS = data.stats || ['teho_plus','teho_plus_adj','tehot','kl_pct',
-    'saatto_pct','eten_pct','kunnarit','lyodyt','tuodut','palo_rate'];
+  const STATS = data.stats || ['vyk','jyk','spark_index','adv_plus','runner_plus','out_avoid_plus',
+    'money_kl_plus','adv1_pct','adv2_pct','adv3_pct','adv_home_pct',
+    'adv1_plus','adv2_plus','adv3_plus','adv_home_plus','teho_plus','teho_plus_adj'];
 
   if (!stat || !STATS.includes(stat)) stat = STATS[0];
 
-  // stats where lower = better
-  const LOWER_BETTER = new Set(['palo_rate']);
-  // stats that are plain index numbers (no decimal formatting)
+  // every Mallo metric is "higher = better" (indices centred on 100)
+  const LOWER_BETTER = new Set();
+  // stats shown as plain numbers (indices + value stats), not .xxx rates
   const INDEX_STATS = new Set(['spark_index','adv_plus','runner_plus','out_avoid_plus',
     'money_kl_plus','adv1_plus','adv2_plus','adv3_plus','adv_home_plus',
-    'teho_plus','teho_plus_adj','kunnarit','lyodyt','tuodut','tehot']);
+    'teho_plus','teho_plus_adj','vyk','jyk','raa']);
 
-  const sorted = [...players].filter(p => p.turns_at_bat >= 40)
+  let sorted = [...players].filter(p => p.turns_at_bat >= 40)
     .sort((a,b) => {
       const av = a[stat], bv = b[stat];
       if (av === null && bv === null) return 0;
@@ -164,78 +343,81 @@ async function showLeaderboard(sid, stat) {
       return LOWER_BETTER.has(stat) ? av - bv : bv - av;
     });
 
+  // position filter (baseball position); options built from the qualified pool
+  const posPresent = POS_ORDER.filter(p => sorted.some(l => posLabel(l.pos) === p));
+  if (posFilter) sorted = sorted.filter(l => posLabel(l.pos) === posFilter);
+  const posQ = posFilter ? `&pos=${posFilter}` : '';
+  const posOpts = [`<option value="">Kaikki paikat</option>`].concat(
+    posPresent.map(p => `<option value="${p}"${p===posFilter?' selected':''}>${p}</option>`)).join('');
+  const posSel = `<span class="lab">Paikka</span>
+    <select class="sel" onchange="location.hash='/?sid=${sid}&stat=${stat}'+(this.value?'&pos='+this.value:'')">${posOpts}</select>`;
+
   const pills = STATS.map(s =>
-    `<a href="#" onclick="nav('leaderboard',${sid},'${s}');return false;"
+    `<a href="#/?sid=${sid}&stat=${s}${posQ}"
        class="${s===stat?'active':''}">${STAT_LABEL[s]||s}</a>`).join('');
 
-  // determine what to show in the "featured" column (replaces TEHO+ when sorting by something else)
+  // SPARK + TEHO+ are the always-on anchors; the sorted stat gets its own
+  // highlighted column unless it is already one of the anchors.
   const featuredStat = stat;
-  const showTehoBar = ['teho_plus','teho_plus_adj'].includes(stat);
-  const showTehoAlways = !['kunnarit','lyodyt','tuodut','tehot'].includes(stat);
+  const ANCHOR_STATS = ['spark_index', 'teho_plus'];
+  const showFeat = !ANCHOR_STATS.includes(stat);
+  const maxFeat = Math.max(...sorted.map(x => Math.abs(x[featuredStat] || 0)), 1e-9);
+  const sparkMax = Math.max(...sorted.map(x => Math.abs(x.spark_index || 0)), 1e-9);
+  const featTh = STAT_LABEL[stat] || stat;
 
-  let rows = '';
-  sorted.forEach((l, i) => {
-    const fv = l[featuredStat];
-    let featCell;
-    if (showTehoBar) {
-      const barW = Math.min(Math.round((fv||0)/2.1), 100);
-      featCell = `<div class="teho-cell">
-        <span class="val">${fv??'—'}</span>
-        <span class="bar"><i style="width:${barW}%"></i></span>
-      </div>`;
-    } else {
-      featCell = `<span class="val">${fv===null||fv===undefined?'—':INDEX_STATS.has(stat)?fv:rate(fv)}</span>`;
-    }
-    const tehoExtra = showTehoAlways && !showTehoBar
-      ? `<td class="num">${l.teho_plus??'—'}</td>` : '';
-    rows += `<tr${i===0?' class="leader"':''}>
-      <td><span class="rank">${i===0?'1':i+1}</span></td>
-      <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a></td>
-      <td class="name team"><a href="#/team/${encodeURIComponent(l.team)}?sid=${sid}">${l.team||'—'}</a></td>
-      <td class="num">${l.games}</td><td class="num">${l.turns_at_bat}</td>
-      <td class="num">${l.kunnarit}</td><td class="num">${l.lyodyt}</td><td class="num">${l.tuodut}</td>
-      <td class="num">${l.tehot}</td>
-      <td class="num">${rate(l.kl_pct)}</td>
-      ${tehoExtra}
-      <td>${featCell}</td>
-    </tr>`;
-  });
+  const barCell = (v, max) => {
+    const w = v == null ? 0 : Math.min(Math.abs(v) / max * 100, 100);
+    return `<td><div class="teho-cell"><span class="val">${v??'—'}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
+  };
+  const cols = [
+    {key:'rank', label:'#', sortable:false, get:()=>0, cell:(r,i)=>`<td><span class="rank">${i+1}</span></td>`},
+    {key:'name', label:'Pelaaja', thClass:'name', get:r=>r.name,
+     cell:r=>`<td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a> <span class="pos">${posLabel(r.pos)}</span></td>`},
+    {key:'team', label:'Joukkue', thClass:'name', get:r=>r.team,
+     cell:r=>`<td class="name team"><a href="#/team/${encodeURIComponent(r.team)}?sid=${sid}">${r.team||'—'}</a></td>`},
+    {key:'games', label:'O', get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
+    {key:'turns_at_bat', label:'Vuorot', get:r=>r.turns_at_bat, cell:r=>`<td class="num">${r.turns_at_bat}</td>`},
+    {key:'spark_index', label:'SPARK', get:r=>r.spark_index, cell:r=>barCell(r.spark_index, sparkMax)},
+    {key:'teho_plus', label:'TEHO+', get:r=>r.teho_plus, cell:r=>`<td class="num">${r.teho_plus??'—'}</td>`},
+  ];
+  if (showFeat) cols.push({key:stat, label:featTh, get:r=>r[stat], cell:r=>{
+    const fv=r[stat], isIdx=INDEX_STATS.has(stat);
+    const shown = fv==null?'—':isIdx?fv:rate(fv);
+    const w = fv==null?0:Math.min(Math.abs(fv)/maxFeat*100,100);
+    return `<td><div class="teho-cell"><span class="val">${shown}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
+  }});
 
-  const featTh = STAT_LABEL[stat]||stat;
-  const tehoExtraTh = showTehoAlways && !showTehoBar ? `<th>TEHO+</th>` : '';
-
-  const subText = ['spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
-    'adv1_plus','adv2_plus','adv3_plus','adv_home_plus'].includes(stat)
+  const subText = ['vyk','jyk','raa'].includes(stat)
+    ? 'VYK = voitot yli korvaajan (pesäpallon WAR-vastine), JYK = juoksut yli korvaajan — kertyviä arvomittareita. Vähintään 40 lyöntivuoroa.'
+    : ['spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
+       'adv1_plus','adv2_plus','adv3_plus','adv_home_plus'].includes(stat)
     ? 'Mallo-mittarit: 100 = sarjan keskiarvo, yli 100 parempi. Vähintään 40 lyöntivuoroa.'
     : 'Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).';
 
   main().innerHTML = `
-    <div class="controls">
-      ${seasonSelHtml(META.seasons, sid, '/', `&stat=${stat}`)}
-    </div>
+    ${leaderboardControls(sid, '')}
     <div class="page" style="padding-bottom:6px">
-      <h1>${season.series} ${season.year}</h1>
+      <h1>${parseSeries(season.series).tier} ${season.year}</h1>
       <p class="sub">${subText}</p>
     </div>
     <div class="filters">
       <span class="lab">Järjestä</span>
       ${pills}
       <span class="spacer"></span>
+      ${posSel}
       <a href="#" onclick="dlLB(${sid},'${stat}');return false;">↓ CSV</a>
     </div>
-    <table>
-      <thead><tr>
-        <th style="width:36px">#</th>
-        <th class="name">Pelaaja</th><th class="name">Joukkue</th>
-        <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-        <th>Tehot</th><th>KL%</th>${tehoExtraTh}<th>${featTh}</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+    <div id="lb-table"></div>`;
+
+  makeTable(document.getElementById('lb-table'), {
+    columns: cols, rows: sorted, sort: { key: stat, dir: -1 },
+    rowClass: (r, gi) => gi === 0 ? 'leader' : '',
+  });
 
   window.dlLB = function(sid, stat) {
-    const cols = ['name','team','games','turns_at_bat','kunnarit','lyodyt','tuodut',
-                  'tehot','kl_pct','saatto_pct','eten_pct','palo_rate','teho_plus','teho_plus_adj'];
+    const cols = ['name','team','games','turns_at_bat','vyk','jyk','raa',
+                  'spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
+                  'adv1_pct','adv2_pct','adv3_pct','adv_home_pct','teho_plus','teho_plus_adj'];
     downloadCSV(sorted, cols, `${season.series}-${season.year}-${stat}.csv`);
   };
   window.nav = function(page, sid, stat) {
@@ -244,34 +426,75 @@ async function showLeaderboard(sid, stat) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   LUKKARIT — pitcher run-prevention leaderboard
+══════════════════════════════════════════════════════════════════════════ */
+async function showLukkarit(sid) {
+  const data = await fetchJSON(`data/lukkari/${sid}.json`);
+  const season = data.season;
+  const lk = data.lukkarit || [];
+  const maxRp = Math.max(...lk.map(l => Math.abs(l.lukkari_rp || 0)), 1e-9);
+
+  const cols = [
+    {key:'rank', label:'#', sortable:false, get:()=>0, cell:(r,i)=>`<td><span class="rank">${i+1}</span></td>`},
+    {key:'name', label:'Pelaaja', thClass:'name', get:r=>r.name,
+     cell:r=>`<td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a> <span class="pos">P</span></td>`},
+    {key:'team', label:'Joukkue', thClass:'name', get:r=>r.team,
+     cell:r=>`<td class="name team"><a href="#/team/${encodeURIComponent(r.team)}?sid=${sid}">${r.team||'—'}</a></td>`},
+    {key:'lukkari_games', label:'Ott.', get:r=>r.lukkari_games, cell:r=>`<td class="num">${r.lukkari_games}</td>`},
+    {key:'runs_allowed', label:'Päästetyt', get:r=>r.runs_allowed, cell:r=>`<td class="num">${r.runs_allowed}</td>`},
+    {key:'lra', label:'LRA', get:r=>r.lra, cell:r=>`<td class="num">${r.lra!=null?r.lra.toFixed(2):'—'}</td>`},
+    {key:'lra_minus', label:'LRA-', get:r=>r.lra_minus, cell:r=>`<td class="num">${r.lra_minus??'—'}</td>`},
+    {key:'lukkari_rp', label:'RP', get:r=>r.lukkari_rp, cell:r=>{
+      const w = Math.min(Math.abs(r.lukkari_rp||0)/maxRp*100,100);
+      return `<td><div class="teho-cell"><span class="val">${r.lukkari_rp??'—'}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
+    }},
+  ];
+
+  main().innerHTML = `
+    ${leaderboardControls(sid, 'lukkari')}
+    <div class="page" style="padding-bottom:6px">
+      <h1>${parseSeries(season.series).tier} ${season.year} <span class="muted">· Lukkarit</span></h1>
+      <p class="sub">Lukkarin juoksujenesto: RP = juoksut estetty yli sarjan keskiarvon (kertyvä, suurempi parempi). LRA = päästetyt juoksut/ottelu, LRA- indeksinä (100 = keskiarvo, pienempi parempi). Vähintään 3 lukkariottelua. ERA-tyylinen silta kunnes syöttödata on saatavilla.</p>
+    </div>
+    ${lk.length ? `<div id="lk-table"></div>` : `<div class="page"><p class="sub">Ei lukkaridataa tälle kaudelle.</p></div>`}`;
+
+  if (lk.length) makeTable(document.getElementById('lk-table'), {
+    columns: cols, rows: lk, sort: { key: 'lukkari_rp', dir: -1 },
+    rowClass: (r, gi) => gi === 0 ? 'leader' : '',
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    PROJECTIONS
 ══════════════════════════════════════════════════════════════════════════ */
 async function showProjections(sid) {
-  const data = await fetchJSON(`data/projections/${sid}.json`);
-  const season = data.season;
-  const projs = data.projections;
+  // PARE is forward-looking — projections exist for the current season only, so
+  // restrict the selector to this year's series (avoids 404s on historical years).
+  const maxYear = Math.max(...META.seasons.map(s => s.year));
+  const curSeasons = META.seasons.filter(s => s.year === maxYear);
+  if (!curSeasons.some(s => s.id === sid)) sid = curSeasons[0]?.id;
 
-  let rows = '';
-  projs.forEach((p, i) => {
-    const barW = Math.min(Math.round((p.teho_plus_proj||0)/2.1), 100);
-    rows += `<tr${i===0?' class="leader"':''}>
-      <td><span class="rank">${i===0?'1':i+1}</span></td>
-      <td class="name"><a class="player" href="#/player/${p.player_id}">${p.name}</a></td>
-      <td class="num">${p.age||'—'}</td>
-      <td class="num">${rate(p.stats?.kl_pct?.rate)}</td>
-      <td class="num">${rate(p.stats?.saatto_pct?.rate)}</td>
-      <td class="num">${rate(p.stats?.eten_pct?.rate)}</td>
-      <td class="num">${rate(p.stats?.palo_rate?.rate)}</td>
-      <td><div class="teho-cell">
-        <span class="val">${p.teho_plus_proj}</span>
-        <span class="bar"><i style="width:${barW}%"></i></span>
-      </div></td>
-    </tr>`;
-  });
+  const data = await fetchJSON(`data/projections/${sid}.json`);
+  const projs = data.projections;
+  const maxProj = Math.max(...projs.map(p => Math.abs(p.teho_plus_proj || 0)), 1e-9);
+
+  const cols = [
+    {key:'rank', label:'#', sortable:false, get:()=>0, cell:(r,i)=>`<td><span class="rank">${i+1}</span></td>`},
+    {key:'name', label:'Pelaaja', thClass:'name', get:r=>r.name,
+     cell:r=>`<td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a></td>`},
+    {key:'ekl', label:'eKL%', get:r=>r.stats?.kl_pct?.rate, cell:r=>`<td class="num">${rate(r.stats?.kl_pct?.rate)}</td>`},
+    {key:'esaatto', label:'eSaatto%', get:r=>r.stats?.saatto_pct?.rate, cell:r=>`<td class="num">${rate(r.stats?.saatto_pct?.rate)}</td>`},
+    {key:'eeten', label:'eEtenemis%', get:r=>r.stats?.eten_pct?.rate, cell:r=>`<td class="num">${rate(r.stats?.eten_pct?.rate)}</td>`},
+    {key:'epalo', label:'ePalo%', get:r=>r.stats?.palo_rate?.rate, cell:r=>`<td class="num">${rate(r.stats?.palo_rate?.rate)}</td>`},
+    {key:'eteho', label:'eTEHO+', thClass:'extra', get:r=>r.teho_plus_proj, cell:r=>{
+      const w = Math.min(Math.abs(r.teho_plus_proj||0)/maxProj*100,100);
+      return `<td><div class="teho-cell"><span class="val">${r.teho_plus_proj}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
+    }},
+  ];
 
   main().innerHTML = `
     <div class="controls">
-      ${seasonSelHtml(META.seasons, sid, '/projections')}
+      ${seasonSelHtml(curSeasons, sid, '/projections')}
     </div>
     <div class="page" style="padding-bottom:6px">
       <h1>PARE-ennusteet</h1>
@@ -279,15 +502,12 @@ async function showProjections(sid) {
       eksponentiaalisesti painotettuna + regressio sarjakeskiarvoon.
       Ei mielivaltaisia "viimeiset N ottelua" -rajauksia.</p>
     </div>
-    <table>
-      <thead><tr>
-        <th style="width:34px">#</th>
-        <th class="name">Pelaaja</th>
-        <th>Ikä</th><th>eKL%</th><th>eSaatto%</th>
-        <th>eEtenemis%</th><th>ePalo%</th><th class="extra">eTEHO+</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+    <div id="pr-table"></div>`;
+
+  makeTable(document.getElementById('pr-table'), {
+    columns: cols, rows: projs, sort: { key: 'eteho', dir: -1 },
+    rowClass: (r, gi) => gi === 0 ? 'leader' : '',
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -301,19 +521,21 @@ async function showLeague(sid) {
   const parks = data.parks;
   const weather = data.weather;
 
-  let standRows = '';
-  table.forEach((t, i) => {
-    const diff = t.run_diff >= 0 ? `+${t.run_diff}` : `${t.run_diff}`;
-    standRows += `<tr>
-      <td>${i+1}</td>
-      <td class="name"><a href="#/team/${encodeURIComponent(t.team)}?sid=${sid}">${t.team}</a></td>
-      <td class="num">${t.games}</td><td class="num">${t.wins}</td>
-      <td class="num">${t.ties??'—'}</td><td class="num">${t.losses}</td>
-      <td class="num"><strong>${t.points}</strong></td>
-      <td class="num">${t.runs_for}–${t.runs_against}</td>
-      <td class="num ${t.run_diff>=0?'pos':'neg'}">${diff}</td>
-    </tr>`;
-  });
+  const standCols = [
+    {key:'rank', label:'#', sortable:false, get:()=>0, cell:(r,i)=>`<td>${i+1}</td>`},
+    {key:'team', label:'Joukkue', thClass:'name', get:r=>r.team,
+     cell:r=>`<td class="name"><a href="#/team/${encodeURIComponent(r.team)}?sid=${sid}">${r.team}</a></td>`},
+    {key:'games', label:'O', get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
+    {key:'wins', label:'V', get:r=>r.wins, cell:r=>`<td class="num">${r.wins}</td>`},
+    {key:'ties', label:'T', get:r=>r.ties, cell:r=>`<td class="num">${r.ties??'—'}</td>`},
+    {key:'losses', label:'H', get:r=>r.losses, cell:r=>`<td class="num">${r.losses}</td>`},
+    {key:'points', label:'Pisteet', get:r=>r.points, cell:r=>`<td class="num"><strong>${r.points}</strong></td>`},
+    {key:'runs', label:'Juoksut', sortable:false, get:r=>r.run_diff, cell:r=>`<td class="num">${r.runs_for}–${r.runs_against}</td>`},
+    {key:'run_diff', label:'±', get:r=>r.run_diff, cell:r=>{
+      const diff = r.run_diff>=0?`+${r.run_diff}`:`${r.run_diff}`;
+      return `<td class="num ${r.run_diff>=0?'pos':'neg'}">${diff}</td>`;
+    }},
+  ];
 
   let parkRows = '';
   for (const p of (parks||[])) {
@@ -348,16 +570,7 @@ async function showLeague(sid) {
       </div></div>` : ''}
     <div class="page" style="padding-top:0">
       <h2>Sarjataulukko</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th>#</th><th class="name">Joukkue</th>
-            <th>O</th><th>V</th><th>T</th><th>H</th>
-            <th>Pisteet</th><th>Juoksut</th><th>±</th>
-          </tr></thead>
-          <tbody>${standRows}</tbody>
-        </table>
-      </div>
+      <div id="lg-standings"></div>
       <h2>Kenttäkertoimet <span class="muted">(100 = neutraali)</span></h2>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
@@ -381,6 +594,10 @@ async function showLeague(sid) {
       </div>
     </div>`;
 
+  makeTable(document.getElementById('lg-standings'), {
+    columns: standCols, rows: table, sort: { key: 'points', dir: -1 }, pageSize: 50,
+  });
+
   if (history && typeof renderFangraph === 'function') {
     const el = document.getElementById('fangraph');
     if (el) renderFangraph(el, history);
@@ -395,7 +612,7 @@ const BASE_KL_KEYS = ['kl_base0','kl_base1','kl_base2','kl_base3'];
 
 async function showPlayer(pid) {
   const data = await fetchJSON(`data/players/${pid}.json`);
-  const {player, career, line, proj, career_json, base_kl, base_keys, log, comps} = data;
+  const {player, career, line, proj, translation, career_json, base_kl, base_keys, comps} = data;
 
   const projTile = proj?.teho_plus_proj
     ? `<div class="tile"><div class="label">PARE enn.</div><div class="value">${proj.teho_plus_proj}</div></div>` : '';
@@ -421,12 +638,13 @@ async function showPlayer(pid) {
   for (const s of career) {
     careerRows += `<tr>
       <td class="name">${s.year}</td>
-      <td class="num">${s.age||'—'}</td>
       <td class="num">${s.games}</td><td class="num">${s.turns_at_bat}</td>
-      <td class="num">${s.kunnarit}</td><td class="num">${s.lyodyt}</td><td class="num">${s.tuodut}</td>
-      <td class="num">${s.tehot}</td>
-      <td class="num">${rate(s.kl_pct)}</td><td class="num">${rate(s.saatto_pct)}</td>
-      <td class="num">${rate(s.eten_pct)}</td><td class="num">${rate(s.palo_rate)}</td>
+      <td class="num strong">${s.vyk??'—'}</td>
+      <td class="num">${s.spark_index??'—'}</td>
+      <td class="num">${s.adv_plus??'—'}</td>
+      <td class="num">${s.runner_plus??'—'}</td>
+      <td class="num">${s.out_avoid_plus??'—'}</td>
+      <td class="num">${s.money_kl_plus??'—'}</td>
       <td class="num extra">${s.teho_plus??'—'}</td>
       <td class="num">${s.teho_plus_adj||'—'}</td>
     </tr>`;
@@ -464,34 +682,6 @@ async function showPlayer(pid) {
     }
   }
 
-  let logRows = '';
-  for (const g of (log||[])) {
-    logRows += `<tr>
-      <td class="name"><a href="#/match/${g.match_id}">${g.date}</a></td>
-      <td class="name">${g.opponent}</td>
-      <td style="color:var(--ink3);font-size:12px">${g.home?'K':'V'}</td>
-      <td class="num">${g.turns_at_bat}</td>
-      <td class="num">${g.kunnarit}</td><td class="num">${g.lyodyt}</td><td class="num">${g.tuodut}</td>
-      <td class="num">${g.tehot}</td>
-      <td class="num">${g.karkilyonnit}</td>
-      <td class="num">${g.karki_yritykset??g.karkilyonti_yritykset??'—'}</td>
-      <td class="num">${g.palot}</td>
-    </tr>`;
-  }
-  const logHtml = log?.length ? `
-    <h2>Ottelupäiväkirja ${line.year}</h2>
-    <div class="card" style="padding:0;overflow:hidden">
-      <table>
-        <thead><tr>
-          <th class="name">Päivä</th>
-          <th class="name">Vastustaja</th><th></th>
-          <th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-          <th>Tehot</th><th>KL</th><th>KLY</th><th>Palot</th>
-        </tr></thead>
-        <tbody>${logRows}</tbody>
-      </table>
-    </div>` : '';
-
   const careerCharts = career?.length > 1 ? `
     <h2>Urakehitys</h2>
     <div class="card">
@@ -503,19 +693,22 @@ async function showPlayer(pid) {
 
   main().innerHTML = `
     <div class="page">
-      <h1>${player.name}</h1>
+      <h1>${player.name} <span class="pos">${posLabel(line.pos)}</span></h1>
       <p class="sub">
         <a href="#/team/${encodeURIComponent(line.team)}?sid=${line.season_id}">${line.team}</a>
         ${line.age ? `· ${line.age} v` : ''}
         · kausi ${line.year}
+        ${translation ? `· <a href="#/baseball/${pid}">⚾ Baseball →</a>` : ''}
       </p>
       <div class="tiles">
         <div class="tile"><div class="label">Ottelut</div><div class="value">${line.games}</div></div>
-        <div class="tile"><div class="label">Kunnarit</div><div class="value">${line.kunnarit}</div></div>
-        <div class="tile"><div class="label">Tehot K+L+T</div><div class="value">${line.tehot}</div></div>
-        <div class="tile hero"><div class="label">TEHO+</div><div class="value">${line.teho_plus||'—'}</div></div>
+        <div class="tile hero"><div class="label">VYK</div><div class="value">${line.vyk??'—'}</div></div>
+        <div class="tile"><div class="label">SPARK</div><div class="value">${line.spark_index??'—'}</div></div>
+        <div class="tile"><div class="label">TEHO+</div><div class="value">${line.teho_plus||'—'}</div></div>
         ${projTile}
       </div>
+      <h2>Mallo-indeksit ${line.year} <span class="muted">(100 = sarjan keskiarvo)</span></h2>
+      <div class="card"><div id="index-bars"></div></div>
       <h2>Prosenttipisteet ${line.year} <span class="muted">(sarjan vakiopelaajien joukossa)</span></h2>
       <div class="card">
         ${pctBars}
@@ -531,9 +724,8 @@ async function showPlayer(pid) {
           <div class="card" style="padding:0;overflow:hidden">
             <table>
               <thead><tr>
-                <th class="name">Kausi</th><th>Ikä</th><th>O</th><th>Vuorot</th>
-                <th>K</th><th>L</th><th>T</th><th>Tehot</th>
-                <th>KL%</th><th>Saatto%</th><th>Etenemis%</th><th>Palo%</th>
+                <th class="name">Kausi</th><th>O</th><th>Vuorot</th>
+                <th>VYK</th><th>SPARK</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th>KOTI-KL+</th>
                 <th class="extra">TEHO+</th><th title="kenttäkorjattu">kTEHO+</th>
               </tr></thead>
               <tbody>${careerRows}</tbody>
@@ -557,8 +749,19 @@ async function showPlayer(pid) {
           </div>` : ''}
         </div>
       </div>
-      ${logHtml}
     </div>`;
+
+  const ibEl = document.getElementById('index-bars');
+  if (ibEl && typeof renderIndexBars === 'function') {
+    renderIndexBars(ibEl, [
+      {label:'SPARK',    value: line.spark_index,    full:'SPARK — kärjenrakentajan kokonaisindeksi'},
+      {label:'ADV+',     value: line.adv_plus,       full:'Etenemisarvo lyöjänä'},
+      {label:'RUN+',     value: line.runner_plus,    full:'Etenijän arvo'},
+      {label:'OUT+',     value: line.out_avoid_plus, full:'Palojen välttäminen'},
+      {label:'KOTI-KL+', value: line.money_kl_plus,  full:'Kotiutuskärkilyönnit'},
+      {label:'TEHO+',    value: line.teho_plus,      full:'Tuotanto per vuoro'},
+    ]);
+  }
 
   if (career?.length > 1 && typeof renderCareer === 'function') {
     const klEl = document.getElementById('career-kl');
@@ -586,7 +789,7 @@ async function showTeam(teamRaw, sid) {
   }
 
   const data = await fetchJSON(`data/teams/${slug}-${actualSid}.json`);
-  const {team, season, roster, matches, standing} = data;
+  const {team, season, roster, standing} = data;
 
   const standingTiles = standing ? `
     <div class="tiles" style="margin-top:16px">
@@ -596,31 +799,17 @@ async function showTeam(teamRaw, sid) {
       <div class="tile"><div class="label">Juoksuero</div><div class="value">${standing.run_diff>=0?'+':''}${standing.run_diff}</div></div>
     </div>` : '';
 
-  let rosterRows = '';
-  for (const l of roster) {
-    rosterRows += `<tr>
-      <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a></td>
-      <td class="num">${l.games}</td><td class="num">${l.turns_at_bat}</td>
-      <td class="num">${l.kunnarit}</td><td class="num">${l.lyodyt}</td><td class="num">${l.tuodut}</td>
-      <td class="num">${l.tehot}</td>
-      <td class="num">${rate(l.kl_pct)}</td>
-      <td class="num extra">${l.teho_plus??'—'}</td>
-    </tr>`;
-  }
-
-  let matchRows = '';
-  for (const m of matches) {
-    const periods = m.periods_home != null
-      ? `${m.periods_home}–${m.periods_away}${m.tiebreak?' k':''}` : '—';
-    matchRows += `<tr>
-      <td><a href="#/match/${m.id}">${m.date}</a></td>
-      <td class="name">${m.home_team}</td>
-      <td class="name">${m.away_team}</td>
-      <td class="num">${m.home_runs}–${m.away_runs}</td>
-      <td class="num">${periods}</td>
-      <td class="name" style="color:var(--ink3);font-size:12px">${m.stadium||'—'}</td>
-    </tr>`;
-  }
+  const rosterCols = [
+    {key:'name', label:'Pelaaja', thClass:'name', get:r=>r.name,
+     cell:r=>`<td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a> <span class="pos">${posLabel(r.pos)}</span></td>`},
+    {key:'games', label:'O', get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
+    {key:'turns_at_bat', label:'Vuorot', get:r=>r.turns_at_bat, cell:r=>`<td class="num">${r.turns_at_bat}</td>`},
+    {key:'spark_index', label:'SPARK', get:r=>r.spark_index, cell:r=>`<td class="num strong">${r.spark_index??'—'}</td>`},
+    {key:'adv_plus', label:'ADV+', get:r=>r.adv_plus, cell:r=>`<td class="num">${r.adv_plus??'—'}</td>`},
+    {key:'runner_plus', label:'RUN+', get:r=>r.runner_plus, cell:r=>`<td class="num">${r.runner_plus??'—'}</td>`},
+    {key:'out_avoid_plus', label:'OUT+', get:r=>r.out_avoid_plus, cell:r=>`<td class="num">${r.out_avoid_plus??'—'}</td>`},
+    {key:'teho_plus', label:'TEHO+', thClass:'extra', get:r=>r.teho_plus, cell:r=>`<td class="num extra">${r.teho_plus??'—'}</td>`},
+  ];
 
   main().innerHTML = `
     <div class="page">
@@ -628,76 +817,58 @@ async function showTeam(teamRaw, sid) {
       <p class="sub">${season.series} ${season.year}</p>
       ${standingTiles}
       <h2 style="margin-top:${standing?'4px':'0'}">Pelaajat</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th class="name">Pelaaja</th>
-            <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-            <th>Tehot</th><th>KL%</th><th class="extra">TEHO+</th>
-          </tr></thead>
-          <tbody>${rosterRows}</tbody>
-        </table>
-      </div>
-      <h2>Ottelut</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th>Päivä</th>
-            <th class="name">Koti</th><th class="name">Vieras</th>
-            <th>Tulos</th><th>Erät</th><th class="name">Stadion</th>
-          </tr></thead>
-          <tbody>${matchRows}</tbody>
-        </table>
-      </div>
+      <div id="tm-roster"></div>
     </div>`;
+
+  makeTable(document.getElementById('tm-roster'), {
+    columns: rosterCols, rows: roster, sort: { key: 'spark_index', dir: -1 }, pageSize: 50,
+  });
 }
 
+
 /* ══════════════════════════════════════════════════════════════════════════
-   MATCH
+   BASEBALL TRANSLATION — concise player → MLB card
 ══════════════════════════════════════════════════════════════════════════ */
-async function showMatch(mid) {
-  const data = await fetchJSON(`data/matches/${mid}.json`);
-  const {match: m, sides} = data;
+async function showBaseball(pid) {
+  const data = await fetchJSON(`data/players/${pid}.json`);
+  const {player, line, translation: t} = data;
+  if (!t) {
+    main().innerHTML = `<div class="page"><h1>${player.name}</h1>
+      <p class="sub"><a href="#/player/${pid}">← takaisin</a> · ei baseball-käännöstä (liian vähän lyöntivuoroja).</p></div>`;
+    return;
+  }
+  const callout = (k, v, cls) => `<div class="callout"><div class="k">${k}</div><div class="v ${cls||''}">${v}</div></div>`;
+  const rows = t.rows.map(r => `<tr>
+    <td class="name">${r.pesis_label}</td>
+    <td class="num">${rate(r.pesis_value)}</td>
+    <td class="num">${r.percentile}</td>
+    <td class="num">${r.mlb_stat}</td>
+    <td class="num extra">${r.mlb_value}</td>
+  </tr>`).join('');
 
-  let html = `<div class="page">
-    <h1>${m.home_team} – ${m.away_team}</h1>
-    <p class="sub">${m.series} ${m.year} · ${m.date}${m.stadium?` · ${m.stadium}`:''}</p>
-    <div class="tiles" style="margin-top:16px">
-      <div class="tile hero"><div class="label">Tulos</div><div class="value">${m.home_runs}–${m.away_runs}</div></div>
-      ${m.temperature!=null?`<div class="tile"><div class="label">Lämpö</div><div class="value">${m.temperature}°</div></div>`:''}
-      ${m.wind!=null?`<div class="tile"><div class="label">Tuuli</div><div class="value">${m.wind} m/s</div></div>`:''}
-      ${m.attendance?`<div class="tile"><div class="label">Yleisö</div><div class="value">${m.attendance}</div></div>`:''}
-    </div>`;
-
-  for (const [team, lines] of Object.entries(sides)) {
-    let rows = '';
-    for (const l of lines) {
-      rows += `<tr>
-        <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a></td>
-        <td class="num">${l.turns_at_bat}</td>
-        <td class="num">${l.kunnarit}</td><td class="num">${l.lyodyt}</td><td class="num">${l.tuodut}</td>
-        <td class="num extra"><strong>${l.tehot}</strong></td>
-        <td class="num">${l.karkilyonnit}</td>
-        <td class="num">${rate(l.karkilyonnit&&l.karkilyonti_yritykset?l.karkilyonnit/l.karkilyonti_yritykset:null)}</td>
-        <td class="num">${l.palot}</td>
-      </tr>`;
-    }
-    html += `
-      <h2>${team}</h2>
+  main().innerHTML = `
+    <div class="page">
+      <h1>${player.name} <span class="muted">· baseball</span></h1>
+      <p class="sub"><a href="#/player/${pid}">← ${line.team} · ${line.year}</a></p>
+      <div class="callrow">
+        ${callout('wRC+ equivalent', t.wrc_plus ?? '—', 'accent')}
+        ${callout('Reads like', t.tier ?? '—')}
+        ${callout('162-game pace', `${t.pace.HR} HR · ${t.pace.RBI} RBI · ${t.pace.R} R`)}
+      </div>
+      <h2>Skill → MLB <span class="muted">(same percentile, MLB scale)</span></h2>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
           <thead><tr>
-            <th class="name">Pelaaja</th>
-            <th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-            <th class="extra">Tehot</th><th>KL</th><th>KL%</th><th>Palot</th>
+            <th class="name">Pesäpallo</th><th>Arvo</th><th>Pctile</th>
+            <th>MLB</th><th class="extra">Käännös</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
-      </div>`;
-  }
-
-  html += '</div>';
-  main().innerHTML = html;
+      </div>
+      <p class="legend">Rank-preserving quantile map — a player's percentile among qualified
+      Superpesis hitters read off at the same percentile of the MLB distribution. A translation
+      baseball fans can read, not a claim the skills transfer.</p>
+    </div>`;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -706,32 +877,16 @@ async function showMatch(mid) {
 function showAbout() {
   main().innerHTML = `
     <div class="page">
-      <h1>What is Mallo?</h1>
-      <p class="sub">The first analytics site for pesäpallo (Finnish baseball). English, because
-      the ideas came from the baseball and basketball analytics world — Finnish UI everywhere else.</p>
+      <h1>Tietoa</h1>
       <div class="prose">
-        <p class="lead">Public analytics transformed how baseball (Baseball Savant, FanGraphs,
-        Baseball-Reference) and basketball (DARKO, LEBRON) are understood — but pesäpallo, a sport
-        with a century of history and a results service that records every plate turn, has never had
-        an analytics layer. Mallo is an attempt to build one, on top of the official
-        <a href="https://www.pesistulokset.fi/">pesistulokset.fi</a> data service.</p>
-        <p><strong>PARE</strong> (Painotettu ja Regressoitu Ennuste — a nod to
-        <a href="https://www.darko.app/">DARKO</a>, its methodological parent) is a daily-updating
-        estimate of every player's true talent in every rate stat. Every game a player has ever played
-        counts, weighted by an exponential decay fitted per stat — no arbitrary "last 10 games" windows —
-        and blended with the league average in proportion to how much evidence exists.</p>
-        <p><strong>TEHO+</strong> is league-indexed production per plate turn (100 = league average,
-        150 = MVP season) in the spirit of baseball's OPS+/wRC+. <strong>kTEHO+</strong> is the
-        park-adjusted version.</p>
-        <p><strong>Percentile profiles</strong> show where a player ranks among qualified peers in each
-        skill, Baseball Savant style. <strong>Kenttäkertoimet</strong> are the sport's first published
-        park factors. <strong>Playoff odds</strong> come from Monte Carlo simulation of the remaining
-        schedule.</p>
-        <p>Data: the official pesistulokset.fi results service, per-player per-match statistics back
-        to 1991.</p>
-        <p>Open source, work in progress. The roadmap — run expectancy from play-by-play, lukkari
-        metrics, manager decision analysis, win probability — lives in
-        <code>docs/design.md</code>.</p>
+        <p class="lead">Tämä on fanisivusto, joka ottaa mallia baseballin edistyneiden tilastojen
+        sivustoista. Se on yhä vahvasti työn alla ja nojaa pesistulokset-palvelun dataan.</p>
+        <p>Ennen kaikkea kyseessä on fanikokeilu — tapani tuoda rakkaus baseball-tilastoihin
+        pesäpalloon. Ajan myötä varmasti muokkaamme mittareita ja poistamme osan, mutta tämä on
+        ensimmäinen versio, jonka kokoamisesta olin innoissani.</p>
+        <p>Jos haluat tietää hieman siitä, miten päädyin seuraamaan lajia — olen ollut fani vuodesta
+        2011 — lue <a href="https://www.superpesis.fi/ajankohtaista/superpesis-yhdysvaltalainen-ron-bronson-toteutti-unelmansa-ja-matkusti-suomeen-katsomaan-pesapalloa">juttuni Superpesiksen sivuilla</a>.</p>
+        <p>✉️ <a href="mailto:${contactAddr()}">${contactAddr()}</a></p>
       </div>
     </div>`;
 }
@@ -790,6 +945,16 @@ function showGlossary() {
           gr('KOTI-KL+','<code>100 × K % / sarjataso</code>','kotiutus-/juoksuksi muuttavat kärkilyöntiyritykset')
         )}
       </div>
+      <h2>Arvo <span class="muted">— WAR-tyyliset kertyvät mittarit</span></h2>
+      <p class="sub">Toisin kuin indeksit (per vuoro), nämä <em>kertyvät</em>: peliaika kasvattaa arvoa. Juoksuarvot johdetaan sarjan omasta juoksuympäristöstä (ridge-regressio joukkuetotaaleista), ei MLB:n painoista.</p>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('JYK','<code>juoksuarvo − korvaajataso × vuorot</code>','Juoksut Yli Korvaajan — juoksut yli vapaasti saatavilla olevan pelaajan') +
+          gr('VYK','<code>JYK / (juoksut per ottelu)</code>','Voitot Yli Korvaajan — WAR-vastine; kertyvä kokonaisarvo voittoina') +
+          gr('RAA','<code>juoksuarvo − sarjataso × vuorot</code>','juoksut yli sarjan keskiarvon (ei korvaajatasoa)')
+        )}
+        <p class="legend" style="padding:10px 16px">Ensimmäinen versio olemassa olevista koosterivistä; tarkentuu RE24-malliin kun syöttö-syötöltä-data on käytössä.</p>
+      </div>
       <h2>Indeksit</h2>
       <div class="card" style="padding:0;overflow-x:auto">
         ${gtable(
@@ -806,6 +971,26 @@ function showGlossary() {
           gr('eTEHO+','<code>100 × ennustettu tehot/V / sarjataso</code>','')
         )}
         <p class="legend" style="padding:10px 16px">e- = ennustettu · k- = kenttäkorjattu.</p>
+      </div>
+      <h2>Lukkari <span class="muted">— juoksujenesto</span></h2>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('LRA','<code>päästetyt juoksut / lukkariottelut</code>','lukkarin joukkueen päästämät juoksut per ottelu (ERA-vastine)') +
+          gr('LRA-','<code>100 × LRA / sarjan LRA</code>','100 = keskiarvo, pienempi parempi') +
+          gr('RP','<code>(sarjan LRA − LRA) × lukkariottelut</code>','juoksut estetty yli keskiarvon; kertyvä, suurempi parempi')
+        )}
+        <p class="legend" style="padding:10px 16px">ERA-tyylinen silta olemassa olevista otteluriveistä; tarkentuu kun syöttö-syötöltä-data on käytössä.</p>
+      </div>
+      <h2>Paikat <span class="muted">— pesäpallo → baseball</span></h2>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('L → P','lukkari','pitcher') +
+          gr('S → C','sieppari','catcher') +
+          gr('1V / 2V / 3V → 1B / 2B / 3B','1./2./3.-vahti','vahdit') +
+          gr('3P / 2P → LSS / RSS','3./2.-polttaja','vasen / oikea sisäkenttä (shortstop)') +
+          gr('3K / 2K → LF / RF','3./2.-koppari','vasen / oikea ulkokenttä') +
+          gr('J → DH','jokeri','lyöjä ilman kenttäpaikkaa')
+        )}
       </div>
       <h2>Muut</h2>
       <div class="card" style="padding:0;overflow-x:auto">
@@ -839,8 +1024,11 @@ async function route() {
 
     if (page === '' || page === 'leaderboard') {
       const sid = parseInt(params.sid || defaultSid, 10);
-      const stat = params.stat || 'teho_plus';
-      await showLeaderboard(sid, stat);
+      if (params.view === 'lukkari') {
+        await showLukkarit(sid);
+      } else {
+        await showLeaderboard(sid, params.stat || 'vyk', params.pos || '');
+      }
 
     } else if (page === 'projections') {
       const sid = parseInt(params.sid || defaultSid, 10);
@@ -855,15 +1043,15 @@ async function route() {
       if (!pid) throw new Error('bad player id');
       await showPlayer(pid);
 
+    } else if (page === 'baseball') {
+      const pid = parseInt(parts[1], 10);
+      if (!pid) throw new Error('bad player id');
+      await showBaseball(pid);
+
     } else if (page === 'team') {
       const teamRaw = parts[1] || '';
       const sid = params.sid ? parseInt(params.sid, 10) : null;
       await showTeam(teamRaw, sid);
-
-    } else if (page === 'match') {
-      const mid = parseInt(parts[1], 10);
-      if (!mid) throw new Error('bad match id');
-      await showMatch(mid);
 
     } else if (page === 'about') {
       showAbout();

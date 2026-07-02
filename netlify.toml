@@ -1,6 +1,8 @@
 [build]
   publish = "site"
-  command = "python export.py"
+  # Data under site/data/ is pre-built (via `python export.py`) and committed,
+  # so deploys are pure static — no build step, no DB, no Python at deploy time.
+  command = ""
 
 [[headers]]
   for = "/data/*"

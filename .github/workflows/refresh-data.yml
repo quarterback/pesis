@@ -1,0 +1,65 @@
+name: Daily data refresh
+
+# Re-ingests the current pesäpallo season from pesistulokset.fi, re-exports the
+# static site/data, and commits the diff so Vercel redeploys. Historical seasons
+# are static, so only the current year is fetched each day (polite to the API);
+# the full SQLite DB is kept in the Actions cache between runs so career pages
+# still export with complete history. If the cache is ever empty, the workflow
+# rebuilds the full 1990→ history first.
+
+on:
+  schedule:
+    - cron: '17 5 * * *'   # daily, 05:17 UTC
+  workflow_dispatch: {}     # allow manual runs from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Restore the SQLite DB (full history) from cache
+        uses: actions/cache@v4
+        with:
+          path: data/pesis.db
+          key: pesis-db-${{ github.run_id }}
+          restore-keys: |
+            pesis-db-
+
+      - name: Backfill full history if the cache was empty
+        run: |
+          if [ ! -s data/pesis.db ]; then
+            echo "No cached DB — running the one-time 1990→ backfill."
+            python -m pesis ingest-v1 --from-year 1990 --to-year "$(date +%Y)" --series all
+          fi
+
+      - name: Ingest the current season
+        run: python -m pesis ingest-v1 --year "$(date +%Y)" --series all
+
+      - name: Re-export the static data
+        run: |
+          rm -rf site/data
+          python export.py
+
+      - name: Commit and push if anything changed
+        run: |
+          git config user.name "mallo-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data
+          if git diff --cached --quiet; then
+            echo "No data changes today."
+          else
+            git commit -m "Daily data refresh ($(date -u +%F))"
+            git push
+          fi

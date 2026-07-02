@@ -12,18 +12,16 @@
    ============================================================================ */
 
 /* ----------------------------------------------------------------------------
-   FONTS — Fontspace faces plug in here. Uncomment the @font-face blocks, point
-   them at your downloaded files, and the two variables cascade everywhere.
-   Until then the stack falls back to the system stand-ins below.
+   FONTS — Fontshare faces (loaded via <link> to api.fontshare.com in index.html):
+   Clash Display (heavy grotesque) for the wordmark / titles / big stat numbers,
+   Satoshi for body/UI. Numbers/labels keep a system monospace so stat columns
+   align on tabular figures (Fontshare has no strong tabular mono). No Google
+   Fonts. System stacks remain as fallbacks if Fontshare fails to load.
    ---------------------------------------------------------------------------- */
-/*
-@font-face { font-family:"Mallo Display"; src:url("/static/fonts/display.woff2") format("woff2"); font-weight:700 900; font-display:swap; }
-@font-face { font-family:"Mallo Mono";    src:url("/static/fonts/mono.woff2")    format("woff2"); font-weight:400 700; font-display:swap; }
-*/
 :root{
-  --font-display:/* "Mallo Display", */ "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono:   /* "Mallo Mono",    */ ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-  --font-body:   "Helvetica Neue", Helvetica, system-ui, sans-serif;
+  --font-display: "Red Hat Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-body:    "Plus Jakarta Sans", "Helvetica Neue", Helvetica, system-ui, sans-serif;
 
   /* Brand palette (fixed across themes) */
   --apricot:#f9dbbd; --candy:#ffa5ab; --rose:#da627d; --berry:#a53860; --bordeaux:#450920;
@@ -117,9 +115,9 @@ a:hover{ text-decoration:underline; }
    ---------------------------------------------------------------------------- */
 header{ background:var(--bar); border-bottom:1px solid var(--line-hd);
         padding:16px 26px; display:flex; align-items:center; justify-content:space-between; }
-header .brand{ font-family:var(--font-display); font-weight:800; font-size:24px;
-               letter-spacing:-.035em; color:var(--ink-strong); line-height:1; }
-header .brand .dot{ color:var(--brand-dot); }               /* the "." after Mallo */
+header .brand{ font-family:var(--font-display); font-weight:900; font-style:italic; font-size:25px;
+               letter-spacing:-.03em; color:var(--ink-strong); line-height:1; }
+header .brand .dot{ color:var(--brand-dot); font-style:italic; }   /* the "." after Mallo */
 header .navwrap{ display:flex; align-items:center; gap:22px; }
 header nav{ display:flex; gap:20px; }
 header nav a{ color:var(--nav-ink); font-size:13px; }
@@ -212,6 +210,12 @@ td.team{ color:var(--ink3); font-size:12px; }
 th.extra, td.extra{ color:var(--accent); font-weight:700; }   /* the sorted stat pulled to the last column */
 td.extra{ font-family:var(--font-mono); }
 
+/* baseball position badge next to a player name */
+.pos{ display:inline-block; font:700 9.5px var(--font-mono); letter-spacing:.03em;
+      color:var(--ink3); background:var(--track); border-radius:4px;
+      padding:1px 5px; margin-left:5px; vertical-align:middle; }
+h1 .pos{ font-size:13px; padding:2px 7px; vertical-align:middle; }
+
 /* rank + leader row */
 .rank{ font-family:var(--font-mono); font-size:11.5px; color:var(--rank-ink); }
 tr.leader td{ background:var(--topbg); }
@@ -223,6 +227,28 @@ tr.leader .rank{ background:var(--rank-top-bg); color:var(--rank-top-ink);
 .teho-cell .val{ font-family:var(--font-mono); font-weight:700; font-size:13px; min-width:26px; text-align:right; color:var(--ink-strong); }
 .teho-cell .bar{ width:56px; height:6px; border-radius:3px; background:var(--tehobar-bg); }
 .teho-cell .bar > i{ display:block; height:100%; border-radius:3px; background:var(--tehobar-fill); box-shadow:var(--tehobar-glow); }
+
+/* stats table sits on its own surface panel, lifted off the page background */
+.tbl-card{ background:var(--surface); border:1px solid var(--surface-line); border-radius:13px;
+           box-shadow:var(--card-shadow); overflow:hidden; margin-bottom:4px; }
+/* accent-tinted dividers between rows, on every stat table (leaderboards + card tables) */
+.tbl-card thead th, .card table thead th{ background:var(--thbg); }
+.tbl-card tbody td, .card table tbody td{ border-bottom:1px solid color-mix(in srgb, var(--accent) 20%, var(--surface)); }
+.tbl-card tbody tr:last-child td, .card table tbody tr:last-child td{ border-bottom:none; }
+
+/* sortable column headers + pagination */
+th.sortable{ cursor:pointer; user-select:none; white-space:nowrap; }
+th.sortable:hover{ color:var(--ink-strong); }
+th.sorted{ color:var(--accent); }
+.pager{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:14px 2px 2px;
+        font:600 12px var(--font-body); color:var(--ink3); }
+.pager .pinfo, .pager .ppage{ font-family:var(--font-mono); }
+.pager .psize select{ margin-left:5px; }
+.pager .pnav{ display:flex; align-items:center; gap:10px; }
+.pager .pbtn{ font:600 12px var(--font-body); padding:5px 12px; border:1px solid var(--line-hd);
+              border-radius:8px; background:var(--card); color:var(--ink); cursor:pointer; }
+.pager .pbtn:disabled{ opacity:.4; cursor:default; }
+.pager .pbtn:not(:disabled):hover{ border-color:var(--accent); color:var(--accent); }
 
 /* ----------------------------------------------------------------------------
    STAT TILES  (player header)
@@ -282,6 +308,8 @@ tr.leader .rank{ background:var(--rank-top-bg); color:var(--rank-top-ink);
 .callout .k{ font:600 9px var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--label); }
 .callout .v{ font-family:var(--font-display); font-weight:800; font-size:26px; letter-spacing:-.02em; color:var(--ink-strong); margin-top:5px; }
 .callout .v.accent{ color:var(--accent); }
+.callrow{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0 8px; }
+@media(max-width:640px){ .callrow{ grid-template-columns:1fr; } }
 
 /* STANDINGS extras — playoff-odds inline bar + signed run differential */
 .odds{ display:inline-flex; align-items:center; gap:8px; justify-content:flex-end; }

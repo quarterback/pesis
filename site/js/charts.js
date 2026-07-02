@@ -113,6 +113,46 @@
       });
   };
 
+  /* ---- Mallo index bars (league-relative, 100 = average) --------------- */
+
+  window.renderIndexBars = function (container, items, baseline = 100) {
+    const rows = items.filter(d => d.value != null);
+    const el = d3.select(container);
+    el.selectAll("*").remove();
+    if (!rows.length) return;
+    const width = container.clientWidth || 640;
+    const rowH = 34, m = { top: 16, right: 40, bottom: 8, left: 92 };
+    const height = m.top + m.bottom + rows.length * rowH;
+    const svg = el.append("svg")
+      .attr("viewBox", `0 0 ${width} ${height}`).attr("width", "100%");
+    const maxV = Math.max(baseline * 1.25, d3.max(rows, d => d.value) * 1.05);
+    const x = d3.scaleLinear([0, maxV], [m.left, width - m.right]);
+    const y = d3.scaleBand(rows.map(d => d.label), [m.top, height - m.bottom]).padding(0.3);
+    const accent = css("--series-1"), muted = css("--baseline");
+
+    // league-average reference line at 100
+    svg.append("line").attr("class", "fg-base")
+      .attr("x1", x(baseline)).attr("x2", x(baseline))
+      .attr("y1", m.top - 4).attr("y2", height - m.bottom);
+    svg.append("text").attr("class", "fg-baselabel")
+      .attr("x", x(baseline)).attr("y", m.top - 7).attr("text-anchor", "middle")
+      .text(baseline);
+
+    const g = svg.selectAll("g.b").data(rows).join("g").attr("class", "b");
+    g.append("rect").attr("class", "fg-bar")
+      .attr("x", m.left).attr("y", d => y(d.label))
+      .attr("width", d => Math.max(2, x(d.value) - m.left))
+      .attr("height", y.bandwidth()).attr("rx", 3)
+      .attr("fill", d => d.value >= baseline ? accent : muted);
+    g.append("text").attr("class", "fg-cat")
+      .attr("x", m.left - 10).attr("y", d => y(d.label) + y.bandwidth() / 2)
+      .attr("dy", "0.32em").attr("text-anchor", "end").text(d => d.label);
+    g.append("text").attr("class", "fg-val")
+      .attr("x", d => x(d.value) + 6).attr("y", d => y(d.label) + y.bandwidth() / 2)
+      .attr("dy", "0.32em").text(d => d.value);
+    g.append("title").text(d => `${d.full || d.label}: ${d.value} (100 = sarjan keskiarvo)`);
+  };
+
   /* ---- career mini charts (small multiples, never a dual axis) --------- */
 
   window.renderCareer = function (container, seasons, key, opts = {}) {

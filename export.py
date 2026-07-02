@@ -9,14 +9,16 @@ The site/ directory can then be deployed to Netlify, Vercel, or any static host.
 from __future__ import annotations
 import json, re, unicodedata
 from pathlib import Path
-from pesis import context, db, metrics, projection, simulate
+from pesis import context, db, metrics, projection, simulate, translate
 
+# Mallo-native analytics only — the site is additive to pesistulokset, never a
+# clone of its counting columns (kunnarit/lyodyt/tuodut/tehot) or published rates.
+# VYK/JYK are the value stats (wins/runs above replacement — the WAR analog).
 LEADERBOARD_STATS = [
-    "spark_index", "adv_plus", "runner_plus", "out_avoid_plus", "money_kl_plus",
+    "vyk", "jyk", "spark_index", "adv_plus", "runner_plus", "out_avoid_plus", "money_kl_plus",
     "adv1_pct", "adv2_pct", "adv3_pct", "adv_home_pct",
     "adv1_plus", "adv2_plus", "adv3_plus", "adv_home_plus",
-    "teho_plus", "teho_plus_adj", "tehot", "kl_pct",
-    "saatto_pct", "eten_pct", "kunnarit", "lyodyt", "tuodut", "palo_rate",
+    "teho_plus", "teho_plus_adj",
 ]
 PCT_STATS = ["kl_pct", "saatto_pct", "eten_pct", "kunnari_rate",
              "lyoty_rate", "palo_rate", "tehot_per_turn"]
@@ -39,6 +41,48 @@ def rows_to_dicts(rows) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+# Only the fields each view actually reads — keeps the historical export small.
+ROSTER_FIELDS = ["player_id", "name", "games", "turns_at_bat", "pos",
+                 "spark_index", "adv_plus", "runner_plus", "out_avoid_plus", "teho_plus"]
+CAREER_FIELDS = ["year", "age", "games", "turns_at_bat", "vyk", "spark_index",
+                 "adv_plus", "runner_plus", "out_avoid_plus", "money_kl_plus",
+                 "teho_plus", "teho_plus_adj"]
+LEADERBOARD_PLAYER_FIELDS = (["player_id", "name", "team", "games", "turns_at_bat",
+                              "pos", "raa"] + LEADERBOARD_STATS)
+
+
+def slim(d: dict, fields) -> dict:
+    return {k: d.get(k) for k in fields}
+
+
+def translation_card(line: dict) -> dict | None:
+    """Concise player→MLB baseball translation for one season line, reusing the
+    quantile map in pesis/translate.py (percentiles must already be attached)."""
+    rows = []
+    for m in translate.MAPPINGS:
+        pct = line.get(f"pct_{m['stat']}")
+        value = line.get(m["stat"])
+        if pct is None or value is None:
+            continue
+        mlb = translate._quantile_value(pct, m["mean"], m["sd"], m["dir"])
+        rows.append({"pesis_label": m["pesis"], "pesis_value": value,
+                     "percentile": pct, "mlb_stat": m["mlb"],
+                     "mlb_value": format(mlb, m["fmt"])})
+    if not rows:
+        return None
+    games = line["games"] or 1
+    pct_prod = line.get("pct_tehot_per_turn")
+    wrc = (round(translate._quantile_value(pct_prod, 100.0, 25.0, +1))
+           if pct_prod is not None else None)
+    return {
+        "wrc_plus": wrc, "tier": translate.wrc_tier(wrc) if wrc is not None else None,
+        "rows": rows,
+        "pace": {"HR": round(line["kunnarit"] * 162 / games),
+                 "RBI": round(line["lyodyt"] * 162 / games),
+                 "R": round(line["tuodut"] * 162 / games)},
+    }
+
+
 def main():
     conn = db.connect()
     print("Exporting…")
@@ -47,6 +91,7 @@ def main():
     all_seasons = rows_to_dicts(conn.execute(
         "SELECT id, year, series FROM seasons ORDER BY year DESC, series"
     ).fetchall())
+    max_year = max((s["year"] for s in all_seasons), default=0)
     nav_seasons = rows_to_dicts(conn.execute(
         """SELECT id, year, series FROM seasons s
            WHERE year = (SELECT MAX(year) FROM seasons WHERE series = s.series)
@@ -73,9 +118,10 @@ def main():
             continue
         lines = cached_lines(sid)
 
-        # Leaderboard: all players with percentiles added
-        lb_lines = [dict(l) for l in lines]
-        metrics.add_percentiles(lb_lines)
+        # Leaderboard: qualified players only (the board hides the rest), slimmed
+        # to the fields the table/pills/CSV/position-filter actually read.
+        lb_lines = [slim(l, LEADERBOARD_PLAYER_FIELDS)
+                    for l in lines if l["turns_at_bat"] >= metrics.QUALIFY_TURNS]
         dump(OUT / "leaderboard" / f"{sid}.json", {
             "season": season,
             "stats": LEADERBOARD_STATS,
@@ -94,40 +140,44 @@ def main():
             "weather": context.weather_effects(conn, same_series),
         })
 
-        # Projections
-        league_rates = metrics.league_rates(cached_lines(sid))
-        pids = [r[0] for r in conn.execute(
-            "SELECT DISTINCT player_id FROM player_games WHERE season_id = ?",
-            (sid,)).fetchall()]
-        projs = []
-        for pid in pids:
-            p = projection.project_player(conn, pid, league=league_rates)
-            if (p["teho_plus_proj"] is not None
-                    and p["stats"]["kl_pct"]["effective_n"] >= 20):
-                projs.append(p)
-        projs.sort(key=lambda p: p["teho_plus_proj"], reverse=True)
-        dump(OUT / "projections" / f"{sid}.json", {
-            "season": season, "projections": projs[:50],
+        # Projections (PARE) — forward-looking, only meaningful for the current
+        # season, so skip the expensive projection pass for historical years.
+        if season["year"] == max_year:
+            league_rates = metrics.league_rates(cached_lines(sid))
+            pids = [r[0] for r in conn.execute(
+                "SELECT DISTINCT player_id FROM player_games WHERE season_id = ?",
+                (sid,)).fetchall()]
+            projs = []
+            for pid in pids:
+                p = projection.project_player(conn, pid, league=league_rates)
+                if (p["teho_plus_proj"] is not None
+                        and p["stats"]["kl_pct"]["effective_n"] >= 20):
+                    projs.append(p)
+            projs.sort(key=lambda p: p["teho_plus_proj"], reverse=True)
+            dump(OUT / "projections" / f"{sid}.json", {
+                "season": season, "projections": projs[:50],
+            })
+
+        # Lukkari (pitcher) run-prevention leaderboard
+        dump(OUT / "lukkari" / f"{sid}.json", {
+            "season": season, "lukkarit": metrics.lukkari_lines(conn, sid),
         })
 
-        # Teams
+        # Teams — roster ranked by SPARK (Mallo composite), unqualified players last
         teams = {l["team"] for l in lines if l.get("team")}
         for team in teams:
             roster = sorted(
                 [l for l in cached_lines(sid) if l.get("team") == team],
-                key=lambda l: l["tehot"], reverse=True)
+                key=lambda l: (l.get("spark_index") if l.get("spark_index") is not None
+                               else -1, l["tehot"]), reverse=True)
             if not roster:
                 continue
-            matches = rows_to_dicts(conn.execute(
-                """SELECT * FROM matches WHERE season_id = ?
-                   AND (home_team = ? OR away_team = ?) ORDER BY date""",
-                (sid, team, team)).fetchall())
             standing = next(
                 (t for t in simulate.standings(conn, sid) if t["team"] == team), None)
             slug = slugify(team)
             dump(OUT / "teams" / f"{slug}-{sid}.json", {
                 "team": team, "slug": slug, "season": season,
-                "roster": roster, "matches": matches, "standing": standing,
+                "roster": [slim(l, ROSTER_FIELDS) for l in roster], "standing": standing,
             })
 
         print(f"  season {season['year']} {season['series']}  "
@@ -158,6 +208,17 @@ def main():
             _league_cache[sid] = metrics.league_rates(cached_lines(sid))
         return _league_cache[sid]
 
+    _trans_cache: dict = {}
+
+    def translations_for(sid):
+        if sid not in _trans_cache:
+            tl = [dict(l) for l in cached_lines(sid)]
+            metrics.add_percentiles(tl, stats=tuple(m["stat"] for m in translate.MAPPINGS)
+                                    + ("tehot_per_turn",))
+            _trans_cache[sid] = {l["player_id"]: card for l in tl
+                                 if (card := translation_card(l))}
+        return _trans_cache[sid]
+
     # Players ordered by most recent season first — 2026 gets written before older history
     player_ids = [r[0] for r in conn.execute(
         """SELECT DISTINCT p.id FROM players p
@@ -185,7 +246,11 @@ def main():
         if not line:
             continue
 
-        proj = projection.project_player(conn, pid, league=league_rates_cached(sid))
+        # PARE projection is forward-looking — only compute it for players whose
+        # latest season is the current one (skips the expensive pass for retired
+        # players and every historical season line).
+        proj = (projection.project_player(conn, pid, league=league_rates_cached(sid))
+                if current["year"] == max_year else None)
 
         career_json = [
             {"year": s["year"], "kl_pct": s["kl_pct"], "teho_plus": s["teho_plus"]}
@@ -197,43 +262,27 @@ def main():
         if base_kl and all(base_kl.get(f"kl_base{k}_tries", 0) == 0 for k in range(4)):
             base_kl = None
 
-        game_log = metrics.game_log(conn, pid, current["season_id"])
+        # Baseball translation — current-season qualified players only
+        translation = (translations_for(sid).get(pid)
+                       if current["year"] == max_year else None)
 
         dump(out_path, {
             "player": dict(row),
-            "career": career,
+            "career": [slim(s, CAREER_FIELDS) for s in career],
             "line": line,
             "proj": proj,
+            "translation": translation,
             "career_json": career_json,
             "pct_stats": PCT_STATS,
             "base_kl": base_kl,
             "base_keys": BASE_KL_KEYS,
-            "log": [dict(g) for g in game_log],
             "comps": [],
         })
         done += 1
 
     print(f"  {len(player_ids)} player profiles  ({done} written, {skipped} skipped)")
-
-    # ── Match box scores ───────────────────────────────────────────────
-    all_matches = conn.execute(
-        "SELECT m.*, s.series, s.year FROM matches m "
-        "JOIN seasons s ON s.id = m.season_id"
-    ).fetchall()
-    for m in all_matches:
-        mid = m["id"]
-        lines = conn.execute(
-            """SELECT pg.*, p.name,
-                      pg.kunnarit + pg.lyodyt + pg.tuodut AS tehot
-               FROM player_games pg JOIN players p ON p.id = pg.player_id
-               WHERE pg.match_id = ? ORDER BY pg.team, tehot DESC""",
-            (mid,)).fetchall()
-        sides: dict = {}
-        for l in lines:
-            sides.setdefault(l["team"], []).append(dict(l))
-        dump(OUT / "matches" / f"{mid}.json", {"match": dict(m), "sides": sides})
-
-    print(f"  {len(all_matches)} match box scores")
+    # Match box scores are intentionally NOT exported — the site is additive to
+    # pesistulokset, not a re-hosting of its per-match line scores.
     print("Done.")
 
 
