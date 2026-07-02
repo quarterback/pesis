@@ -30,6 +30,7 @@ RATES = {
     "eten_pct": ("etenemiset", "eteneminen_yritykset"),
     "kunnari_rate": ("kunnarit", "turns_at_bat"),
     "lyoty_rate": ("lyodyt", "turns_at_bat"),
+    "tuotu_rate": ("tuodut", "eteneminen_yritykset"),
     "haava_rate": ("haavat", "turns_at_bat"),
     "palo_rate": ("palot", "turns_at_bat"),
 }

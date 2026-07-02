@@ -1,0 +1,17 @@
+# fly launch will offer to tweak this; the defaults below work as-is.
+app = "karki-pesis"
+primary_region = "arn"   # Stockholm — closest region to Finland
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

@@ -50,6 +50,22 @@ def upsert_player(conn: sqlite3.Connection, pid: int, name: str,
     )
 
 
+def insert_match(conn: sqlite3.Connection, season_id: int, match: dict) -> None:
+    """Store one match's context row. ``match`` keys mirror the columns; the
+    real ``/public/match`` payload carries stadium, weather, temperature and
+    spectators — map them here when wiring the real backfill."""
+    conn.execute(
+        """INSERT OR REPLACE INTO matches
+           (id, season_id, date, home_team, away_team, stadium, temperature,
+            wind, rain, attendance, home_runs, away_runs)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (match["id"], season_id, match["date"], match["home_team"],
+         match["away_team"], match.get("stadium"), match.get("temperature"),
+         match.get("wind"), match.get("rain"), match.get("attendance"),
+         match.get("home_runs"), match.get("away_runs")),
+    )
+
+
 def upsert_season(conn: sqlite3.Connection, year: int, series: str) -> int:
     conn.execute(
         "INSERT OR IGNORE INTO seasons (year, series) VALUES (?, ?)", (year, series)

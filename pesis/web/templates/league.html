@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Sarjataulukko {{ season.year }}{% endblock %}
+{% block content %}
+<h1>{{ season.series }} {{ season.year }}</h1>
+<p class="sub">
+  {% if as_of %}Tilanne {{ as_of }} · pudotuspeliprosentit 2000 simuloinnista (4 paikkaa).
+  {% else %}Koko kausi. Lisää <code>?as_of=YYYY-MM-DD</code> osoitteeseen nähdäksesi
+  pudotuspelitodennäköisyydet kesken kauden.{% endif %}
+</p>
+
+<div class="filters">
+  {% for s in seasons %}
+  <a href="?year={{ s.year }}{% if as_of %}&amp;as_of={{ as_of }}{% endif %}"
+     class="{{ 'active' if s.year == season.year }}">{{ s.year }}</a>
+  {% endfor %}
+</div>
+
+<div class="card">
+<table>
+  <thead>
+    <tr><th>#</th><th class="name">Joukkue</th><th>O</th><th>V</th><th>T</th><th>H</th>
+        <th>Pisteet</th><th>Juoksut</th><th>±</th>
+        {% if as_of %}<th>Jäljellä</th><th>Pudotuspelit-%</th>{% endif %}</tr>
+  </thead>
+  <tbody>
+    {% for t in table %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td class="name">{{ t.team }}</td>
+      <td>{{ t.games }}</td><td>{{ t.wins }}</td><td>{{ t.ties }}</td><td>{{ t.losses }}</td>
+      <td><strong>{{ t.points }}</strong></td>
+      <td>{{ t.runs_for }}–{{ t.runs_against }}</td>
+      <td>{{ "%+d" | format(t.run_diff) }}</td>
+      {% if as_of %}<td>{{ t.remaining }}</td><td><strong>{{ t.odds }}</strong></td>{% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Kenttäkertoimet <span style="font-weight:400;color:var(--ink-3)">(100 = neutraali juoksuympäristö)</span></h2>
+<div class="card">
+<table>
+  <thead><tr><th class="name">Stadion</th><th>Ottelut</th><th>Juoksua/ottelu</th><th>PF</th></tr></thead>
+  <tbody>
+    {% for p in parks %}
+    <tr><td class="name">{{ p.stadium }}</td><td>{{ p.games }}</td>
+        <td>{{ p.runs_per_game }}</td><td><strong>{{ p.pf }}</strong></td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Tuuli ja kunnarit</h2>
+<div class="card">
+<table>
+  <thead><tr><th class="name">Tuuli</th><th>Ottelut</th><th>Kunnarit/vuoro</th><th>Juoksua/ottelu</th></tr></thead>
+  <tbody>
+    {% for w in weather %}
+    <tr><td class="name">{{ w.wind }}</td><td>{{ w.games }}</td>
+        <td>{{ w.kunnari_rate }}</td><td>{{ w.runs_per_game }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="sub" style="margin:10px 0 0">Sää joka ottelusta suoraan tulospalvelun datasta —
+kenttäkertoimia tai säävaikutuksia ei ole aiemmin julkaistu pesäpallosta.</p>
+</div>
+{% endblock %}

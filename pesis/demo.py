@@ -29,6 +29,13 @@ LAST = ["Ahonen", "Hakala", "Heikkinen", "Järvinen", "Kinnunen", "Korhonen",
 TEAMS = ["Vimpeli", "Sotkamo", "Manse", "Joensuu", "Kouvola", "Hyvinkää",
          "Kempele", "Seinäjoki", "Imatra", "Alajärvi"]
 
+# latent run environment per home stadium — the ground truth that
+# context.park_factors() must recover (tests assert the ordering)
+PARK = {"Vimpeli": 1.12, "Sotkamo": 0.94, "Manse": 1.06, "Joensuu": 0.90,
+        "Kouvola": 1.00, "Hyvinkää": 1.03, "Kempele": 0.97, "Seinäjoki": 1.08,
+        "Imatra": 0.92, "Alajärvi": 1.00}
+WIND_KUNNARI = 0.05  # multiplicative kunnari boost per m/s of wind
+
 # latent talent: stat -> (league mean, between-player sd)
 TALENT = {
     "kl_rate": (0.55, 0.10),      # kärkilyönti-%
@@ -62,11 +69,15 @@ class DemoPlayer:
 
 
 def _game_row(rng: random.Random, p: DemoPlayer, year: int, match_id: int,
-              date: str, team: str, opp: str, home: bool) -> dict:
+              date: str, team: str, opp: str, home: bool,
+              park: float = 1.0, wind: float = 0.0) -> dict:
     turns = rng.choice([2, 3, 3, 4, 4, 5])
     kly = sum(rng.random() < 0.6 for _ in range(turns * 2))
     saatto_y = rng.randint(0, 3)
     eten_y = rng.randint(1, 5)
+    kunnari_p = min(0.9, p.rate("kunnari_rate", year) * park * (1 + WIND_KUNNARI * wind))
+    run_p = {stat: min(0.95, p.rate(stat, year) * park)
+             for stat in ("lyoty_rate", "tuotu_rate")}
     row = {
         "player_id": p.id, "player_name": p.name, "born_year": p.born_year,
         "match_id": match_id, "date": date, "team": team, "opponent": opp,
@@ -77,9 +88,9 @@ def _game_row(rng: random.Random, p: DemoPlayer, year: int, match_id: int,
         "saatot": sum(rng.random() < p.rate("saatto_rate", year) for _ in range(saatto_y)),
         "eteneminen_yritykset": eten_y,
         "etenemiset": sum(rng.random() < p.rate("eten_rate", year) for _ in range(eten_y)),
-        "kunnarit": sum(rng.random() < p.rate("kunnari_rate", year) for _ in range(turns)),
-        "lyodyt": sum(rng.random() < p.rate("lyoty_rate", year) for _ in range(turns)),
-        "tuodut": sum(rng.random() < p.rate("tuotu_rate", year) for _ in range(eten_y)),
+        "kunnarit": sum(rng.random() < kunnari_p for _ in range(turns)),
+        "lyodyt": sum(rng.random() < run_p["lyoty_rate"] for _ in range(turns)),
+        "tuodut": sum(rng.random() < run_p["tuotu_rate"] for _ in range(eten_y)),
         "haavat": sum(rng.random() < p.rate("haava_rate", year) for _ in range(turns)),
         "palot": sum(rng.random() < p.rate("palo_rate", year) for _ in range(turns)),
     }
@@ -115,14 +126,28 @@ def build_demo(conn: sqlite3.Connection, seed: int = 27,
             rng.shuffle(order)
             for i in range(0, len(order), 2):
                 home_team, away_team = order[i], order[i + 1]
+                park = PARK[home_team]
+                wind = round(rng.uniform(0.0, 8.0), 1)
+                temp = round(rng.uniform(11.0, 28.0), 1)
+                rain = int(rng.random() < 0.10)
+                runs = {home_team: 0, away_team: 0}
                 for team, opp, is_home in ((home_team, away_team, True),
                                            (away_team, home_team, False)):
                     for p in rosters[team]:
                         if rng.random() < 0.12:  # rests / injuries
                             continue
                         row = _game_row(rng, p, year, match_id, date.isoformat(),
-                                        team, opp, is_home)
+                                        team, opp, is_home, park=park, wind=wind)
                         ingest.insert_player_game(conn, season_id, row)
+                        runs[team] += row["tuodut"]
+                ingest.insert_match(conn, season_id, {
+                    "id": match_id, "date": date.isoformat(),
+                    "home_team": home_team, "away_team": away_team,
+                    "stadium": f"{home_team} stadion", "temperature": temp,
+                    "wind": wind, "rain": rain,
+                    "attendance": rng.randint(400, 4500),
+                    "home_runs": runs[home_team], "away_runs": runs[away_team],
+                })
                 match_id += 1
             date += datetime.timedelta(days=rng.choice([3, 3, 4]))
     conn.commit()

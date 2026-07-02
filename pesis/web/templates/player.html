@@ -2,7 +2,8 @@
 {% block title %}{{ player.name }}{% endblock %}
 {% block content %}
 <h1>{{ player.name }}</h1>
-<p class="sub">{{ line.team }}{% if line.age %} · {{ line.age }} v{% endif %} · kausi {{ line.year }}</p>
+<p class="sub">{{ line.team }}{% if line.age %} · {{ line.age }} v{% endif %} · kausi {{ line.year }}
+· <a href="/player/{{ player.id }}/baseball">Baseball translation 🇺🇸</a></p>
 
 <div class="tiles">
   <div class="tile"><div class="label">Ottelut</div><div class="value">{{ line.games }}</div></div>
@@ -67,6 +68,24 @@
   </tbody>
 </table>
 </div>
+
+{% if comps %}
+<h2>Vertailukelpoiset kaudet <span style="font-weight:400;color:var(--ink-3)">(1000 = identtinen)</span></h2>
+<div class="card">
+<table>
+  <thead><tr><th>Pisteet</th><th class="name">Pelaaja</th><th>Kausi</th><th>Ikä</th><th>TEHO+</th></tr></thead>
+  <tbody>
+    {% for c in comps %}
+    <tr>
+      <td>{{ c.score }}</td>
+      <td class="name"><a href="/player/{{ c.player_id }}">{{ c.name }}</a></td>
+      <td>{{ c.year }}</td><td>{{ c.age }}</td><td>{{ c.teho_plus }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
 
 <h2>TAHKO-ennuste ({{ proj.as_of }})</h2>
 <div class="card">

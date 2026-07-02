@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}What is Kärki?{% endblock %}
+{% block content %}
+<h1>What is Kärki?</h1>
+<p class="sub">The first analytics site for pesäpallo (Finnish baseball). English, because
+the ideas came from the baseball and basketball analytics world — Finnish UI everywhere else.</p>
+
+<div class="card" style="font-size:14px; color:var(--ink-2)">
+<p>Public analytics transformed how baseball (Baseball Savant, FanGraphs, Baseball-Reference)
+and basketball (DARKO, LEBRON) are understood — but pesäpallo, a sport with a century of
+history and a results service that records every plate turn, has never had an analytics layer.
+Kärki is an attempt to build one, on top of the official
+<a href="https://www.pesistulokset.fi/">pesistulokset.fi</a> data service.</p>
+
+<p><strong>TAHKO</strong> (named for Lauri "Tahko" Pihkala, the sport's inventor — and a nod to
+<a href="https://www.darko.app/">DARKO</a>, its methodological parent) is a daily-updating
+estimate of every player's true talent in every rate stat. Every game a player has ever played
+counts, weighted by an exponential decay fitted per stat — no arbitrary "last 10 games" windows —
+and blended with the league average in proportion to how much evidence exists. Hot streak in a
+small sample? TAHKO stays skeptical. Sustained improvement? It follows.</p>
+
+<p><strong>TEHO+</strong> is league-indexed production per plate turn (100 = league average,
+150 = MVP season) in the spirit of baseball's OPS+/wRC+ — so seasons and eras can be compared
+honestly.</p>
+
+<p><strong>Percentile profiles</strong> (the red-to-blue sliders) show where a player ranks among
+qualified peers in each skill, Baseball Savant style. <strong>Kenttäkertoimet</strong> are the
+sport's first published park factors — the results service records weather on every match, so
+wind and temperature effects are measured, not folklore. <strong>Playoff odds</strong> come from
+Monte Carlo simulation of the remaining schedule. And the
+<strong>baseball translation</strong> pages map any player's league percentiles onto MLB
+distributions, for explaining pesäpallo performances to baseball fans.</p>
+
+<p>Data: the official pesistulokset.fi API (free keys from tulospalvelu@pesis.fi), with
+per-player per-match statistics back to 1990. This instance may be running the built-in
+synthetic demo league; real-data ingest is a one-command backfill once a key is configured.</p>
+
+<p>Open source, work in progress. The roadmap — run expectancy from play-by-play, lukkari
+metrics, manager decision analysis, win probability — lives in <code>docs/design.md</code>.</p>
+</div>
+{% endblock %}

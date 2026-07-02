@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from . import db, demo, metrics, tahko
+from . import context, db, demo, metrics, similarity, simulate, tahko, translate
 
 
 def cmd_demo(args) -> None:
@@ -75,6 +75,59 @@ def cmd_fit(args) -> None:
         print(f"{spec.name:<14} beta={tuned.beta:<6} prior_strength={tuned.prior_strength}")
 
 
+def cmd_standings(args) -> None:
+    conn = db.connect(args.db)
+    sid = _season_id(conn, args.year)
+    rows = (simulate.playoff_odds(conn, sid, as_of=args.as_of, seed=args.seed)
+            if args.as_of else simulate.standings(conn, sid))
+    cols = "{:<3} {:<12} {:>3} {:>3} {:>3} {:>3} {:>4} {:>6}"
+    header = cols.format("#", "team", "G", "W", "T", "L", "pts", "diff")
+    print(header + ("   playoff%" if args.as_of else ""))
+    for i, t in enumerate(rows, 1):
+        line = cols.format(i, t["team"], t["games"], t["wins"], t["ties"],
+                           t["losses"], t["points"], t["run_diff"])
+        if args.as_of:
+            line += f"   {t['odds']:>6.1f}"
+        print(line)
+
+
+def cmd_parks(args) -> None:
+    conn = db.connect(args.db)
+    print("{:<20} {:>6} {:>10} {:>5}".format("stadium", "games", "runs/game", "PF"))
+    for p in context.park_factors(conn):
+        print("{:<20} {:>6} {:>10} {:>5}".format(
+            p["stadium"], p["games"], p["runs_per_game"], p["pf"]))
+    print()
+    print("{:<22} {:>6} {:>13} {:>10}".format("wind", "games", "kunnarit/turn", "runs/game"))
+    for w in context.weather_effects(conn):
+        print("{:<22} {:>6} {:>13} {:>10}".format(
+            w["wind"], w["games"], w["kunnari_rate"], w["runs_per_game"]))
+
+
+def cmd_comps(args) -> None:
+    conn = db.connect(args.db)
+    result = similarity.comps(conn, args.player, year=args.year, limit=args.limit)
+    if not result:
+        raise SystemExit("no qualified season for that player")
+    print("{:<5} {:<22} {:>5} {:>4} {:>6}".format("score", "player", "year", "age", "TEHO+"))
+    for c in result:
+        print("{:<5} {:<22} {:>5} {:>4} {:>6}".format(
+            c["score"], c["name"][:22], c["year"], c["age"], c["teho_plus"]))
+
+
+def cmd_mlb(args) -> None:
+    conn = db.connect(args.db)
+    t = translate.translate_player(conn, args.player, year=args.year)
+    if not t:
+        raise SystemExit("no season line for that player")
+    print(f"{t['name']} ({t['team']}, {t['year']}) — "
+          f"wRC+ equiv {t['wrc_plus']} ({t['tier']}); "
+          f"162-game pace {t['pace']['HR']} HR / {t['pace']['RBI']} RBI / {t['pace']['R']} R")
+    for r in t["rows"]:
+        print(f"  {r['pesis_label']:<42} p{r['percentile']:<3} → "
+              f"{r['mlb_stat']:<12} {r['mlb_value']}")
+
+
 def cmd_runserver(args) -> None:
     from .web.app import create_app
     create_app(args.db).run(host="0.0.0.0", port=args.port, debug=False)
@@ -108,6 +161,26 @@ def main(argv=None) -> None:
 
     p = sub.add_parser("fit", help="walk-forward tune decay/prior per stat")
     p.set_defaults(func=cmd_fit)
+
+    p = sub.add_parser("standings", help="standings; with --as-of adds playoff odds")
+    p.add_argument("--year", type=int, default=None)
+    p.add_argument("--as-of", default=None, help="cutoff date, e.g. 2026-06-15")
+    p.add_argument("--seed", type=int, default=1)
+    p.set_defaults(func=cmd_standings)
+
+    p = sub.add_parser("parks", help="park factors and weather effects")
+    p.set_defaults(func=cmd_parks)
+
+    p = sub.add_parser("comps", help="similarity scores for a player's season")
+    p.add_argument("--player", type=int, required=True)
+    p.add_argument("--year", type=int, default=None)
+    p.add_argument("--limit", type=int, default=5)
+    p.set_defaults(func=cmd_comps)
+
+    p = sub.add_parser("mlb", help="pesis → baseball translation for a player")
+    p.add_argument("--player", type=int, required=True)
+    p.add_argument("--year", type=int, default=None)
+    p.set_defaults(func=cmd_mlb)
 
     p = sub.add_parser("runserver", help="serve the web UI")
     p.add_argument("--port", type=int, default=5000)
