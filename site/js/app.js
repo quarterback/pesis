@@ -34,6 +34,7 @@ const STAT_LABEL = {
   kl_base0:'1 % (1→2)', kl_base1:'2 % (2→3)',
   kl_base2:'3 % (3→koti)', kl_base3:'K % (kotiutus)',
   teho_plus:'TEHO+', teho_plus_adj:'kTEHO+',
+  vyk:'VYK', jyk:'JYK', raa:'RAA',
   tehot:'Tehot', kunnarit:'Kunnarit', lyodyt:'Lyödyt', tuodut:'Tuodut',
 };
 
@@ -228,10 +229,10 @@ async function showLeaderboard(sid, stat) {
 
   // every Mallo metric is "higher = better" (indices centred on 100)
   const LOWER_BETTER = new Set();
-  // stats that are plain index numbers (no decimal formatting)
+  // stats shown as plain numbers (indices + value stats), not .xxx rates
   const INDEX_STATS = new Set(['spark_index','adv_plus','runner_plus','out_avoid_plus',
     'money_kl_plus','adv1_plus','adv2_plus','adv3_plus','adv_home_plus',
-    'teho_plus','teho_plus_adj']);
+    'teho_plus','teho_plus_adj','vyk','jyk','raa']);
 
   const sorted = [...players].filter(p => p.turns_at_bat >= 40)
     .sort((a,b) => {
@@ -251,6 +252,8 @@ async function showLeaderboard(sid, stat) {
   const featuredStat = stat;
   const ANCHOR_STATS = ['spark_index', 'teho_plus'];
   const showFeat = !ANCHOR_STATS.includes(stat);
+  // scale the featured-column bar to the leader's value (works for indices & value stats)
+  const maxFeat = Math.max(...sorted.map(x => Math.abs(x[featuredStat] || 0)), 1e-9);
 
   let rows = '';
   sorted.forEach((l, i) => {
@@ -259,9 +262,8 @@ async function showLeaderboard(sid, stat) {
       const fv = l[featuredStat];
       const isIdx = INDEX_STATS.has(stat);
       const shown = fv === null || fv === undefined ? '—' : isIdx ? fv : rate(fv);
-      const bar = isIdx
-        ? `<span class="bar"><i style="width:${Math.min(Math.round((fv||0)/2.2),100)}%"></i></span>` : '';
-      featCell = `<td><div class="teho-cell"><span class="val">${shown}</span>${bar}</div></td>`;
+      const w = fv === null || fv === undefined ? 0 : Math.min(Math.abs(fv) / maxFeat * 100, 100);
+      featCell = `<td><div class="teho-cell"><span class="val">${shown}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
     }
     rows += `<tr${i===0?' class="leader"':''}>
       <td><span class="rank">${i+1}</span></td>
@@ -276,8 +278,10 @@ async function showLeaderboard(sid, stat) {
 
   const featTh = STAT_LABEL[stat]||stat;
 
-  const subText = ['spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
-    'adv1_plus','adv2_plus','adv3_plus','adv_home_plus'].includes(stat)
+  const subText = ['vyk','jyk','raa'].includes(stat)
+    ? 'VYK = voitot yli korvaajan (pesäpallon WAR-vastine), JYK = juoksut yli korvaajan — kertyviä arvomittareita. Vähintään 40 lyöntivuoroa.'
+    : ['spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
+       'adv1_plus','adv2_plus','adv3_plus','adv_home_plus'].includes(stat)
     ? 'Mallo-mittarit: 100 = sarjan keskiarvo, yli 100 parempi. Vähintään 40 lyöntivuoroa.'
     : 'Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).';
 
@@ -304,7 +308,7 @@ async function showLeaderboard(sid, stat) {
     </table>`;
 
   window.dlLB = function(sid, stat) {
-    const cols = ['name','team','games','turns_at_bat',
+    const cols = ['name','team','games','turns_at_bat','vyk','jyk','raa',
                   'spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
                   'adv1_pct','adv2_pct','adv3_pct','adv_home_pct','teho_plus','teho_plus_adj'];
     downloadCSV(sorted, cols, `${season.series}-${season.year}-${stat}.csv`);
@@ -494,7 +498,8 @@ async function showPlayer(pid) {
       <td class="name">${s.year}</td>
       <td class="num">${s.age||'—'}</td>
       <td class="num">${s.games}</td><td class="num">${s.turns_at_bat}</td>
-      <td class="num strong">${s.spark_index??'—'}</td>
+      <td class="num strong">${s.vyk??'—'}</td>
+      <td class="num">${s.spark_index??'—'}</td>
       <td class="num">${s.adv_plus??'—'}</td>
       <td class="num">${s.runner_plus??'—'}</td>
       <td class="num">${s.out_avoid_plus??'—'}</td>
@@ -555,8 +560,9 @@ async function showPlayer(pid) {
       </p>
       <div class="tiles">
         <div class="tile"><div class="label">Ottelut</div><div class="value">${line.games}</div></div>
+        <div class="tile hero"><div class="label">VYK</div><div class="value">${line.vyk??'—'}</div></div>
         <div class="tile"><div class="label">SPARK</div><div class="value">${line.spark_index??'—'}</div></div>
-        <div class="tile hero"><div class="label">TEHO+</div><div class="value">${line.teho_plus||'—'}</div></div>
+        <div class="tile"><div class="label">TEHO+</div><div class="value">${line.teho_plus||'—'}</div></div>
         ${projTile}
       </div>
       <h2>Mallo-indeksit ${line.year} <span class="muted">(100 = sarjan keskiarvo)</span></h2>
@@ -577,7 +583,7 @@ async function showPlayer(pid) {
             <table>
               <thead><tr>
                 <th class="name">Kausi</th><th>Ikä</th><th>O</th><th>Vuorot</th>
-                <th>SPARK</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th>KOTI-KL+</th>
+                <th>VYK</th><th>SPARK</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th>KOTI-KL+</th>
                 <th class="extra">TEHO+</th><th title="kenttäkorjattu">kTEHO+</th>
               </tr></thead>
               <tbody>${careerRows}</tbody>
@@ -771,6 +777,16 @@ function showGlossary() {
           gr('KOTI-KL+','<code>100 × K % / sarjataso</code>','kotiutus-/juoksuksi muuttavat kärkilyöntiyritykset')
         )}
       </div>
+      <h2>Arvo <span class="muted">— WAR-tyyliset kertyvät mittarit</span></h2>
+      <p class="sub">Toisin kuin indeksit (per vuoro), nämä <em>kertyvät</em>: peliaika kasvattaa arvoa. Juoksuarvot johdetaan sarjan omasta juoksuympäristöstä (ridge-regressio joukkuetotaaleista), ei MLB:n painoista.</p>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('JYK','<code>juoksuarvo − korvaajataso × vuorot</code>','Juoksut Yli Korvaajan — juoksut yli vapaasti saatavilla olevan pelaajan') +
+          gr('VYK','<code>JYK / (juoksut per ottelu)</code>','Voitot Yli Korvaajan — WAR-vastine; kertyvä kokonaisarvo voittoina') +
+          gr('RAA','<code>juoksuarvo − sarjataso × vuorot</code>','juoksut yli sarjan keskiarvon (ei korvaajatasoa)')
+        )}
+        <p class="legend" style="padding:10px 16px">Ensimmäinen versio olemassa olevista koosterivistä; tarkentuu RE24-malliin kun syöttö-syötöltä-data on käytössä.</p>
+      </div>
       <h2>Indeksit</h2>
       <div class="card" style="padding:0;overflow-x:auto">
         ${gtable(
@@ -820,7 +836,7 @@ async function route() {
 
     if (page === '' || page === 'leaderboard') {
       const sid = parseInt(params.sid || defaultSid, 10);
-      const stat = params.stat || 'spark_index';
+      const stat = params.stat || 'vyk';
       await showLeaderboard(sid, stat);
 
     } else if (page === 'projections') {

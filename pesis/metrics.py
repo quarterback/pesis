@@ -93,6 +93,7 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
             if line["tehot_per_turn"] is not None and league_tpt else None
         )
     _add_analytics_indices(lines)
+    _add_value_stats(conn, season_id, lines)
     _add_park_adjusted(conn, season_id, lines)
     return lines
 
@@ -161,6 +162,143 @@ def _add_analytics_indices(lines: list[dict]) -> None:
         comps = [l.get("adv_plus"), l.get("runner_plus"), l.get("out_avoid_plus")]
         l["spark_index"] = (round(0.50 * comps[0] + 0.30 * comps[1] + 0.20 * comps[2])
                             if all(c is not None for c in comps) else None)
+
+
+def _runs_per_win(conn: sqlite3.Connection, season_id: int) -> float:
+    """Season run-to-win scale for VYK.
+
+    Without play-by-play win probability, use the actual season scoring
+    environment: one win is roughly one average game's total run separation
+    opportunity. This is deliberately conservative and will be replaced by a
+    fitted runs-to-wins curve once full standings/PBP are available.
+    """
+    row = conn.execute(
+        """SELECT AVG(home_runs + away_runs) AS rpg
+           FROM matches
+           WHERE season_id = ? AND home_runs IS NOT NULL AND away_runs IS NOT NULL""",
+        (season_id,),
+    ).fetchone()
+    if row and row["rpg"]:
+        return max(4.0, float(row["rpg"]))
+    return 8.0
+
+
+def _team_event_rows(conn: sqlite3.Connection, season_id: int) -> list[dict]:
+    return [dict(r) for r in conn.execute(
+        """SELECT team,
+                  SUM(kunnarit) AS kunnarit,
+                  SUM(lyodyt) AS lyodyt,
+                  SUM(tuodut) AS tuodut,
+                  SUM(karkilyonnit) AS karkilyonnit,
+                  SUM(saatot) AS saatot,
+                  SUM(etenemiset) AS etenemiset,
+                  SUM(haavat) AS haavat,
+                  SUM(palot) AS palot,
+                  SUM(turns_at_bat) AS turns_at_bat
+           FROM player_games
+           WHERE season_id = ? AND team IS NOT NULL
+           GROUP BY team""",
+        (season_id,),
+    ).fetchall()]
+
+
+def _solve_linear_system(a: list[list[float]], b: list[float]) -> list[float] | None:
+    """Small Gaussian solver used for ridge normal equations."""
+    n = len(b)
+    aug = [row[:] + [b[i]] for i, row in enumerate(a)]
+    for col in range(n):
+        pivot = max(range(col, n), key=lambda r: abs(aug[r][col]))
+        if abs(aug[pivot][col]) < 1e-9:
+            return None
+        aug[col], aug[pivot] = aug[pivot], aug[col]
+        div = aug[col][col]
+        aug[col] = [v / div for v in aug[col]]
+        for r in range(n):
+            if r == col:
+                continue
+            factor = aug[r][col]
+            aug[r] = [aug[r][c] - factor * aug[col][c] for c in range(n + 1)]
+    return [aug[i][-1] for i in range(n)]
+
+
+def _empirical_value_weights(conn: sqlite3.Connection, season_id: int) -> dict[str, float]:
+    """Estimate aggregate pesäpallo run weights from team totals.
+
+    This is a first WAR-style scaffold from existing box-score rows, not the
+    final RE24 model. It regresses team runs on team event totals with a small
+    ridge penalty and then constrains signs so good events add value and outs
+    remove value. If a season is too small or singular, fall back to conservative
+    pesäpallo-shaped priors.
+    """
+    fallback = {
+        "kunnarit": 1.40,
+        "lyodyt": 0.90,
+        "tuodut": 0.70,
+        "karkilyonnit": 0.28,
+        "saatot": 0.20,
+        "etenemiset": 0.22,
+        "haavat": -0.20,
+        "palot": -0.35,
+    }
+    rows = _team_event_rows(conn, season_id)
+    features = list(fallback)
+    if len(rows) < 6:
+        return fallback
+
+    # Standardize counts so ridge is stable across event scales.
+    means = {f: sum(r[f] or 0 for r in rows) / len(rows) for f in features}
+    scales = {}
+    for f in features:
+        var = sum(((r[f] or 0) - means[f]) ** 2 for r in rows) / len(rows)
+        scales[f] = var ** 0.5 or 1.0
+    y_mean = sum(r["tuodut"] or 0 for r in rows) / len(rows)
+    x_rows = [[((r[f] or 0) - means[f]) / scales[f] for f in features] for r in rows]
+    y = [(r["tuodut"] or 0) - y_mean for r in rows]
+    lam = 2.0
+    xtx = [[sum(x[i] * x[j] for x in x_rows) + (lam if i == j else 0.0)
+            for j in range(len(features))]
+           for i in range(len(features))]
+    xty = [sum(x[i] * yy for x, yy in zip(x_rows, y)) for i in range(len(features))]
+    beta = _solve_linear_system(xtx, xty)
+    if beta is None:
+        return fallback
+    weights = {f: beta[i] / scales[f] for i, f in enumerate(features)}
+    for f in ("kunnarit", "lyodyt", "tuodut", "karkilyonnit", "saatot", "etenemiset"):
+        weights[f] = max(0.02, min(2.5, weights.get(f, fallback[f])))
+    for f in ("haavat", "palot"):
+        weights[f] = min(-0.02, max(-1.5, weights.get(f, fallback[f])))
+    return weights
+
+
+def _add_value_stats(conn: sqlite3.Connection, season_id: int, lines: list[dict]) -> None:
+    """Attach first WAR-like value stats from existing aggregate rows.
+
+    JYK (Juoksut Yli Korvaajan) is runs above replacement. VYK (Voitot Yli
+    Korvaajan) is the WAR analog: JYK divided by the season run-to-win scale.
+    This is intentionally additive/counting value; TEHO+/SPARK remain rates.
+    """
+    if not lines:
+        return
+    weights = _empirical_value_weights(conn, season_id)
+    value_events = tuple(weights)
+    for line in lines:
+        line["run_value"] = sum((line.get(f) or 0) * weights[f] for f in value_events)
+    total_turns = sum(l.get("turns_at_bat", 0) for l in lines)
+    if not total_turns:
+        for line in lines:
+            line["raa"] = line["jyk"] = line["vyk"] = None
+        return
+    league_rate = sum(l["run_value"] for l in lines) / total_turns
+    rates = [l["run_value"] / l["turns_at_bat"] for l in lines if l.get("turns_at_bat")]
+    mean = sum(rates) / len(rates)
+    sd = (sum((r - mean) ** 2 for r in rates) / len(rates)) ** 0.5 if rates else 0.0
+    replacement_rate = max(0.0, league_rate - 0.75 * sd)
+    rpw = _runs_per_win(conn, season_id)
+    for line in lines:
+        turns = line.get("turns_at_bat", 0)
+        line["raa"] = round(line["run_value"] - league_rate * turns, 1)
+        line["jyk"] = round(line["run_value"] - replacement_rate * turns, 1)
+        line["vyk"] = round(line["jyk"] / rpw, 2) if rpw else None
 
 
 def _add_park_adjusted(conn: sqlite3.Connection, season_id: int,
