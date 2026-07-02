@@ -314,7 +314,11 @@ def create_app(db_path: str | None = None) -> Flask:
         season_lines = cached_lines(current["season_id"])
         metrics.add_percentiles(season_lines)
         line = next(l for l in season_lines if l["player_id"] == player_id)
-        proj = projection.project_player(c, player_id)
+        # anchor the projection prior to the player's OWN league — the
+        # default "latest season" would be arbitrary with four leagues loaded
+        proj = projection.project_player(
+            c, player_id,
+            league=metrics.league_rates(cached_lines(current["season_id"])))
         career_json = json.dumps([
             {"year": s["year"], "kl_pct": s["kl_pct"], "teho_plus": s["teho_plus"]}
             for s in career])
