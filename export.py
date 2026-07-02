@@ -12,6 +12,9 @@ from pathlib import Path
 from pesis import context, db, metrics, projection, simulate
 
 LEADERBOARD_STATS = [
+    "spark_index", "adv_plus", "runner_plus", "out_avoid_plus", "money_kl_plus",
+    "adv1_pct", "adv2_pct", "adv3_pct", "adv_home_pct",
+    "adv1_plus", "adv2_plus", "adv3_plus", "adv_home_plus",
     "teho_plus", "teho_plus_adj", "tehot", "kl_pct",
     "saatto_pct", "eten_pct", "kunnarit", "lyodyt", "tuodut", "palo_rate",
 ]

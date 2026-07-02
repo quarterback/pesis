@@ -53,7 +53,8 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
     sums = ", ".join(f"SUM({c}) AS {c}" for c in COUNTING)
     rows = conn.execute(
         f"""SELECT pg.player_id, p.name, p.born_year, s.year,
-                   COUNT(*) AS games, MAX(pg.team) AS team, {sums}
+                   COUNT(*) AS games, MAX(pg.team) AS team,
+                   json_group_array(pg.raw) AS raw_rows, {sums}
             FROM player_games pg
             JOIN players p ON p.id = pg.player_id
             JOIN seasons s ON s.id = pg.season_id
@@ -65,6 +66,7 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
     lines = []
     for r in rows:
         line = dict(r)
+        line["season_id"] = season_id
         line["tehot"] = line["kunnarit"] + line["lyodyt"] + line["tuodut"]
         if line["born_year"]:
             line["age"] = line["year"] - line["born_year"]
@@ -73,6 +75,14 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
         line["tehot_per_turn"] = (
             line["tehot"] / line["turns_at_bat"] if line["turns_at_bat"] else None
         )
+        line["kl_per_turn"] = (
+            line["karkilyonnit"] / line["turns_at_bat"] if line["turns_at_bat"] else None
+        )
+        line["hr_rbi_per_turn"] = (
+            (line["kunnarit"] + line["lyodyt"]) / line["turns_at_bat"]
+            if line["turns_at_bat"] else None
+        )
+        _add_raw_base_splits(line, r["raw_rows"] if "raw_rows" in r.keys() else None)
         lines.append(line)
 
     league_tpt = _league_tehot_per_turn(lines)
@@ -81,8 +91,75 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
             round(100 * line["tehot_per_turn"] / league_tpt)
             if line["tehot_per_turn"] is not None and league_tpt else None
         )
+    _add_analytics_indices(lines)
     _add_park_adjusted(conn, season_id, lines)
     return lines
+
+
+def _add_raw_base_splits(line: dict, raw_rows_json: str | None) -> None:
+    """Attach official 1%/2%/3%/K% KL splits from raw rows."""
+    import json as _json
+    succ = [0, 0, 0, 0]
+    tries = [0, 0, 0, 0]
+    if raw_rows_json:
+        for raw_text in _json.loads(raw_rows_json):
+            raw = _json.loads(raw_text or "{}")
+            src = raw.get("_v1", raw)
+            for i in range(4):
+                succ[i] += src.get(f"batpe_succeeded_{i}") or 0
+                tries[i] += src.get(f"batpe_tries_{i}") or 0
+    for i in range(4):
+        line[f"kl_base{i}"] = succ[i] / tries[i] if tries[i] else None
+        line[f"kl_base{i}_tries"] = tries[i]
+    line["adv1_pct"] = line["kl_base0"]
+    line["adv2_pct"] = line["kl_base1"]
+    line["adv3_pct"] = line["kl_base2"]
+    line["adv_home_pct"] = line["kl_base3"]
+    line["money_kl_pct"] = line["kl_base3"]
+    line["money_kl_tries"] = line["kl_base3_tries"]
+
+
+def _safe_div(num, den):
+    return num / den if num is not None and den else None
+
+
+def _index(value, league):
+    return round(100 * value / league) if value is not None and league else None
+
+
+def _add_analytics_indices(lines: list[dict]) -> None:
+    """Add Mallo-only composite analytics (ADV+, RUN+, OUT+, SPARK, base-split plus)."""
+    adv_num = sum(l["karkilyonnit"] + l["saatot"] for l in lines)
+    adv_den = sum(l["karki_yritykset"] + l["saatto_yritykset"] for l in lines)
+    run_num = sum(l["etenemiset"] for l in lines)
+    run_den = sum(l["eteneminen_yritykset"] for l in lines)
+    out_num = sum(l["palot"] for l in lines)
+    out_den = sum(l["turns_at_bat"] for l in lines)
+    league_adv = _safe_div(adv_num, adv_den)
+    league_run = _safe_div(run_num, run_den)
+    league_out_avoid = 1 - (out_num / out_den) if out_den else None
+    base_leagues = {}
+    for i in range(4):
+        base_num = sum((l.get(f"kl_base{i}") or 0) * l.get(f"kl_base{i}_tries", 0)
+                       for l in lines if l.get(f"kl_base{i}") is not None)
+        base_den = sum(l.get(f"kl_base{i}_tries", 0) for l in lines)
+        base_leagues[i] = _safe_div(base_num, base_den)
+    league_money = base_leagues[3]
+    for l in lines:
+        adv = _safe_div(l["karkilyonnit"] + l["saatot"],
+                        l["karki_yritykset"] + l["saatto_yritykset"])
+        out_avoid = 1 - l["palo_rate"] if l.get("palo_rate") is not None else None
+        l["adv_plus"] = _index(adv, league_adv)
+        l["runner_plus"] = _index(l.get("eten_pct"), league_run)
+        l["out_avoid_plus"] = _index(out_avoid, league_out_avoid)
+        l["adv1_plus"] = _index(l.get("adv1_pct"), base_leagues[0])
+        l["adv2_plus"] = _index(l.get("adv2_pct"), base_leagues[1])
+        l["adv3_plus"] = _index(l.get("adv3_pct"), base_leagues[2])
+        l["adv_home_plus"] = _index(l.get("adv_home_pct"), league_money)
+        l["money_kl_plus"] = l["adv_home_plus"]
+        comps = [l.get("adv_plus"), l.get("runner_plus"), l.get("out_avoid_plus")]
+        l["spark_index"] = (round(0.50 * comps[0] + 0.30 * comps[1] + 0.20 * comps[2])
+                            if all(c is not None for c in comps) else None)
 
 
 def _add_park_adjusted(conn: sqlite3.Connection, season_id: int,

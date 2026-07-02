@@ -24,11 +24,15 @@ function slugify(s) {
 }
 
 const STAT_LABEL = {
+  spark_index:'SPARK', adv_plus:'ADV+', runner_plus:'RUN+',
+  out_avoid_plus:'OUT+', money_kl_plus:'KOTI-KL+',
+  adv1_pct:'1 %', adv2_pct:'2 %', adv3_pct:'3 %', adv_home_pct:'K %',
+  adv1_plus:'1 %+', adv2_plus:'2 %+', adv3_plus:'3 %+', adv_home_plus:'K %+',
   kl_pct:'KL%', saatto_pct:'Saatto%', eten_pct:'Etenemis%',
   kunnari_rate:'Kunnarit/vuoro', lyoty_rate:'Lyödyt/vuoro',
   palo_rate:'Palo%', tehot_per_turn:'Tehot/vuoro',
-  kl_base0:'KL% 1. pesa', kl_base1:'KL% 2. pesa',
-  kl_base2:'KL% 3. pesa', kl_base3:'KL% koti',
+  kl_base0:'1 % (1→2)', kl_base1:'2 % (2→3)',
+  kl_base2:'3 % (3→koti)', kl_base3:'K % (kotiutus)',
   teho_plus:'TEHO+', teho_plus_adj:'kTEHO+',
   tehot:'Tehot', kunnarit:'Kunnarit', lyodyt:'Lyödyt', tuodut:'Tuodut',
 };
@@ -136,16 +140,20 @@ function pctBar(pct, label, val) {
    LEADERBOARD
 ══════════════════════════════════════════════════════════════════════════ */
 async function showLeaderboard(sid, stat) {
-  stat = stat || 'teho_plus';
-  const STATS = ['teho_plus','teho_plus_adj','tehot','kl_pct',
-                 'saatto_pct','eten_pct','kunnarit','lyodyt','tuodut','palo_rate'];
-  if (!STATS.includes(stat)) stat = 'teho_plus';
-
   const data = await fetchJSON(`data/leaderboard/${sid}.json`);
   const season = data.season;
   const players = data.players;
+  const STATS = data.stats || ['teho_plus','teho_plus_adj','tehot','kl_pct',
+    'saatto_pct','eten_pct','kunnarit','lyodyt','tuodut','palo_rate'];
 
-  const showExtra = !['teho_plus','kl_pct','kunnarit','lyodyt','tuodut','tehot'].includes(stat);
+  if (!stat || !STATS.includes(stat)) stat = STATS[0];
+
+  // stats where lower = better
+  const LOWER_BETTER = new Set(['palo_rate']);
+  // stats that are plain index numbers (no decimal formatting)
+  const INDEX_STATS = new Set(['spark_index','adv_plus','runner_plus','out_avoid_plus',
+    'money_kl_plus','adv1_plus','adv2_plus','adv3_plus','adv_home_plus',
+    'teho_plus','teho_plus_adj','kunnarit','lyodyt','tuodut','tehot']);
 
   const sorted = [...players].filter(p => p.turns_at_bat >= 40)
     .sort((a,b) => {
@@ -153,25 +161,33 @@ async function showLeaderboard(sid, stat) {
       if (av === null && bv === null) return 0;
       if (av === null) return 1;
       if (bv === null) return -1;
-      return (stat === 'palo_rate') ? av - bv : bv - av;
+      return LOWER_BETTER.has(stat) ? av - bv : bv - av;
     });
 
   const pills = STATS.map(s =>
     `<a href="#" onclick="nav('leaderboard',${sid},'${s}');return false;"
        class="${s===stat?'active':''}">${STAT_LABEL[s]||s}</a>`).join('');
 
+  // determine what to show in the "featured" column (replaces TEHO+ when sorting by something else)
+  const featuredStat = stat;
+  const showTehoBar = ['teho_plus','teho_plus_adj'].includes(stat);
+  const showTehoAlways = !['kunnarit','lyodyt','tuodut','tehot'].includes(stat);
+
   let rows = '';
   sorted.forEach((l, i) => {
-    const rankSpan = i === 0
-      ? `<span class="rank">1</span>`
-      : `<span class="rank">${i+1}</span>`;
-    const barW = Math.min(Math.round((l.teho_plus||0)/2.1), 100);
-    const tehoCell = `<div class="teho-cell">
-      <span class="val">${l.teho_plus??'—'}</span>
-      <span class="bar"><i style="width:${barW}%"></i></span>
-    </div>`;
-    const extra = showExtra
-      ? `<td class="num extra">${typeof l[stat]==='number'&&!Number.isInteger(l[stat])?rate(l[stat]):l[stat]??'—'}</td>` : '';
+    const fv = l[featuredStat];
+    let featCell;
+    if (showTehoBar) {
+      const barW = Math.min(Math.round((fv||0)/2.1), 100);
+      featCell = `<div class="teho-cell">
+        <span class="val">${fv??'—'}</span>
+        <span class="bar"><i style="width:${barW}%"></i></span>
+      </div>`;
+    } else {
+      featCell = `<span class="val">${fv===null||fv===undefined?'—':INDEX_STATS.has(stat)?fv:rate(fv)}</span>`;
+    }
+    const tehoExtra = showTehoAlways && !showTehoBar
+      ? `<td class="num">${l.teho_plus??'—'}</td>` : '';
     rows += `<tr${i===0?' class="leader"':''}>
       <td><span class="rank">${i===0?'1':i+1}</span></td>
       <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a></td>
@@ -180,12 +196,18 @@ async function showLeaderboard(sid, stat) {
       <td class="num">${l.kunnarit}</td><td class="num">${l.lyodyt}</td><td class="num">${l.tuodut}</td>
       <td class="num">${l.tehot}</td>
       <td class="num">${rate(l.kl_pct)}</td>
-      ${extra}
-      <td>${tehoCell}</td>
+      ${tehoExtra}
+      <td>${featCell}</td>
     </tr>`;
   });
 
-  const extraTh = showExtra ? `<th class="extra">${STAT_LABEL[stat]||stat}</th>` : '';
+  const featTh = STAT_LABEL[stat]||stat;
+  const tehoExtraTh = showTehoAlways && !showTehoBar ? `<th>TEHO+</th>` : '';
+
+  const subText = ['spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
+    'adv1_plus','adv2_plus','adv3_plus','adv_home_plus'].includes(stat)
+    ? 'Mallo-mittarit: 100 = sarjan keskiarvo, yli 100 parempi. Vähintään 40 lyöntivuoroa.'
+    : 'Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).';
 
   main().innerHTML = `
     <div class="controls">
@@ -193,7 +215,7 @@ async function showLeaderboard(sid, stat) {
     </div>
     <div class="page" style="padding-bottom:6px">
       <h1>${season.series} ${season.year}</h1>
-      <p class="sub">Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).</p>
+      <p class="sub">${subText}</p>
     </div>
     <div class="filters">
       <span class="lab">Järjestä</span>
@@ -206,7 +228,7 @@ async function showLeaderboard(sid, stat) {
         <th style="width:36px">#</th>
         <th class="name">Pelaaja</th><th class="name">Joukkue</th>
         <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-        <th>Tehot</th><th>KL%</th>${extraTh}<th>TEHO+</th>
+        <th>Tehot</th><th>KL%</th>${tehoExtraTh}<th>${featTh}</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -753,6 +775,19 @@ function showGlossary() {
           gr('Tuodut/yritys','<code>T / etenemisyritykset</code>','etenijän tuotto') +
           gr('Palo-%','<code>palot / V</code>','pienempi parempi') +
           gr('Tehot/vuoro','<code>(K + L + T) / V</code>','')
+        )}
+      </div>
+      <h2>Mallo-analytiikka</h2>
+      <p class="sub">Nämä mittarit eivät toista pesistulokset-laskureita — ne indeksoivat etenemisen, palojen välttämisen ja kotiutuskärkilyönnit sarjaan (100 = keskiarvo, yli 100 parempi).</p>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('ADV+','<code>100 × ((KL + saatot) / (KLY + saatto-Y)) / sarjataso</code>','lyöjän etenemisarvo ilman K/L/T-toistoa') +
+          gr('RUN+','<code>100 × etenemis-% / sarjataso</code>','pelaajan arvo etenijänä') +
+          gr('OUT+','<code>100 × (1 − palot/vuoro) / sarjataso</code>','palojen välttäminen; yli 100 parempi') +
+          gr('SPARK','<code>0.50·ADV+ + 0.30·RUN+ + 0.20·OUT+</code>','kärjenrakentajan kokonaisindeksi') +
+          gr('1 % / 2 % / 3 % / K %','<code>onnistuneet KL-liikkeet / yritykset</code>','1→2, 2→3, 3→koti ja kotiutus; yksi lyöntivuoro voi tuottaa useita KL:iä') +
+          gr('1 %+ / 2 %+ / 3 %+ / K %+','<code>100 × split-% / sarjan split-%</code>','sama virallinen split sarjaindeksinä') +
+          gr('KOTI-KL+','<code>100 × K % / sarjataso</code>','kotiutus-/juoksuksi muuttavat kärkilyöntiyritykset')
         )}
       </div>
       <h2>Indeksit</h2>
