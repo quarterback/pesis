@@ -1,0 +1,5 @@
+{
+  "outputDirectory": "site",
+  "buildCommand": "python export.py",
+  "rewrites": [{"source": "/(.*)", "destination": "/index.html"}]
+}
