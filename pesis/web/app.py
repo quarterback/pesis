@@ -56,6 +56,34 @@ def sparkline(values: list[float], width: int = 220, height: int = 44,
             "width": width, "height": height}
 
 
+def traj_svg(career: list, width: int = 320, height: int = 118) -> dict | None:
+    """Build SVG data for TEHO+ career trajectory chart (Mallo design)."""
+    pad_x, label_h = 30, 14
+    data = [(s["year"], s["teho_plus"]) for s in career if s.get("teho_plus") is not None]
+    if len(data) < 2:
+        return None
+    years, vals = zip(*data)
+    lo, hi = min(vals), max(vals)
+    span = (hi - lo) or 1.0
+    baseline = height - label_h
+    inner_h = baseline - pad_x
+    inner_w = width - 2 * pad_x
+    step = inner_w / (len(vals) - 1)
+    pts = [
+        (round(pad_x + i * step, 1),
+         round(baseline - inner_h * (v - lo) / span, 1))
+        for i, v in enumerate(vals)
+    ]
+    poly = " ".join(f"{x},{y}" for x, y in pts)
+    area = poly + f" {pts[-1][0]},{baseline} {pts[0][0]},{baseline}"
+    dots = [{"x": x, "y": y, "label": str(yr)} for (x, y), yr in zip(pts, years)]
+    return {
+        "points": poly, "area": area, "dots": dots,
+        "baseline": baseline, "width": width, "height": height,
+        "area_opacity": 0.18,
+    }
+
+
 def create_app(db_path: str | None = None) -> Flask:
     app = Flask(__name__)
     app.config["DB_PATH"] = db_path or db.DEFAULT_DB_PATH
@@ -150,9 +178,9 @@ def create_app(db_path: str | None = None) -> Flask:
         metrics.add_percentiles(season_lines)
         line = next(l for l in season_lines if l["player_id"] == player_id)
         proj = tahko.project_player(c, player_id)
-        spark = sparkline([s["kl_pct"] for s in career])
+        traj = traj_svg(career)
         return render_template("player.html", player=row, career=career,
-                               line=line, proj=proj, spark=spark,
+                               line=line, proj=proj, traj=traj,
                                pct_stats=PCT_STATS,
                                comps=similarity.comps(c, player_id))
 

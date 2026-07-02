@@ -1,78 +1,91 @@
 {% extends "base.html" %}
 {% block title %}{{ t.name }} — baseball translation{% endblock %}
 {% block content %}
-<h1>{{ t.name }}, translated for baseball fans</h1>
-<p class="sub">{{ t.team }} · Superpesis {{ t.year }}{% if t.age %} · age {{ t.age }}{% endif %}
-· This page is in English on purpose — share it with people who know baseball but not pesäpallo.</p>
+<div class="pwrap">
+  <h1 class="pname">{{ t.name }}</h1>
+  <p class="pmeta">{{ t.team }} · Superpesis {{ t.year }}{% if t.age %} · age {{ t.age }}{% endif %}
+  · This page is in English on purpose — share it with people who know baseball but not pesäpallo.</p>
 
-<div class="tiles">
-  <div class="tile"><div class="label">wRC+ equivalent (TEHO+)</div>
-    <div class="value">{{ t.wrc_plus or "—" }}</div></div>
-  <div class="tile"><div class="label">Reads like</div>
-    <div class="value" style="font-size:18px; line-height:2">{{ t.tier or "—" }}</div></div>
-  <div class="tile"><div class="label">One MLB month, volume-wise</div>
-    <div class="value" style="font-size:18px; line-height:2">
-      {{ t.games }} games · {{ t.pace.HR }}/{{ t.pace.RBI }}/{{ t.pace.R }}
-      HR/RBI/R at 162-game pace</div></div>
-</div>
-<p class="sub">A Superpesis regular season runs 28–33 games (33 in 2025) — almost exactly one
-month of MLB baseball. That's part of why baseball's statistical language fits this sport so
-well: you already reason about month-sized samples every May (Player of the Month, hot streaks,
-"on pace for" headlines). Read the pace above exactly that way — it's a ×{{ t.pace.extrapolation }}
-extrapolation, an April headline rather than a projection. The rate translations below don't
-even need the caveat: percentiles don't care how long the schedule is.</p>
+  <div class="tiles">
+    <div class="tile hero">
+      <div class="tl">wRC+ equivalent</div>
+      <div class="tvv">{{ t.wrc_plus or "—" }}</div>
+    </div>
+    <div class="tile">
+      <div class="tl">Reads like</div>
+      <div class="tvv" style="font-size:18px;line-height:1.3;margin-top:6px">{{ t.tier or "—" }}</div>
+    </div>
+    <div class="tile" style="grid-column:span 3">
+      <div class="tl">One MLB month · 162-game pace</div>
+      <div class="tvv" style="font-size:18px;line-height:1.3;margin-top:6px">
+        {{ t.games }} G · {{ t.pace.HR }} HR / {{ t.pace.RBI }} RBI / {{ t.pace.R }} R
+      </div>
+    </div>
+  </div>
 
-{% if t.rows %}
-<h2>Skill-by-skill translation <span style="font-weight:400;color:var(--ink-3)">(same percentile, MLB scale)</span></h2>
-<div class="card">
-<table>
-  <thead>
-    <tr><th class="name">Pesäpallo stat</th><th>Value</th><th>League pctile</th>
-        <th>MLB analog</th><th>Translated</th></tr>
-  </thead>
-  <tbody>
-    {% for r in t.rows %}
-    <tr>
-      <td class="name">{{ r.pesis_label }}</td>
-      <td>{{ r.pesis_value | rate }}</td>
-      <td>{{ r.percentile }}</td>
-      <td>{{ r.mlb_stat }}</td>
-      <td><strong>{{ r.mlb_value }}</strong></td>
-    </tr>
-    <tr><td class="name" colspan="5" style="color:var(--ink-3); font-size:13px;
-        border-bottom:1px solid var(--grid); padding-top:0">{{ r.blurb }}</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
-<p class="sub" style="margin:10px 0 0">Method: rank-preserving quantile mapping — his percentile
-among qualified Superpesis hitters, read off the MLB qualified-hitter distribution (2023–25 era).
-It translates <em>rank</em>, not skill transfer: pesäpallo is a different sport (the pitch is
-tossed straight up from beside the plate, the field is a fan, and wounds aren't outs).</p>
-</div>
-{% else %}
-<div class="card"><p>Not enough plate turns this season to qualify for percentiles.</p></div>
-{% endif %}
+  <p style="font-size:12.5px;color:var(--ink2);margin:0 0 24px;line-height:1.55">
+  A Superpesis regular season runs 28–33 games — almost exactly one month of MLB baseball.
+  That's part of why baseball's statistical language fits this sport so well: you already
+  reason about month-sized samples every May. Read the pace above exactly that way — it's a
+  ×{{ t.pace.extrapolation }} extrapolation, an April headline rather than a projection. The
+  rate translations below don't even need the caveat: percentiles don't care how long the schedule is.</p>
 
-<h2>Pesäpallo in 60 seconds, for baseball people</h2>
-<div class="card" style="font-size:14px; color:var(--ink-2)">
-<p><strong>The pitch is vertical.</strong> The "pitcher" (lukkari) stands at the plate and tosses
-the ball straight up; hitting is about placement, not beating velocity. Think of every at-bat as
-a bunt-or-drive decision against a shifted defense.</p>
-<p><strong>The manager bats.</strong> Not literally — but the pelinjohtaja signals every swing,
-take, and advance with a giant fan. Strategy density is closer to football play-calling than
-baseball managing.</p>
-<p><strong>Wounds aren't outs.</strong> A caught fly "wounds" (haavoittaa) the advancing runner —
-he's erased, but no out is recorded. Outs (palot, "burns") happen when the ball beats a runner
-to the base.</p>
-<p><strong>A kärkilyönti — advancing the lead runner — is the core batting skill</strong>, the
-sport's batting average. Home runs (kunnarit) exist but never leave the park: the batter sprints
-the bases like an inside-the-park homer, every time.</p>
-<p><strong>Structure:</strong> two 4-inning periods; win both, win the game. Split them and you
-play a super-inning (extra innings), then a one-on-one homer derby (kotiutuslyöntikilpailu) —
-yes, the sport settles ties with a shootout.</p>
-<p><strong>The season is a sprint.</strong> 28–33 regular-season games, roughly one MLB month —
-so every series matters, and context matters more than in a 162-game grind: who you played,
-in which park, in what wind. The results service records all of it, which is why these numbers
-can be park- and weather-adjusted instead of taken raw.</p>
+  {% if t.rows %}
+  <h2 class="sech">Skill-by-skill translation <span class="secsub">(same percentile, MLB scale)</span></h2>
+  <div class="card" style="margin-bottom:24px">
+    <table class="career">
+      <thead>
+        <tr>
+          <th class="name">Pesäpallo stat</th><th>Value</th>
+          <th>League pctile</th><th>MLB analog</th><th>Translated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in t.rows %}
+        <tr>
+          <td class="yr">{{ r.pesis_label }}</td>
+          <td>{{ r.pesis_value | rate }}</td>
+          <td>{{ r.percentile }}</td>
+          <td>{{ r.mlb_stat }}</td>
+          <td><strong>{{ r.mlb_value }}</strong></td>
+        </tr>
+        <tr>
+          <td class="yr" colspan="5" style="color:var(--ink3);font-size:11.5px;padding-top:2px">{{ r.blurb }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="legend" style="margin-top:12px">Method: rank-preserving quantile mapping — his percentile
+    among qualified Superpesis hitters, read off the MLB qualified-hitter distribution (2023–25 era).
+    It translates <em>rank</em>, not skill transfer: pesäpallo is a different sport.</p>
+  </div>
+  {% else %}
+  <div class="card" style="margin-bottom:24px">
+    <p style="color:var(--ink2);font-size:13px;margin:0">Not enough plate turns this season to qualify for percentiles.</p>
+  </div>
+  {% endif %}
+
+  <h2 class="sech">Pesäpallo in 60 seconds, for baseball people</h2>
+  <div class="contentcard">
+    <p><strong>The pitch is vertical.</strong> The "pitcher" (lukkari) stands at the plate and tosses
+    the ball straight up; hitting is about placement, not beating velocity. Think of every at-bat as
+    a bunt-or-drive decision against a shifted defense.</p>
+    <p><strong>The manager bats.</strong> Not literally — but the pelinjohtaja signals every swing,
+    take, and advance with a giant fan. Strategy density is closer to football play-calling than
+    baseball managing.</p>
+    <p><strong>Wounds aren't outs.</strong> A caught fly "wounds" (haavoittaa) the advancing runner —
+    he's erased, but no out is recorded. Outs (palot, "burns") happen when the ball beats a runner
+    to the base.</p>
+    <p><strong>A kärkilyönti — advancing the lead runner — is the core batting skill</strong>, the
+    sport's batting average. Home runs (kunnarit) exist but never leave the park: the batter sprints
+    the bases like an inside-the-park homer, every time.</p>
+    <p><strong>Structure:</strong> two 4-inning periods; win both, win the game. Split them and you
+    play a super-inning (extra innings), then a one-on-one homer derby (kotiutuslyöntikilpailu) —
+    yes, the sport settles ties with a shootout.</p>
+    <p><strong>The season is a sprint.</strong> 28–33 regular-season games, roughly one MLB month —
+    so every series matters, and context matters more than in a 162-game grind: who you played,
+    in which park, in what wind. The results service records all of it, which is why these numbers
+    can be park- and weather-adjusted instead of taken raw.</p>
+  </div>
 </div>
 {% endblock %}

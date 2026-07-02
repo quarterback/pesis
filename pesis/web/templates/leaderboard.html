@@ -1,42 +1,66 @@
 {% extends "base.html" %}
 {% block title %}Tilastot {{ season.year }}{% endblock %}
 {% block content %}
-<h1>{{ season.series }} {{ season.year }}</h1>
-<p class="sub">Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).</p>
-
-<div class="filters">
-  {% for s in stats %}
-  <a href="?stat={{ s }}&amp;year={{ season.year }}" class="{{ 'active' if s == stat }}">{{ s }}</a>
-  {% endfor %}
-</div>
-<div class="filters">
-  {% for s in seasons %}
-  <a href="?stat={{ stat }}&amp;year={{ s.year }}" class="{{ 'active' if s.year == season.year }}">{{ s.year }}</a>
-  {% endfor %}
-</div>
-
-<div class="card">
-<table>
-  <thead>
-    <tr><th>#</th><th class="name">Pelaaja</th><th class="name">Joukkue</th>
-        <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th><th>Tehot</th>
-        <th>KL%</th><th>TEHO+</th><th>{{ stat }}</th></tr>
-  </thead>
-  <tbody>
-    {% for l in lines %}
-    <tr>
-      <td>{{ loop.index }}</td>
-      <td class="name"><a href="/player/{{ l.player_id }}">{{ l.name }}</a></td>
-      <td class="name">{{ l.team }}</td>
-      <td>{{ l.games }}</td><td>{{ l.turns_at_bat }}</td>
-      <td>{{ l.kunnarit }}</td><td>{{ l.lyodyt }}</td><td>{{ l.tuodut }}</td>
-      <td>{{ l.tehot }}</td>
-      <td>{{ l.kl_pct | rate }}</td>
-      <td>{{ l.teho_plus }}</td>
-      <td><strong>{{ l[stat] | rate if l[stat] is float else l[stat] }}</strong></td>
-    </tr>
+<div class="controls">
+  <span class="ctl-lab">Kausi</span>
+  <div class="seg">
+    {% for s in seasons %}
+    <a href="?stat={{ stat }}&amp;year={{ s.year }}" class="{{ 'on' if s.year == season.year }}">{{ s.year }}</a>
     {% endfor %}
-  </tbody>
-</table>
+  </div>
+</div>
+<div class="headwrap">
+  <h1 class="lead">{{ season.series }} {{ season.year }}</h1>
+  <p class="sub">Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).</p>
+</div>
+<div class="toglabel">Järjestä</div>
+<div class="toggles">
+  {% for s in stats %}
+  <a href="?stat={{ s }}&amp;year={{ season.year }}" class="tog {{ 'on' if s == stat }}">{{ s }}</a>
+  {% endfor %}
+</div>
+<div class="lbwrap">
+  <table class="lb">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th class="name">Pelaaja</th>
+        <th class="name">Joukkue</th>
+        <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
+        <th>Tehot</th><th>KL%</th>
+        {% if stat not in ['teho_plus', 'kl_pct', 'kunnarit', 'lyodyt', 'tuodut', 'tehot'] %}
+        <th>{{ stat }}</th>
+        {% endif %}
+        <th>TEHO+</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set maxtp = lines[0].teho_plus if lines else 210 %}
+      {% for l in lines %}
+      {% set bw = [(l.teho_plus * 100 // (maxtp or 210)), 100]|min %}
+      <tr class="{{ 'top' if loop.first }}">
+        <td><span class="rk">{{ loop.index }}</span></td>
+        <td class="name"><a class="pl" href="/player/{{ l.player_id }}">{{ l.name }}</a></td>
+        <td class="name team">{{ l.team }}</td>
+        <td class="num">{{ l.games }}</td>
+        <td class="num">{{ l.turns_at_bat }}</td>
+        <td class="num">{{ l.kunnarit }}</td>
+        <td class="num">{{ l.lyodyt }}</td>
+        <td class="num">{{ l.tuodut }}</td>
+        <td class="num">{{ l.tehot }}</td>
+        <td class="num">{{ l.kl_pct | rate }}</td>
+        {% if stat not in ['teho_plus', 'kl_pct', 'kunnarit', 'lyodyt', 'tuodut', 'tehot'] %}
+        <td class="num"><strong>{{ l[stat] | rate if l[stat] is float else l[stat] }}</strong></td>
+        {% endif %}
+        <td>
+          <div class="tehocell">
+            <span class="tv">{{ l.teho_plus }}</span>
+            <span class="bar"><i style="width:{{ bw }}%"></i></span>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}
