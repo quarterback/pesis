@@ -210,6 +210,12 @@ td.team{ color:var(--ink3); font-size:12px; }
 th.extra, td.extra{ color:var(--accent); font-weight:700; }   /* the sorted stat pulled to the last column */
 td.extra{ font-family:var(--font-mono); }
 
+/* baseball position badge next to a player name */
+.pos{ display:inline-block; font:700 9.5px var(--font-mono); letter-spacing:.03em;
+      color:var(--ink3); background:var(--track); border-radius:4px;
+      padding:1px 5px; margin-left:5px; vertical-align:middle; }
+h1 .pos{ font-size:13px; padding:2px 7px; vertical-align:middle; }
+
 /* rank + leader row */
 .rank{ font-family:var(--font-mono); font-size:11.5px; color:var(--rank-ink); }
 tr.leader td{ background:var(--topbg); }

@@ -38,6 +38,15 @@ const STAT_LABEL = {
   tehot:'Tehot', kunnarit:'Kunnarit', lyodyt:'Lyödyt', tuodut:'Tuodut',
 };
 
+// Finnish fielding code → baseball position (shown next to every player).
+// null = jokeri (no fielding position) → DH.
+const POS_MAP = {
+  L:'P', S:'C', '1V':'1B', '2V':'2B', '3V':'3B',
+  '3P':'LSS', '2P':'RSS', '3K':'LF', '2K':'RF', J:'DH',
+};
+const POS_ORDER = ['P','C','1B','2B','3B','LSS','RSS','LF','RF','DH'];
+function posLabel(code) { return code ? (POS_MAP[code] || code) : 'DH'; }
+
 async function fetchJSON(url) {
   if (_cache[url]) return _cache[url];
   const r = await fetch(url);
@@ -99,11 +108,12 @@ function parseSeries(series) {
   return { sex: null, tier: series };
 }
 
-function leaderboardControls(sid) {
+function leaderboardControls(sid, view) {
   const seasons = META.seasons;
   const cur = seasons.find(s => s.id === sid) || seasons[0];
   const { sex: curSex, tier: curTier } = parseSeries(cur.series);
   const curYear = cur.year;
+  const vq = view === 'lukkari' ? '&view=lukkari' : '';  // preserve view across series/season switches
   const find = (sex, tier, year) => seasons.find(s => {
     const p = parseSeries(s.series);
     return p.sex === sex && p.tier === tier && s.year === year;
@@ -115,7 +125,7 @@ function leaderboardControls(sid) {
       const m = find(sex, tier, curYear);
       if (!m) return '';   // tier not imported for this sex/year — omit entirely
       const on = sex === curSex && tier === curTier ? ' class="on"' : '';
-      return `<button${on} onclick="location.hash='/?sid=${m.id}'">${tier}</button>`;
+      return `<button${on} onclick="location.hash='/?sid=${m.id}${vq}'">${tier}</button>`;
     }).join('');
     return `<div class="col"><div class="colh">${label}</div>${items}</div>`;
   };
@@ -125,12 +135,18 @@ function leaderboardControls(sid) {
       <div class="menu" id="sarjaMenu" style="display:none">${col('M','Miehet')}${col('N','Naiset')}</div>
     </div>`;
 
+  // Lyöjät / Lukkarit — batting vs pitching leaderboard
+  const modeSeg = `<div class="seg">
+    <a href="#/?sid=${sid}"${view!=='lukkari'?' class="on"':''}>Lyöjät</a>
+    <a href="#/?sid=${sid}&view=lukkari"${view==='lukkari'?' class="on"':''}>Lukkarit</a>
+  </div>`;
+
   // Miehet / Naiset segmented — same tier, other sex
   const seg = ['M', 'N'].map(sex => {
     const m = find(sex, curTier, curYear);
     const label = sex === 'M' ? 'Miehet' : 'Naiset';
     if (!m) return `<a class="disabled" aria-disabled="true" style="opacity:.4;pointer-events:none">${label}</a>`;
-    return `<a href="#/?sid=${m.id}"${sex===curSex?' class="on"':''}>${label}</a>`;
+    return `<a href="#/?sid=${m.id}${vq}"${sex===curSex?' class="on"':''}>${label}</a>`;
   }).join('');
 
   // Kausi — years available for the current series (sex + tier)
@@ -138,10 +154,11 @@ function leaderboardControls(sid) {
     .filter(s => { const p = parseSeries(s.series); return p.sex === curSex && p.tier === curTier; })
     .sort((a, b) => b.year - a.year);
   const yearOpts = years.map(s =>
-    `<option value="#/?sid=${s.id}"${s.id===sid?' selected':''}>${s.year}</option>`).join('');
+    `<option value="#/?sid=${s.id}${vq}"${s.id===sid?' selected':''}>${s.year}</option>`).join('');
 
   return `<div class="controls">
     ${sarja}
+    ${modeSeg}
     <div class="seg">${seg}</div>
     <span class="spacer"></span>
     <span class="lab">Kausi</span>
@@ -218,11 +235,12 @@ function pctBar(pct, label, val) {
 /* ══════════════════════════════════════════════════════════════════════════
    LEADERBOARD
 ══════════════════════════════════════════════════════════════════════════ */
-async function showLeaderboard(sid, stat) {
+async function showLeaderboard(sid, stat, posFilter) {
+  posFilter = posFilter || '';
   const data = await fetchJSON(`data/leaderboard/${sid}.json`);
   const season = data.season;
   const players = data.players;
-  const STATS = data.stats || ['spark_index','adv_plus','runner_plus','out_avoid_plus',
+  const STATS = data.stats || ['vyk','jyk','spark_index','adv_plus','runner_plus','out_avoid_plus',
     'money_kl_plus','adv1_pct','adv2_pct','adv3_pct','adv_home_pct',
     'adv1_plus','adv2_plus','adv3_plus','adv_home_plus','teho_plus','teho_plus_adj'];
 
@@ -235,7 +253,7 @@ async function showLeaderboard(sid, stat) {
     'money_kl_plus','adv1_plus','adv2_plus','adv3_plus','adv_home_plus',
     'teho_plus','teho_plus_adj','vyk','jyk','raa']);
 
-  const sorted = [...players].filter(p => p.turns_at_bat >= 40)
+  let sorted = [...players].filter(p => p.turns_at_bat >= 40)
     .sort((a,b) => {
       const av = a[stat], bv = b[stat];
       if (av === null && bv === null) return 0;
@@ -244,8 +262,17 @@ async function showLeaderboard(sid, stat) {
       return LOWER_BETTER.has(stat) ? av - bv : bv - av;
     });
 
+  // position filter (baseball position); options built from the qualified pool
+  const posPresent = POS_ORDER.filter(p => sorted.some(l => posLabel(l.pos) === p));
+  if (posFilter) sorted = sorted.filter(l => posLabel(l.pos) === posFilter);
+  const posQ = posFilter ? `&pos=${posFilter}` : '';
+  const posOpts = [`<option value="">Kaikki paikat</option>`].concat(
+    posPresent.map(p => `<option value="${p}"${p===posFilter?' selected':''}>${p}</option>`)).join('');
+  const posSel = `<span class="lab">Paikka</span>
+    <select class="sel" onchange="location.hash='/?sid=${sid}&stat=${stat}'+(this.value?'&pos='+this.value:'')">${posOpts}</select>`;
+
   const pills = STATS.map(s =>
-    `<a href="#" onclick="nav('leaderboard',${sid},'${s}');return false;"
+    `<a href="#/?sid=${sid}&stat=${s}${posQ}"
        class="${s===stat?'active':''}">${STAT_LABEL[s]||s}</a>`).join('');
 
   // SPARK + TEHO+ are the always-on anchors; the sorted stat gets its own
@@ -268,7 +295,7 @@ async function showLeaderboard(sid, stat) {
     }
     rows += `<tr${i===0?' class="leader"':''}>
       <td><span class="rank">${i+1}</span></td>
-      <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a></td>
+      <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a> <span class="pos">${posLabel(l.pos)}</span></td>
       <td class="name team"><a href="#/team/${encodeURIComponent(l.team)}?sid=${sid}">${l.team||'—'}</a></td>
       <td class="num">${l.games}</td><td class="num">${l.turns_at_bat}</td>
       <td><div class="teho-cell"><span class="val">${l.spark_index??'—'}</span><span class="bar"><i style="width:${Math.min(Math.round((l.spark_index||0)/2.5),100)}%"></i></span></div></td>
@@ -287,7 +314,7 @@ async function showLeaderboard(sid, stat) {
     : 'Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).';
 
   main().innerHTML = `
-    ${leaderboardControls(sid)}
+    ${leaderboardControls(sid, '')}
     <div class="page" style="padding-bottom:6px">
       <h1>${parseSeries(season.series).tier} ${season.year}</h1>
       <p class="sub">${subText}</p>
@@ -296,6 +323,7 @@ async function showLeaderboard(sid, stat) {
       <span class="lab">Järjestä</span>
       ${pills}
       <span class="spacer"></span>
+      ${posSel}
       <a href="#" onclick="dlLB(${sid},'${stat}');return false;">↓ CSV</a>
     </div>
     <table>
@@ -317,6 +345,46 @@ async function showLeaderboard(sid, stat) {
   window.nav = function(page, sid, stat) {
     location.hash = `/${page}?sid=${sid}&stat=${stat}`;
   };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LUKKARIT — pitcher run-prevention leaderboard
+══════════════════════════════════════════════════════════════════════════ */
+async function showLukkarit(sid) {
+  const data = await fetchJSON(`data/lukkari/${sid}.json`);
+  const season = data.season;
+  const lk = data.lukkarit || [];
+  const maxRp = Math.max(...lk.map(l => Math.abs(l.lukkari_rp || 0)), 1e-9);
+
+  let rows = '';
+  lk.forEach((l, i) => {
+    const w = Math.min(Math.abs(l.lukkari_rp || 0) / maxRp * 100, 100);
+    rows += `<tr${i===0?' class="leader"':''}>
+      <td><span class="rank">${i+1}</span></td>
+      <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a> <span class="pos">P</span></td>
+      <td class="name team"><a href="#/team/${encodeURIComponent(l.team)}?sid=${sid}">${l.team||'—'}</a></td>
+      <td class="num">${l.lukkari_games}</td>
+      <td class="num">${l.runs_allowed}</td>
+      <td class="num">${l.lra!=null?l.lra.toFixed(2):'—'}</td>
+      <td class="num">${l.lra_minus??'—'}</td>
+      <td><div class="teho-cell"><span class="val">${l.lukkari_rp??'—'}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>
+    </tr>`;
+  });
+
+  main().innerHTML = `
+    ${leaderboardControls(sid, 'lukkari')}
+    <div class="page" style="padding-bottom:6px">
+      <h1>${parseSeries(season.series).tier} ${season.year} <span class="muted">· Lukkarit</span></h1>
+      <p class="sub">Lukkarin juoksujenesto: RP = juoksut estetty yli sarjan keskiarvon (kertyvä, suurempi parempi). LRA = päästetyt juoksut/ottelu, LRA- indeksinä (100 = keskiarvo, pienempi parempi). Vähintään 3 lukkariottelua. ERA-tyylinen silta kunnes syöttödata on saatavilla.</p>
+    </div>
+    ${lk.length ? `<table>
+      <thead><tr>
+        <th style="width:36px">#</th>
+        <th class="name">Pelaaja</th><th class="name">Joukkue</th>
+        <th>Ott.</th><th>Päästetyt</th><th>LRA</th><th>LRA-</th><th>RP</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>` : `<div class="page"><p class="sub">Ei lukkaridataa tälle kaudelle.</p></div>`}`;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -553,7 +621,7 @@ async function showPlayer(pid) {
 
   main().innerHTML = `
     <div class="page">
-      <h1>${player.name}</h1>
+      <h1>${player.name} <span class="pos">${posLabel(line.pos)}</span></h1>
       <p class="sub">
         <a href="#/team/${encodeURIComponent(line.team)}?sid=${line.season_id}">${line.team}</a>
         ${line.age ? `· ${line.age} v` : ''}
@@ -805,6 +873,26 @@ function showGlossary() {
         )}
         <p class="legend" style="padding:10px 16px">e- = ennustettu · k- = kenttäkorjattu.</p>
       </div>
+      <h2>Lukkari <span class="muted">— juoksujenesto</span></h2>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('LRA','<code>päästetyt juoksut / lukkariottelut</code>','lukkarin joukkueen päästämät juoksut per ottelu (ERA-vastine)') +
+          gr('LRA-','<code>100 × LRA / sarjan LRA</code>','100 = keskiarvo, pienempi parempi') +
+          gr('RP','<code>(sarjan LRA − LRA) × lukkariottelut</code>','juoksut estetty yli keskiarvon; kertyvä, suurempi parempi')
+        )}
+        <p class="legend" style="padding:10px 16px">ERA-tyylinen silta olemassa olevista otteluriveistä; tarkentuu kun syöttö-syötöltä-data on käytössä.</p>
+      </div>
+      <h2>Paikat <span class="muted">— pesäpallo → baseball</span></h2>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('L → P','lukkari','pitcher') +
+          gr('S → C','sieppari','catcher') +
+          gr('1V / 2V / 3V → 1B / 2B / 3B','1./2./3.-vahti','vahdit') +
+          gr('3P / 2P → LSS / RSS','3./2.-polttaja','vasen / oikea sisäkenttä (shortstop)') +
+          gr('3K / 2K → LF / RF','3./2.-koppari','vasen / oikea ulkokenttä') +
+          gr('J → DH','jokeri','lyöjä ilman kenttäpaikkaa')
+        )}
+      </div>
       <h2>Muut</h2>
       <div class="card" style="padding:0;overflow-x:auto">
         ${gtable(
@@ -837,8 +925,11 @@ async function route() {
 
     if (page === '' || page === 'leaderboard') {
       const sid = parseInt(params.sid || defaultSid, 10);
-      const stat = params.stat || 'vyk';
-      await showLeaderboard(sid, stat);
+      if (params.view === 'lukkari') {
+        await showLukkarit(sid);
+      } else {
+        await showLeaderboard(sid, params.stat || 'vyk', params.pos || '');
+      }
 
     } else if (page === 'projections') {
       const sid = parseInt(params.sid || defaultSid, 10);

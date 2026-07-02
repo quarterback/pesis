@@ -112,6 +112,11 @@ def main():
             "season": season, "projections": projs[:50],
         })
 
+        # Lukkari (pitcher) run-prevention leaderboard
+        dump(OUT / "lukkari" / f"{sid}.json", {
+            "season": season, "lukkarit": metrics.lukkari_lines(conn, sid),
+        })
+
         # Teams — roster ranked by SPARK (Mallo composite), unqualified players last
         teams = {l["team"] for l in lines if l.get("team")}
         for team in teams:
