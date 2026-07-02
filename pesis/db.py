@@ -96,6 +96,8 @@ def connect(path: str | None = None) -> sqlite3.Connection:
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
+    # WAL lets the nightly refresh write while the web app keeps reading
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA)
     # additive migrations for DBs created before a column existed
     for ddl in ("ALTER TABLE matches ADD COLUMN periods_home INTEGER",

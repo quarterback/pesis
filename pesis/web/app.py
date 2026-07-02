@@ -11,6 +11,7 @@ import sqlite3
 
 import csv
 import io
+import os
 
 from flask import Flask, Response, abort, g, render_template, request
 
@@ -71,12 +72,24 @@ def create_app(db_path: str | None = None) -> Flask:
             g.db = db.connect(app.config["DB_PATH"])
         return g.db
 
-    # season aggregates are immutable between ingests (which restart the
-    # app), so cache them process-wide; with 35 years of history a career
-    # page would otherwise recompute ~100 full-season aggregations
+    # season aggregates only change when an ingest writes the DB (the daily
+    # refresh loop), so cache them process-wide and invalidate on the DB
+    # file's mtime; with 35 years of history a career page would otherwise
+    # recompute ~100 full-season aggregations
     _lines_cache: dict[int, list[dict]] = {}
+    _cache_stamp: list[float] = [0.0]
+
+    def _db_mtime() -> float:
+        try:
+            return os.path.getmtime(app.config["DB_PATH"])
+        except OSError:
+            return 0.0
 
     def cached_lines(season_id: int) -> list[dict]:
+        stamp = _db_mtime()
+        if stamp != _cache_stamp[0]:
+            _lines_cache.clear()
+            _cache_stamp[0] = stamp
         if season_id not in _lines_cache:
             _lines_cache[season_id] = metrics.season_lines(conn(), season_id)
         # copies: callers (add_percentiles) mutate lines in place

@@ -5,12 +5,14 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 COPY . .
+RUN chmod +x entrypoint.sh
 
-# Bake real current-season Superpesis data (keyless via v1.pesistulokset.fi)
-# into the image; fall back to the synthetic demo league if the fetch fails.
-# Re-deploying refreshes the snapshot. For daily updates without deploys,
-# mount a Fly volume, set PESIS_DB_PATH, and cron `python -m pesis ingest-v1`.
-RUN python -m pesis ingest-v1 --year 2026 --series both || python -m pesis demo
+# Bake a current-season snapshot (keyless via v1.pesistulokset.fi; demo
+# league as offline fallback). At runtime entrypoint.sh copies it onto the
+# data volume ONLY if the volume is empty — an existing volume (e.g. with
+# the 1991→ historical backfill) is never overwritten by a deploy.
+RUN PESIS_DB_PATH=/app/seed/pesis.db python -m pesis ingest-v1 --year 2026 --series both \
+    || PESIS_DB_PATH=/app/seed/pesis.db python -m pesis demo
 
 EXPOSE 8080
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "-w", "2", "wsgi:app"]
+CMD ["./entrypoint.sh"]
