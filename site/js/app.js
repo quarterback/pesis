@@ -468,30 +468,33 @@ async function showLukkarit(sid) {
    PROJECTIONS
 ══════════════════════════════════════════════════════════════════════════ */
 async function showProjections(sid) {
-  const data = await fetchJSON(`data/projections/${sid}.json`);
-  const season = data.season;
-  const projs = data.projections;
+  // PARE is forward-looking — projections exist for the current season only, so
+  // restrict the selector to this year's series (avoids 404s on historical years).
+  const maxYear = Math.max(...META.seasons.map(s => s.year));
+  const curSeasons = META.seasons.filter(s => s.year === maxYear);
+  if (!curSeasons.some(s => s.id === sid)) sid = curSeasons[0]?.id;
 
-  let rows = '';
-  projs.forEach((p, i) => {
-    const barW = Math.min(Math.round((p.teho_plus_proj||0)/2.1), 100);
-    rows += `<tr${i===0?' class="leader"':''}>
-      <td><span class="rank">${i===0?'1':i+1}</span></td>
-      <td class="name"><a class="player" href="#/player/${p.player_id}">${p.name}</a></td>
-      <td class="num">${rate(p.stats?.kl_pct?.rate)}</td>
-      <td class="num">${rate(p.stats?.saatto_pct?.rate)}</td>
-      <td class="num">${rate(p.stats?.eten_pct?.rate)}</td>
-      <td class="num">${rate(p.stats?.palo_rate?.rate)}</td>
-      <td><div class="teho-cell">
-        <span class="val">${p.teho_plus_proj}</span>
-        <span class="bar"><i style="width:${barW}%"></i></span>
-      </div></td>
-    </tr>`;
-  });
+  const data = await fetchJSON(`data/projections/${sid}.json`);
+  const projs = data.projections;
+  const maxProj = Math.max(...projs.map(p => Math.abs(p.teho_plus_proj || 0)), 1e-9);
+
+  const cols = [
+    {key:'rank', label:'#', sortable:false, get:()=>0, cell:(r,i)=>`<td><span class="rank">${i+1}</span></td>`},
+    {key:'name', label:'Pelaaja', thClass:'name', get:r=>r.name,
+     cell:r=>`<td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a></td>`},
+    {key:'ekl', label:'eKL%', get:r=>r.stats?.kl_pct?.rate, cell:r=>`<td class="num">${rate(r.stats?.kl_pct?.rate)}</td>`},
+    {key:'esaatto', label:'eSaatto%', get:r=>r.stats?.saatto_pct?.rate, cell:r=>`<td class="num">${rate(r.stats?.saatto_pct?.rate)}</td>`},
+    {key:'eeten', label:'eEtenemis%', get:r=>r.stats?.eten_pct?.rate, cell:r=>`<td class="num">${rate(r.stats?.eten_pct?.rate)}</td>`},
+    {key:'epalo', label:'ePalo%', get:r=>r.stats?.palo_rate?.rate, cell:r=>`<td class="num">${rate(r.stats?.palo_rate?.rate)}</td>`},
+    {key:'eteho', label:'eTEHO+', thClass:'extra', get:r=>r.teho_plus_proj, cell:r=>{
+      const w = Math.min(Math.abs(r.teho_plus_proj||0)/maxProj*100,100);
+      return `<td><div class="teho-cell"><span class="val">${r.teho_plus_proj}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
+    }},
+  ];
 
   main().innerHTML = `
     <div class="controls">
-      ${seasonSelHtml(META.seasons, sid, '/projections')}
+      ${seasonSelHtml(curSeasons, sid, '/projections')}
     </div>
     <div class="page" style="padding-bottom:6px">
       <h1>PARE-ennusteet</h1>
@@ -499,15 +502,12 @@ async function showProjections(sid) {
       eksponentiaalisesti painotettuna + regressio sarjakeskiarvoon.
       Ei mielivaltaisia "viimeiset N ottelua" -rajauksia.</p>
     </div>
-    <table>
-      <thead><tr>
-        <th style="width:34px">#</th>
-        <th class="name">Pelaaja</th>
-        <th>eKL%</th><th>eSaatto%</th>
-        <th>eEtenemis%</th><th>ePalo%</th><th class="extra">eTEHO+</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+    <div id="pr-table"></div>`;
+
+  makeTable(document.getElementById('pr-table'), {
+    columns: cols, rows: projs, sort: { key: 'eteho', dir: -1 },
+    rowClass: (r, gi) => gi === 0 ? 'leader' : '',
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -521,19 +521,21 @@ async function showLeague(sid) {
   const parks = data.parks;
   const weather = data.weather;
 
-  let standRows = '';
-  table.forEach((t, i) => {
-    const diff = t.run_diff >= 0 ? `+${t.run_diff}` : `${t.run_diff}`;
-    standRows += `<tr>
-      <td>${i+1}</td>
-      <td class="name"><a href="#/team/${encodeURIComponent(t.team)}?sid=${sid}">${t.team}</a></td>
-      <td class="num">${t.games}</td><td class="num">${t.wins}</td>
-      <td class="num">${t.ties??'—'}</td><td class="num">${t.losses}</td>
-      <td class="num"><strong>${t.points}</strong></td>
-      <td class="num">${t.runs_for}–${t.runs_against}</td>
-      <td class="num ${t.run_diff>=0?'pos':'neg'}">${diff}</td>
-    </tr>`;
-  });
+  const standCols = [
+    {key:'rank', label:'#', sortable:false, get:()=>0, cell:(r,i)=>`<td>${i+1}</td>`},
+    {key:'team', label:'Joukkue', thClass:'name', get:r=>r.team,
+     cell:r=>`<td class="name"><a href="#/team/${encodeURIComponent(r.team)}?sid=${sid}">${r.team}</a></td>`},
+    {key:'games', label:'O', get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
+    {key:'wins', label:'V', get:r=>r.wins, cell:r=>`<td class="num">${r.wins}</td>`},
+    {key:'ties', label:'T', get:r=>r.ties, cell:r=>`<td class="num">${r.ties??'—'}</td>`},
+    {key:'losses', label:'H', get:r=>r.losses, cell:r=>`<td class="num">${r.losses}</td>`},
+    {key:'points', label:'Pisteet', get:r=>r.points, cell:r=>`<td class="num"><strong>${r.points}</strong></td>`},
+    {key:'runs', label:'Juoksut', sortable:false, get:r=>r.run_diff, cell:r=>`<td class="num">${r.runs_for}–${r.runs_against}</td>`},
+    {key:'run_diff', label:'±', get:r=>r.run_diff, cell:r=>{
+      const diff = r.run_diff>=0?`+${r.run_diff}`:`${r.run_diff}`;
+      return `<td class="num ${r.run_diff>=0?'pos':'neg'}">${diff}</td>`;
+    }},
+  ];
 
   let parkRows = '';
   for (const p of (parks||[])) {
@@ -568,16 +570,7 @@ async function showLeague(sid) {
       </div></div>` : ''}
     <div class="page" style="padding-top:0">
       <h2>Sarjataulukko</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th>#</th><th class="name">Joukkue</th>
-            <th>O</th><th>V</th><th>T</th><th>H</th>
-            <th>Pisteet</th><th>Juoksut</th><th>±</th>
-          </tr></thead>
-          <tbody>${standRows}</tbody>
-        </table>
-      </div>
+      <div id="lg-standings"></div>
       <h2>Kenttäkertoimet <span class="muted">(100 = neutraali)</span></h2>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
@@ -600,6 +593,10 @@ async function showLeague(sid) {
         <p class="legend" style="padding:10px 16px">Sää joka ottelusta suoraan tulospalvelun datasta.</p>
       </div>
     </div>`;
+
+  makeTable(document.getElementById('lg-standings'), {
+    columns: standCols, rows: table, sort: { key: 'points', dir: -1 }, pageSize: 50,
+  });
 
   if (history && typeof renderFangraph === 'function') {
     const el = document.getElementById('fangraph');
@@ -801,19 +798,17 @@ async function showTeam(teamRaw, sid) {
       <div class="tile"><div class="label">Juoksuero</div><div class="value">${standing.run_diff>=0?'+':''}${standing.run_diff}</div></div>
     </div>` : '';
 
-  // roster ranked by the season line's SPARK order it arrives in; show Mallo indices only
-  let rosterRows = '';
-  for (const l of roster) {
-    rosterRows += `<tr>
-      <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a></td>
-      <td class="num">${l.games}</td><td class="num">${l.turns_at_bat}</td>
-      <td class="num strong">${l.spark_index??'—'}</td>
-      <td class="num">${l.adv_plus??'—'}</td>
-      <td class="num">${l.runner_plus??'—'}</td>
-      <td class="num">${l.out_avoid_plus??'—'}</td>
-      <td class="num extra">${l.teho_plus??'—'}</td>
-    </tr>`;
-  }
+  const rosterCols = [
+    {key:'name', label:'Pelaaja', thClass:'name', get:r=>r.name,
+     cell:r=>`<td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a> <span class="pos">${posLabel(r.pos)}</span></td>`},
+    {key:'games', label:'O', get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
+    {key:'turns_at_bat', label:'Vuorot', get:r=>r.turns_at_bat, cell:r=>`<td class="num">${r.turns_at_bat}</td>`},
+    {key:'spark_index', label:'SPARK', get:r=>r.spark_index, cell:r=>`<td class="num strong">${r.spark_index??'—'}</td>`},
+    {key:'adv_plus', label:'ADV+', get:r=>r.adv_plus, cell:r=>`<td class="num">${r.adv_plus??'—'}</td>`},
+    {key:'runner_plus', label:'RUN+', get:r=>r.runner_plus, cell:r=>`<td class="num">${r.runner_plus??'—'}</td>`},
+    {key:'out_avoid_plus', label:'OUT+', get:r=>r.out_avoid_plus, cell:r=>`<td class="num">${r.out_avoid_plus??'—'}</td>`},
+    {key:'teho_plus', label:'TEHO+', thClass:'extra', get:r=>r.teho_plus, cell:r=>`<td class="num extra">${r.teho_plus??'—'}</td>`},
+  ];
 
   main().innerHTML = `
     <div class="page">
@@ -821,17 +816,12 @@ async function showTeam(teamRaw, sid) {
       <p class="sub">${season.series} ${season.year}</p>
       ${standingTiles}
       <h2 style="margin-top:${standing?'4px':'0'}">Pelaajat</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th class="name">Pelaaja</th>
-            <th>O</th><th>Vuorot</th>
-            <th>SPARK</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th class="extra">TEHO+</th>
-          </tr></thead>
-          <tbody>${rosterRows}</tbody>
-        </table>
-      </div>
+      <div id="tm-roster"></div>
     </div>`;
+
+  makeTable(document.getElementById('tm-roster'), {
+    columns: rosterCols, rows: roster, sort: { key: 'spark_index', dir: -1 }, pageSize: 50,
+  });
 }
 
 

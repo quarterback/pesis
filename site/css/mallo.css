@@ -230,11 +230,11 @@ tr.leader .rank{ background:var(--rank-top-bg); color:var(--rank-top-ink);
 
 /* stats table sits on its own surface panel, lifted off the page background */
 .tbl-card{ background:var(--surface); border:1px solid var(--surface-line); border-radius:13px;
-           box-shadow:var(--card-shadow); overflow:hidden; }
-.tbl-card thead th{ background:var(--thbg); }
-.tbl-card tbody td{ border-bottom:1px solid color-mix(in srgb, var(--accent) 20%, var(--surface)); }
-.tbl-card tbody tr:last-child td{ border-bottom:none; }
-.tbl-card{ margin-bottom:4px; }
+           box-shadow:var(--card-shadow); overflow:hidden; margin-bottom:4px; }
+/* accent-tinted dividers between rows, on every stat table (leaderboards + card tables) */
+.tbl-card thead th, .card table thead th{ background:var(--thbg); }
+.tbl-card tbody td, .card table tbody td{ border-bottom:1px solid color-mix(in srgb, var(--accent) 20%, var(--surface)); }
+.tbl-card tbody tr:last-child td, .card table tbody tr:last-child td{ border-bottom:none; }
 
 /* sortable column headers + pagination */
 th.sortable{ cursor:pointer; user-select:none; white-space:nowrap; }
