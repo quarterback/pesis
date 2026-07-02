@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Tyhjä tietokanta{% endblock %}
+{% block content %}
+<h1>Ei dataa vielä</h1>
+<div class="card">
+  <p>Tietokanta on tyhjä. Aja ensin joko:</p>
+  <p><code>python -m pesis demo</code> — synteettinen demoliiga ilman API-avainta, tai</p>
+  <p><code>python -m pesis ingest --year 2026 --series-id … --series-name Superpesis</code>
+     (vaatii <code>PESISTULOKSET_API_KEY</code>-ympäristömuuttujan; ilmaiset avaimet:
+     tulospalvelu@pesis.fi).</p>
+</div>
+{% endblock %}

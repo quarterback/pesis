@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}TAHKO-ennusteet{% endblock %}
+{% block content %}
+<h1>TAHKO-ennusteet</h1>
+<p class="sub">Päivittyvä arvio jokaisen pelaajan todellisesta tasosta: koko urahistoria
+eksponentiaalisesti painotettuna + regressio sarjakeskiarvoon. Ei mielivaltaisia
+"viimeiset N ottelua" -rajauksia.</p>
+
+<div class="card">
+<table>
+  <thead>
+    <tr><th>#</th><th class="name">Pelaaja</th><th>Ikä</th>
+        <th>KL% (enn.)</th><th>Saatto% (enn.)</th><th>Etenemis% (enn.)</th>
+        <th>Palo% (enn.)</th><th>TEHO+ (enn.)</th></tr>
+  </thead>
+  <tbody>
+    {% for p in projs %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td class="name"><a href="/player/{{ p.player_id }}">{{ p.name }}</a></td>
+      <td>{{ p.age or "—" }}</td>
+      <td>{{ p.stats.kl_pct.rate | rate }}</td>
+      <td>{{ p.stats.saatto_pct.rate | rate }}</td>
+      <td>{{ p.stats.eten_pct.rate | rate }}</td>
+      <td>{{ p.stats.palo_rate.rate | rate }}</td>
+      <td><strong>{{ p.teho_plus_proj }}</strong></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
