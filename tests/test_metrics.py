@@ -46,3 +46,12 @@ def test_percentiles_flip_for_negative_stats():
     # B is better at both: more kärkilyönnit, fewer palot
     assert by_name["B"]["pct_kl_pct"] > by_name["A"]["pct_kl_pct"]
     assert by_name["B"]["pct_palo_rate"] > by_name["A"]["pct_palo_rate"]
+
+
+def test_mallo_indices_are_league_indexed_and_distinct():
+    conn, sid = _build()
+    lines = {l["name"]: l for l in metrics.season_lines(conn, sid)}
+    assert lines["B"]["adv_plus"] > lines["A"]["adv_plus"]
+    assert lines["B"]["out_avoid_plus"] > lines["A"]["out_avoid_plus"]
+    assert lines["B"]["spark_index"] > lines["A"]["spark_index"]
+    assert lines["A"]["spark_index"] != lines["A"]["teho_plus"]

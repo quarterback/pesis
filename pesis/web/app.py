@@ -24,9 +24,10 @@ PCT_STATS = ["kl_pct", "saatto_pct", "eten_pct", "kunnari_rate",
 
 BASE_KL_KEYS = ["kl_base0", "kl_base1", "kl_base2", "kl_base3"]
 
-LEADERBOARD_STATS = ["teho_plus", "teho_plus_adj", "tehot", "kl_pct",
-                     "saatto_pct", "eten_pct", "kunnarit", "lyodyt", "tuodut",
-                     "palo_rate"]
+LEADERBOARD_STATS = ["spark_index", "adv_plus", "runner_plus",
+                     "out_avoid_plus", "money_kl_plus", "teho_plus",
+                     "teho_plus_adj", "tehot", "kl_pct", "saatto_pct",
+                     "eten_pct", "kunnarit", "lyodyt", "tuodut", "palo_rate"]
 
 
 def pct_bucket(pct: int | None) -> int | None:
@@ -199,7 +200,9 @@ def create_app(db_path: str | None = None) -> Flask:
         lines = metrics.leaderboard(conn(), season["id"], stat, limit=1000)
         cols = ["name", "team", "games", "turns_at_bat", "kunnarit", "lyodyt",
                 "tuodut", "tehot", "kl_pct", "saatto_pct", "eten_pct",
-                "palo_rate", "teho_plus", "teho_plus_adj"]
+                "palo_rate", "adv_plus", "runner_plus", "out_avoid_plus",
+                "spark_index", "money_kl_pct", "money_kl_plus",
+                "teho_plus", "teho_plus_adj"]
         buf = io.StringIO()
         w = csv.writer(buf)
         w.writerow(cols)

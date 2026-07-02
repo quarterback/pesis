@@ -51,6 +51,19 @@ S: dict[str, dict[str, str]] = {
                "en": "Minimum 40 turns at bat. TEHO+ = production per turn indexed to league average (100)."},
     "lb.csv": {"fi": "Lataa CSV ↓", "en": "Download CSV ↓"},
 
+
+    "lb.analytics_sub": {"fi": "Mallo-mittarit eivät ole tulospalvelun kopioita: ne indeksoivat etenemisen, palojen välttämisen ja kotiin vievät kärkilyönnit sarjaan (100 = keskiarvo).",
+                         "en": "Mallo metrics are not copied box-score columns: they index advancement, out avoidance and lead-runner-to-home attempts to the league (100 = average)."},
+    "stat.spark_index": {"fi": "SPARK", "en": "SPARK"},
+    "stat.adv_plus": {"fi": "ADV+", "en": "ADV+"},
+    "stat.runner_plus": {"fi": "RUN+", "en": "RUN+"},
+    "stat.out_avoid_plus": {"fi": "OUT+", "en": "OUT+"},
+    "stat.money_kl_plus": {"fi": "KOTI-KL+", "en": "HOME-AH+"},
+    "stat.money_kl_pct": {"fi": "Kotiutus-KL%", "en": "Lead-runner home AH%"},
+    "gl.mallo": {"fi": "Mallo-analytiikka", "en": "Mallo analytics"},
+    "gl.mallo_sub": {"fi": "Nämä rivit rakennetaan tulospalvelun säilytetystä ottelukohtaisesta datasta, mutta ne eivät toista julkaistuja laskureita. 100 = sarjakeskiarvo, yli 100 parempi.",
+                     "en": "These rows are built from the preserved match-level data, but they do not repeat published counters. 100 = league average; above 100 is better."},
+
     # projections
     "proj.title": {"fi": "PARE-ennusteet", "en": "PARE projections"},
     "proj.sub": {"fi": "PARE = Painotettu ja Regressoitu Ennuste: päivittyvä arvio jokaisen pelaajan todellisesta tasosta — koko urahistoria eksponentiaalisesti painotettuna + regressio sarjakeskiarvoon. Ei mielivaltaisia \"viimeiset N ottelua\" -rajauksia.",

@@ -3,10 +3,11 @@
 {% block content %}
 <h1>{{ season.series }} {{ season.year }}</h1>
 <p class="sub">{{ t("lb.sub") }}</p>
+<p class="sub">{{ t("lb.analytics_sub") }}</p>
 
 <div class="filters">
   {% for s in stats %}
-  <a href="?stat={{ s }}&amp;sid={{ season.id }}" class="{{ 'active' if s == stat }}">{{ s }}</a>
+  <a href="?stat={{ s }}&amp;sid={{ season.id }}" class="{{ 'active' if s == stat }}">{{ t("stat." ~ s) if t("stat." ~ s) != "stat." ~ s else s }}</a>
   {% endfor %}
 </div>
 <div class="filters">
@@ -21,7 +22,7 @@
   <thead>
     <tr><th>#</th><th class="name">{{ t("th.player") }}</th><th class="name">{{ t("th.team") }}</th>
         <th>{{ t("th.games") }}</th><th>{{ t("th.turns") }}</th><th>K</th><th>L</th><th>T</th><th>Tehot</th>
-        <th>KL%</th><th>TEHO+</th><th>{{ stat }}</th></tr>
+        <th>KL%</th><th>TEHO+</th><th>{{ t("stat." ~ stat) if t("stat." ~ stat) != "stat." ~ stat else stat }}</th></tr>
   </thead>
   <tbody>
     {% for l in lines %}

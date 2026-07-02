@@ -53,7 +53,8 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
     sums = ", ".join(f"SUM({c}) AS {c}" for c in COUNTING)
     rows = conn.execute(
         f"""SELECT pg.player_id, p.name, p.born_year, s.year,
-                   COUNT(*) AS games, MAX(pg.team) AS team, {sums}
+                   COUNT(*) AS games, MAX(pg.team) AS team,
+                   json_group_array(pg.raw) AS raw_rows, {sums}
             FROM player_games pg
             JOIN players p ON p.id = pg.player_id
             JOIN seasons s ON s.id = pg.season_id
@@ -73,6 +74,7 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
         line["tehot_per_turn"] = (
             line["tehot"] / line["turns_at_bat"] if line["turns_at_bat"] else None
         )
+        _add_raw_base_splits(line, r["raw_rows"] if "raw_rows" in r.keys() else None)
         lines.append(line)
 
     league_tpt = _league_tehot_per_turn(lines)
@@ -81,9 +83,78 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
             round(100 * line["tehot_per_turn"] / league_tpt)
             if line["tehot_per_turn"] is not None and league_tpt else None
         )
+    _add_analytics_indices(lines)
     _add_park_adjusted(conn, season_id, lines)
     return lines
 
+
+
+def _add_raw_base_splits(line: dict, raw_rows_json: str | None) -> None:
+    """Attach target-base KL rates from preserved upstream raw rows.
+
+    The official aggregate pages expose the same counting rows everywhere; these
+    splits use the lower-level batpe_succeeded_N / batpe_tries_N fields when
+    they exist, especially N=3 (bringing the lead runner home).
+    """
+    import json as _json
+
+    succ = [0, 0, 0, 0]
+    tries = [0, 0, 0, 0]
+    if raw_rows_json:
+        for raw_text in _json.loads(raw_rows_json):
+            raw = _json.loads(raw_text or "{}")
+            src = raw.get("_v1", raw)
+            for i in range(4):
+                succ[i] += src.get(f"batpe_succeeded_{i}") or 0
+                tries[i] += src.get(f"batpe_tries_{i}") or 0
+    for i in range(4):
+        line[f"kl_base{i}"] = succ[i] / tries[i] if tries[i] else None
+        line[f"kl_base{i}_tries"] = tries[i]
+    line["money_kl_pct"] = line["kl_base3"]
+    line["money_kl_tries"] = line["kl_base3_tries"]
+
+
+def _safe_div(num: float | int | None, den: float | int | None) -> float | None:
+    return num / den if num is not None and den else None
+
+
+def _index(value: float | None, league: float | None) -> int | None:
+    return round(100 * value / league) if value is not None and league else None
+
+
+def _add_analytics_indices(lines: list[dict]) -> None:
+    """Add Mallo-only composite analytics that are not pesistulokset clones.
+
+    * ADV+ isolates batter advancement (lead-runner KL plus escort advances).
+    * RUN+ isolates the player as a runner.
+    * OUT+ rewards avoiding palot per turn.
+    * SPARK blends those three non-traditional components into a table-setter
+      profile so players can rank without simply repeating K/L/T totals.
+    """
+    adv_num = sum(l["karkilyonnit"] + l["saatot"] for l in lines)
+    adv_den = sum(l["karki_yritykset"] + l["saatto_yritykset"] for l in lines)
+    run_num = sum(l["etenemiset"] for l in lines)
+    run_den = sum(l["eteneminen_yritykset"] for l in lines)
+    out_num = sum(l["palot"] for l in lines)
+    out_den = sum(l["turns_at_bat"] for l in lines)
+    league_adv = _safe_div(adv_num, adv_den)
+    league_run = _safe_div(run_num, run_den)
+    league_out_avoid = 1 - (out_num / out_den) if out_den else None
+    money_num = sum(l.get("money_kl_pct") * l.get("money_kl_tries", 0)
+                    for l in lines if l.get("money_kl_pct") is not None)
+    money_den = sum(l.get("money_kl_tries", 0) for l in lines)
+    league_money = _safe_div(money_num, money_den)
+    for l in lines:
+        adv = _safe_div(l["karkilyonnit"] + l["saatot"],
+                        l["karki_yritykset"] + l["saatto_yritykset"])
+        out_avoid = 1 - l["palo_rate"] if l.get("palo_rate") is not None else None
+        l["adv_plus"] = _index(adv, league_adv)
+        l["runner_plus"] = _index(l.get("eten_pct"), league_run)
+        l["out_avoid_plus"] = _index(out_avoid, league_out_avoid)
+        l["money_kl_plus"] = _index(l.get("money_kl_pct"), league_money)
+        comps = [l.get("adv_plus"), l.get("runner_plus"), l.get("out_avoid_plus")]
+        l["spark_index"] = (round(0.50 * comps[0] + 0.30 * comps[1] + 0.20 * comps[2])
+                            if all(c is not None for c in comps) else None)
 
 def _add_park_adjusted(conn: sqlite3.Connection, season_id: int,
                        lines: list[dict]) -> None:
