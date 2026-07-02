@@ -210,3 +210,17 @@ renderCareer(document.getElementById("career-teho"), seasons, "teho_plus",
 </script>
 {% endif %}
 {% endblock %}
+{% block scripts %}
+{% if career | length > 1 %}
+<script src="/static/d3.v7.min.js"></script>
+<script src="/static/charts.js"></script>
+<script type="application/json" id="career-data">{{ career_json | safe }}</script>
+<script>
+const seasons = JSON.parse(document.getElementById("career-data").textContent);
+renderCareer(document.getElementById("career-kl"), seasons, "kl_pct",
+             { label: "KL%", fmt: d3.format(".3f") });
+renderCareer(document.getElementById("career-teho"), seasons, "teho_plus",
+             { label: "TEHO+", fmt: d3.format("d") });
+</script>
+{% endif %}
+{% endblock %}

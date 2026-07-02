@@ -1,4 +1,6 @@
-# Kärki design doc — a sabermetrics layer for pesäpallo
+# Mallo design doc — a sabermetrics layer for pesäpallo
+
+*(Site name: **Mallo** — owner call 2026-07; earlier working name "Kärki" retired.)*
 
 *2026-07-01. Status: v0 shipped (this repo); real-data backfill pending an API key.*
 
@@ -33,14 +35,14 @@ Nobody has built an analytics layer on any of this. The niche is empty.
 
 ## What we borrow, from whom
 
-| Source | Borrowed idea | Kärki incarnation |
+| Source | Borrowed idea | Mallo incarnation |
 | --- | --- | --- |
-| DARKO | daily-updating Bayesian projections; per-stat exponential decay with *fitted* decay constants; no arbitrary "last N games" windows; aging curves per stat; shrinking to a prior with confidence-dependent learning rate | **TAHKO** (`pesis/tahko.py`) |
+| DARKO | daily-updating Bayesian projections; per-stat exponential decay with *fitted* decay constants; no arbitrary "last N games" windows; aging curves per stat; shrinking to a prior with confidence-dependent learning rate | the projection engine (`pesis/projection.py`) |
 | Baseball Savant | percentile sliders as the player's skill fingerprint; diverging red↔blue = bad↔good; spray/hit charts | player page percentile bars (shipped); hit-map page (roadmap — API has the endpoint) |
 | FanGraphs | league-indexed rate stats (wRC+ → **TEHO+**), qualified leaderboards, career tables | `pesis/metrics.py` + web leaderboards |
 | Baseball-Reference | season-by-season career lines, era adjustment | player page "Kaudet" table |
 | LEBRON / DPM | box-score prior blended with on/off impact | roadmap: lineup-level plus-minus from PBP once ingested |
-| Tango et al. | delta-method aging curves, attempt-weighted | `tahko.aging_curve` |
+| Tango et al. | delta-method aging curves, attempt-weighted | `projection.aging_curve` |
 
 ## Metric definitions (v0)
 
@@ -60,9 +62,15 @@ honest denominators and league context:
 
 Known v0 crudeness, deliberate: tehot-per-turn mixes runner production
 (tuodut) into a batter denominator. A proper split needs runner exposure from
-PBP (see roadmap). `tahko._tuotu_proxy` is the placeholder and says so.
+PBP (see roadmap). `projection._tuotu_proxy` is the placeholder and says so.
 
-## TAHKO — the projection model
+## The projection model
+
+*(Naming convention, owner call 2026-07: descriptive initialisms in the
+WAR/OPS+/xBA tradition — the system is **PARE** (Painotettu ja Regressoitu
+Ennuste), projected stats take an e- prefix (eTEHO+, eKL%), park-adjusted a
+k- prefix (kTEHO+). Never named after people or clubs — the original name
+"TAHKO" collided with Tahko, an actual Superpesis club.)*
 
 DARKO's core question, transplanted: *how much of a hot streak is real?*
 
@@ -78,7 +86,7 @@ DARKO's core question, transplanted: *how much of a hot streak is real?*
    differential-evolution search, grid is fine at our scale.
 
 Validation shipped with the code: the demo league generates every stat line
-from *known latent talent*, and `tests/test_tahko.py` asserts the projections
+from *known latent talent*, and `tests/test_projection.py` asserts the projections
 recover it (truth–projection correlation), that small samples shrink harder,
 and that recent evidence outweighs old.
 
@@ -90,8 +98,25 @@ wrong frame (owner decision, 2026-07). The same short season is unusually
 temperature, attendance and opponent, and the PBP carries base states. So
 observed stats stay the headline, **adjusted for the context they happened
 in** (TEHO+adj is the first: park-adjusted; weather- and opponent-adjusted
-come next). TAHKO remains the forward-looking companion, not a replacement
+come next). The projections remain the forward-looking companion, not a replacement
 for what actually happened.
+
+### Shipped: REAL current-season data, keylessly (`v1import.py`)
+
+v1.pesistulokset.fi (the legacy results site) proxies the stats-tool API
+same-origin **without an api key**: one GET to
+``/api/v1/stats-tool/players?season=&seasonSeries=&phase=`` returns every
+per-player per-match row for a series-season plus name/team/match maps with
+real stadiums, weather flags (0/1 windy/rainy — not m/s), temperature and
+attendance. Season/series ids come from the catalog blob embedded in the
+site HTML (82 seasons, 1945→). The Dockerfile bakes the 2026 men's + women's
+Superpesis at build time (demo fallback if offline); each deploy refreshes
+the snapshot. The official key remains wanted for: 1990→ backfill,
+play-by-play, per-base stats definitions confirmation, and not depending on
+a legacy site staying up. Note from real data: born years are NOT in the v1
+payload (ages/aging need the key or a roster source), and raw TEHO+ runs to
+300+ because production concentrates in the top order — which is why the
+baseball page quantile-maps its wRC+ equivalent instead of copying TEHO+.
 
 ### Shipped since v0 (Tier A — per-game rows + match context)
 
@@ -109,7 +134,7 @@ for what actually happened.
   neighbor over z-scored rates + age, 1000 = identical, own seasons excluded.
 - **Standings + playoff odds** (`simulate.py`): run-diff strength (shrunken)
   → Normal margin model → Monte Carlo over the remaining schedule. Plug in
-  TAHKO-aggregated rosters later. Real Superpesis points rules (2–1 supervuoro
+  projection-aggregated rosters later. Real Superpesis points rules (2–1 supervuoro
   splits) pending real per-jakso data.
 - **Pesis → baseball translation** (`translate.py`, `/player/<id>/baseball`):
   rank-preserving quantile map from Superpesis percentiles onto MLB
@@ -121,10 +146,12 @@ for what actually happened.
 
 ### UI requirements for the design pass
 
-- **Site-wide FI/EN language toggle is a hard requirement** — the audience
-  that makes this project interesting (baseball analytics people) doesn't
-  read Finnish. The baseball-translation and About pages are already English;
-  everything else needs string tables, not per-page forks.
+- **FI/EN toggle: SHIPPED** (`web/i18n.py` string table + `t()` helper,
+  `?lang=` param persisted in a cookie, Finnish default — owner call: "only
+  Finns will care about this site", EN one click away). Remaining gaps:
+  glossary formula *notes* and the empty-DB page body are Finnish-only, and
+  the About page is deliberately English-only (owner's voice). The
+  baseball-translation page stays English-only by design.
 - Keep the baseball translation page standalone-shareable (self-explanatory
   with the primer on-page, no context needed from the rest of the site).
 - Layout reference: darko.app's current site — hero cards over the table

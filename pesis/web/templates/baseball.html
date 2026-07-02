@@ -5,21 +5,15 @@
 <p class="pmeta">{{ t.team }} · Superpesis {{ t.year }}{% if t.age %} · age {{ t.age }}{% endif %}
 · This page is in English on purpose — share it with people who know baseball but not pesäpallo.</p>
 
-<div class="tiles" style="margin-top:16px">
-  <div class="tile hero">
-    <div class="label">wRC+ equivalent</div>
-    <div class="value">{{ t.wrc_plus or "—" }}</div>
-  </div>
-  <div class="tile">
-    <div class="label">Reads like</div>
-    <div class="value" style="font-size:18px;line-height:1.3">{{ t.tier or "—" }}</div>
-  </div>
-  <div class="tile" style="flex:2;min-width:180px">
-    <div class="label">One MLB month · 162-game pace</div>
-    <div class="value" style="font-size:18px;line-height:1.3">
-      {{ t.games }} G · {{ t.pace.HR }} HR / {{ t.pace.RBI }} RBI / {{ t.pace.R }} R
-    </div>
-  </div>
+<div class="tiles">
+  <div class="tile"><div class="label">wRC+ equivalent (TEHO+ {{ t.teho_plus }})</div>
+    <div class="value">{{ t.wrc_plus or "—" }}</div></div>
+  <div class="tile"><div class="label">Reads like</div>
+    <div class="value" style="font-size:18px; line-height:2">{{ t.tier or "—" }}</div></div>
+  <div class="tile"><div class="label">One MLB month, volume-wise</div>
+    <div class="value" style="font-size:18px; line-height:2">
+      {{ t.games }} games · {{ t.pace.HR }}/{{ t.pace.RBI }}/{{ t.pace.R }}
+      HR/RBI/R at 162-game pace</div></div>
 </div>
 
 <p class="sub" style="margin-bottom:20px">
@@ -64,24 +58,4 @@ percentiles don't care how long the schedule is.</p>
 </div>
 {% endif %}
 
-<h2 class="sech">Pesäpallo in 60 seconds, for baseball people</h2>
-<div class="contentcard">
-  <p><strong>The pitch is vertical.</strong> The "pitcher" (lukkari) stands at the plate and tosses
-  the ball straight up; hitting is about placement, not beating velocity. Think of every at-bat as
-  a bunt-or-drive decision against a shifted defense.</p>
-  <p><strong>The manager bats.</strong> Not literally — but the pelinjohtaja signals every swing,
-  take, and advance with a giant fan. Strategy density is closer to football play-calling than
-  baseball managing.</p>
-  <p><strong>Wounds aren't outs.</strong> A caught fly "wounds" (haavoittaa) the advancing runner —
-  he's erased, but no out is recorded. Outs (palot, "burns") happen when the ball beats a runner
-  to the base.</p>
-  <p><strong>A kärkilyönti — advancing the lead runner — is the core batting skill</strong>, the
-  sport's batting average. Home runs (kunnarit) exist but never leave the park: the batter sprints
-  the bases like an inside-the-park homer, every time.</p>
-  <p><strong>Structure:</strong> two 4-inning periods; win both, win the game. Split them and you
-  play a super-inning (extra innings), then a one-on-one homer derby (kotiutuslyöntikilpailu) —
-  yes, the sport settles ties with a shootout.</p>
-  <p><strong>The season is a sprint.</strong> 28–33 regular-season games, roughly one MLB month —
-  so every series matters, and context matters more than in a 162-game grind.</p>
-</div>
 {% endblock %}

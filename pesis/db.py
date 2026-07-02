@@ -94,6 +94,11 @@ def connect(path: str | None = None) -> sqlite3.Connection:
     path = path or DEFAULT_DB_PATH
     if path != ":memory:":
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    # If the target DB is missing/empty and a seed exists, use seed instead
+    if not os.path.isfile(path) or os.path.getsize(path) == 0:
+        seed_path = "/app/seed/pesis.db"
+        if os.path.isfile(seed_path) and os.path.getsize(seed_path) > 0:
+            path = seed_path
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     # WAL lets the nightly refresh write while the web app keeps reading
