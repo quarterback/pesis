@@ -37,8 +37,11 @@ _PHI = NormalDist()
 # distribution, direction (+1 higher percentile = higher MLB value),
 # and the story of the analogy, written for a baseball audience.
 MAPPINGS = (
+    # AVG is intentionally stretched wider than the real MLB spread (sd ~.026):
+    # the elite of Superpesis (KL% ~.800) should read as a historic .400 season,
+    # not a compressed ~.310. Anchored so the ~99th percentile ≈ .400.
     {"stat": "kl_pct", "pesis": "Kärkilyönti-% (advance the lead runner)",
-     "mlb": "AVG", "mean": 0.252, "sd": 0.026, "dir": +1, "fmt": ".3f",
+     "mlb": "AVG", "mean": 0.250, "sd": 0.064, "dir": +1, "fmt": ".3f",
      "blurb": "The core bat-to-ball skill. A kärkilyönti advances the lead "
               "runner — think situational hitting as the PRIMARY batting stat."},
     {"stat": "kl_per_turn", "pesis": "Kärkilyönnit per turn (base hits)",
