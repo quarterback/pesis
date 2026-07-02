@@ -9,7 +9,7 @@ The site/ directory can then be deployed to Netlify, Vercel, or any static host.
 from __future__ import annotations
 import json, re, unicodedata
 from pathlib import Path
-from pesis import context, db, metrics, projection, simulate
+from pesis import context, db, metrics, projection, simulate, translate
 
 # Mallo-native analytics only — the site is additive to pesistulokset, never a
 # clone of its counting columns (kunnarit/lyodyt/tuodut/tehot) or published rates.
@@ -53,6 +53,34 @@ LEADERBOARD_PLAYER_FIELDS = (["player_id", "name", "team", "games", "turns_at_ba
 
 def slim(d: dict, fields) -> dict:
     return {k: d.get(k) for k in fields}
+
+
+def translation_card(line: dict) -> dict | None:
+    """Concise player→MLB baseball translation for one season line, reusing the
+    quantile map in pesis/translate.py (percentiles must already be attached)."""
+    rows = []
+    for m in translate.MAPPINGS:
+        pct = line.get(f"pct_{m['stat']}")
+        value = line.get(m["stat"])
+        if pct is None or value is None:
+            continue
+        mlb = translate._quantile_value(pct, m["mean"], m["sd"], m["dir"])
+        rows.append({"pesis_label": m["pesis"], "pesis_value": value,
+                     "percentile": pct, "mlb_stat": m["mlb"],
+                     "mlb_value": format(mlb, m["fmt"])})
+    if not rows:
+        return None
+    games = line["games"] or 1
+    pct_prod = line.get("pct_tehot_per_turn")
+    wrc = (round(translate._quantile_value(pct_prod, 100.0, 25.0, +1))
+           if pct_prod is not None else None)
+    return {
+        "wrc_plus": wrc, "tier": translate.wrc_tier(wrc) if wrc is not None else None,
+        "rows": rows,
+        "pace": {"HR": round(line["kunnarit"] * 162 / games),
+                 "RBI": round(line["lyodyt"] * 162 / games),
+                 "R": round(line["tuodut"] * 162 / games)},
+    }
 
 
 def main():
@@ -180,6 +208,17 @@ def main():
             _league_cache[sid] = metrics.league_rates(cached_lines(sid))
         return _league_cache[sid]
 
+    _trans_cache: dict = {}
+
+    def translations_for(sid):
+        if sid not in _trans_cache:
+            tl = [dict(l) for l in cached_lines(sid)]
+            metrics.add_percentiles(tl, stats=tuple(m["stat"] for m in translate.MAPPINGS)
+                                    + ("tehot_per_turn",))
+            _trans_cache[sid] = {l["player_id"]: card for l in tl
+                                 if (card := translation_card(l))}
+        return _trans_cache[sid]
+
     # Players ordered by most recent season first — 2026 gets written before older history
     player_ids = [r[0] for r in conn.execute(
         """SELECT DISTINCT p.id FROM players p
@@ -223,11 +262,16 @@ def main():
         if base_kl and all(base_kl.get(f"kl_base{k}_tries", 0) == 0 for k in range(4)):
             base_kl = None
 
+        # Baseball translation — current-season qualified players only
+        translation = (translations_for(sid).get(pid)
+                       if current["year"] == max_year else None)
+
         dump(out_path, {
             "player": dict(row),
             "career": [slim(s, CAREER_FIELDS) for s in career],
             "line": line,
             "proj": proj,
+            "translation": translation,
             "career_json": career_json,
             "pct_stats": PCT_STATS,
             "base_kl": base_kl,

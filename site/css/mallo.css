@@ -308,6 +308,8 @@ th.sorted{ color:var(--accent); }
 .callout .k{ font:600 9px var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--label); }
 .callout .v{ font-family:var(--font-display); font-weight:800; font-size:26px; letter-spacing:-.02em; color:var(--ink-strong); margin-top:5px; }
 .callout .v.accent{ color:var(--accent); }
+.callrow{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0 8px; }
+@media(max-width:640px){ .callrow{ grid-template-columns:1fr; } }
 
 /* STANDINGS extras — playoff-odds inline bar + signed run differential */
 .odds{ display:inline-flex; align-items:center; gap:8px; justify-content:flex-end; }

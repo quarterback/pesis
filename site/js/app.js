@@ -612,7 +612,7 @@ const BASE_KL_KEYS = ['kl_base0','kl_base1','kl_base2','kl_base3'];
 
 async function showPlayer(pid) {
   const data = await fetchJSON(`data/players/${pid}.json`);
-  const {player, career, line, proj, career_json, base_kl, base_keys, comps} = data;
+  const {player, career, line, proj, translation, career_json, base_kl, base_keys, comps} = data;
 
   const projTile = proj?.teho_plus_proj
     ? `<div class="tile"><div class="label">PARE enn.</div><div class="value">${proj.teho_plus_proj}</div></div>` : '';
@@ -698,6 +698,7 @@ async function showPlayer(pid) {
         <a href="#/team/${encodeURIComponent(line.team)}?sid=${line.season_id}">${line.team}</a>
         ${line.age ? `· ${line.age} v` : ''}
         · kausi ${line.year}
+        ${translation ? `· <a href="#/baseball/${pid}">⚾ Baseball →</a>` : ''}
       </p>
       <div class="tiles">
         <div class="tile"><div class="label">Ottelut</div><div class="value">${line.games}</div></div>
@@ -824,6 +825,51 @@ async function showTeam(teamRaw, sid) {
   });
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BASEBALL TRANSLATION — concise player → MLB card
+══════════════════════════════════════════════════════════════════════════ */
+async function showBaseball(pid) {
+  const data = await fetchJSON(`data/players/${pid}.json`);
+  const {player, line, translation: t} = data;
+  if (!t) {
+    main().innerHTML = `<div class="page"><h1>${player.name}</h1>
+      <p class="sub"><a href="#/player/${pid}">← takaisin</a> · ei baseball-käännöstä (liian vähän lyöntivuoroja).</p></div>`;
+    return;
+  }
+  const callout = (k, v, cls) => `<div class="callout"><div class="k">${k}</div><div class="v ${cls||''}">${v}</div></div>`;
+  const rows = t.rows.map(r => `<tr>
+    <td class="name">${r.pesis_label}</td>
+    <td class="num">${rate(r.pesis_value)}</td>
+    <td class="num">${r.percentile}</td>
+    <td class="num">${r.mlb_stat}</td>
+    <td class="num extra">${r.mlb_value}</td>
+  </tr>`).join('');
+
+  main().innerHTML = `
+    <div class="page">
+      <h1>${player.name} <span class="muted">· baseball</span></h1>
+      <p class="sub"><a href="#/player/${pid}">← ${line.team} · ${line.year}</a></p>
+      <div class="callrow">
+        ${callout('wRC+ equivalent', t.wrc_plus ?? '—', 'accent')}
+        ${callout('Reads like', t.tier ?? '—')}
+        ${callout('162-game pace', `${t.pace.HR} HR · ${t.pace.RBI} RBI · ${t.pace.R} R`)}
+      </div>
+      <h2>Skill → MLB <span class="muted">(same percentile, MLB scale)</span></h2>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr>
+            <th class="name">Pesäpallo</th><th>Arvo</th><th>Pctile</th>
+            <th>MLB</th><th class="extra">Käännös</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p class="legend">Rank-preserving quantile map — a player's percentile among qualified
+      Superpesis hitters read off at the same percentile of the MLB distribution. A translation
+      baseball fans can read, not a claim the skills transfer.</p>
+    </div>`;
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    STATIC PAGES
@@ -996,6 +1042,11 @@ async function route() {
       const pid = parseInt(parts[1], 10);
       if (!pid) throw new Error('bad player id');
       await showPlayer(pid);
+
+    } else if (page === 'baseball') {
+      const pid = parseInt(parts[1], 10);
+      if (!pid) throw new Error('bad player id');
+      await showBaseball(pid);
 
     } else if (page === 'team') {
       const teamRaw = parts[1] || '';
