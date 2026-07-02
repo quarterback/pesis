@@ -773,6 +773,9 @@ function showAbout() {
         <p>Ennen kaikkea kyseessä on fanikokeilu — tapani tuoda rakkaus baseball-tilastoihin
         pesäpalloon. Ajan myötä varmasti muokkaamme mittareita ja poistamme osan, mutta tämä on
         ensimmäinen versio, jonka kokoamisesta olin innoissani.</p>
+        <p>Jos haluat tietää hieman siitä, miten päädyin seuraamaan lajia — olen ollut fani vuodesta
+        2011 — lue <a href="https://www.superpesis.fi/ajankohtaista/superpesis-yhdysvaltalainen-ron-bronson-toteutti-unelmansa-ja-matkusti-suomeen-katsomaan-pesapalloa">juttuni Superpesiksen sivuilla</a>.</p>
+        <p>Yhteydenotot: <a href="mailto:ron@ronbronson.com">ron@ronbronson.com</a>.</p>
       </div>
     </div>`;
 }
