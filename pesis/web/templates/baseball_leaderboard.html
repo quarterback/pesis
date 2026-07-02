@@ -18,10 +18,10 @@
 </div>
 
 <div class="card">
-<p class="sub" style="margin-bottom:10px">A Superpesis regular season is about {{ rows[0].context.regular_games if rows else 33 }} games; MLB has 162. The HR/RBI/R columns below are scaled to {{ rows[0].context.mlb_month_games if rows else 33 }} games — a baseball month-sized comparison — not sold as full-season equivalents.</p>
+<p class="sub" style="margin-bottom:10px">A Superpesis regular season is about {{ rows[0].context.regular_games if rows else 33 }} games; MLB has 162. The H and HR+RBI/R/PROD columns below are scaled to {{ rows[0].context.mlb_month_games if rows else 33 }} games — a baseball month-sized comparison — not sold as full-season equivalents.</p>
 <table>
   <thead>
-    <tr><th>#</th><th class="name">Player</th><th class="name">Team</th><th>G</th><th>wRC+ eq</th><th>AVG eq</th><th>HR/600</th><th>RBI/600</th><th>R/600</th><th>K% eq</th><th>33g HR/RBI/R</th><th>162 pace</th></tr>
+    <tr><th>#</th><th class="name">Player</th><th class="name">Team</th><th>G</th><th>wRC+ eq</th><th>H/600</th><th>AVG eq</th><th>HR/600</th><th>HR+RBI/600</th><th>R/600</th><th>K% eq</th><th>33g H · HR+RBI/R/PROD</th><th>162 pace</th></tr>
   </thead>
   <tbody>
     {% for r in rows %}
@@ -31,13 +31,14 @@
       <td class="name">{{ r.team }}</td>
       <td>{{ r.games }}</td>
       <td><strong>{{ r.wrc_plus or "—" }}</strong></td>
+      <td>{{ r.h600_equiv or "—" }}</td>
       <td>{{ r.avg_equiv or "—" }}</td>
       <td>{{ r.hr600_equiv or "—" }}</td>
-      <td>{{ r.rbi600_equiv or "—" }}</td>
+      <td>{{ r.hr_rbi600_equiv or "—" }}</td>
       <td>{{ r.r600_equiv or "—" }}</td>
       <td>{{ r.k_pct_equiv or "—" }}</td>
-      <td>{{ r.counting.mlb_month.HR }}/{{ r.counting.mlb_month.RBI }}/{{ r.counting.mlb_month.R }}</td>
-      <td>{{ r.counting.mlb_full_pace.HR }}/{{ r.counting.mlb_full_pace.RBI }}/{{ r.counting.mlb_full_pace.R }}</td>
+      <td>{{ r.counting.mlb_month.H }} · {{ r.counting.mlb_month.HR_RBI }}/{{ r.counting.mlb_month.R }}/{{ r.counting.mlb_month.PROD }}</td>
+      <td>{{ r.counting.mlb_full_pace.HR_RBI }}/{{ r.counting.mlb_full_pace.R }}/{{ r.counting.mlb_full_pace.PROD }}</td>
     </tr>
     {% endfor %}
   </tbody>

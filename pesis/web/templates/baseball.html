@@ -12,10 +12,10 @@
     <div class="value" style="font-size:18px; line-height:2">{{ tr.tier or "—" }}</div></div>
   <div class="tile"><div class="label">MLB-month equivalent</div>
     <div class="value" style="font-size:18px; line-height:2">
-      {{ tr.counting.mlb_month.games }}g · {{ tr.counting.mlb_month.HR }}/{{ tr.counting.mlb_month.RBI }}/{{ tr.counting.mlb_month.R }}
-      HR/RBI/R</div></div>
+      {{ tr.counting.mlb_month.games }}g · {{ tr.counting.mlb_month.H }} H · {{ tr.counting.mlb_month.HR_RBI }}/{{ tr.counting.mlb_month.R }}/{{ tr.counting.mlb_month.PROD }}
+      HR+RBI/R/PROD</div></div>
 </div>
-<p class="sub">A Superpesis regular season is {{ tr.context.regular_games }} games in this data (the modern league is roughly 28–33). MLB plays 162, so treating pesäpallo totals as direct MLB full-season totals is misleading. The card therefore leads with a {{ tr.context.mlb_month_games }}-game MLB-month equivalent. A 162-game pace still exists as context ({{ tr.counting.mlb_full_pace.HR }}/{{ tr.counting.mlb_full_pace.RBI }}/{{ tr.counting.mlb_full_pace.R }} HR/RBI/R, ×{{ tr.counting.mlb_full_pace.extrapolation }} from this player's games), but it is pace trivia, not an equivalency. Playoff context: the championship path can add up to 15 games (three best-of-five rounds), while the bronze path can add up to 13 (two best-of-five rounds plus a best-of-three third-place series).</p>
+<p class="sub">A Superpesis regular season is {{ tr.context.regular_games }} games in this data (the modern league is roughly 28–33). MLB plays 162, so treating pesäpallo totals as direct MLB full-season totals is misleading. The card therefore leads with a {{ tr.context.mlb_month_games }}-game MLB-month equivalent. A 162-game pace still exists as context ({{ tr.counting.mlb_full_pace.H }} H and {{ tr.counting.mlb_full_pace.HR_RBI }}/{{ tr.counting.mlb_full_pace.R }}/{{ tr.counting.mlb_full_pace.PROD }} HR+RBI/R/PROD, ×{{ tr.counting.mlb_full_pace.extrapolation }} from this player's games), but it is pace trivia, not an equivalency. Playoff context: the championship path can add up to 15 games (three best-of-five rounds), while the bronze path can add up to 13 (two best-of-five rounds plus a best-of-three third-place series).</p>
 
 <p class="sub"><a href="/baseball?sid={{ tr.season_id }}">See the full baseball-translation comparison table →</a></p>
 
@@ -44,7 +44,7 @@
 <p class="sub" style="margin:10px 0 0">Method: rank-preserving quantile mapping — his percentile
 among qualified Superpesis hitters, read off the MLB qualified-hitter distribution (2023–25 era).
 It translates <em>rank</em>, not skill transfer: pesäpallo is a different sport (the pitch is
-tossed straight up from beside the plate, the field is a fan, and wounds aren't outs).</p>
+tossed straight up from beside the plate, the field is a fan, and wounds aren't outs). Current mapping: kärkilyönnit = hits, kärkilyönti-% = batting average, lyödyt line = HR+RBI, tuodut = runs scored, tehot = HR+RBI+runs scored.</p>
 </div>
 {% else %}
 <div class="card"><p>Not enough plate turns this season to qualify for percentiles.</p></div>

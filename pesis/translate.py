@@ -16,22 +16,26 @@ from .metrics import add_percentiles, player_seasons, season_lines
 _PHI = NormalDist()
 
 MAPPINGS = (
-    {"stat": "kl_pct", "pesis": "Kärkilyönti-% (advance the lead runner)",
+    {"stat": "kl_per_turn", "pesis": "Kärkilyönnit (hits)",
+     "mlb": "H / 600 PA", "mean": 151.0, "sd": 25.0, "dir": +1, "fmt": ".0f",
+     "blurb": "Kärkilyönnit are the closest box-score analog to hits: the "
+              "batter successfully advances the lead runner."},
+    {"stat": "kl_pct", "pesis": "Kärkilyönti-% (batting average)",
      "mlb": "AVG", "mean": 0.252, "sd": 0.026, "dir": +1, "fmt": ".3f",
-     "blurb": "The core bat-to-ball skill. A kärkilyönti advances the lead "
-              "runner — think situational hitting as the PRIMARY batting stat."},
+     "blurb": "Kärkilyöntiprosentti is the batting-average analog: success "
+              "per lead-runner advancement attempt."},
     {"stat": "kunnari_rate", "pesis": "Kunnarit per turn (home runs)",
      "mlb": "HR / 600 PA", "mean": 20.0, "sd": 11.0, "dir": +1, "fmt": ".0f",
      "blurb": "A kunnari clears the bases and scores the batter — every one "
               "is an inside-the-park homer; nothing leaves the field."},
-    {"stat": "lyoty_rate", "pesis": "Lyödyt per turn (runs batted home)",
-     "mlb": "RBI / 600 PA", "mean": 72.0, "sd": 20.0, "dir": +1, "fmt": ".0f",
-     "blurb": "Lyödyt credit the batter whose hit brings a runner home — "
-              "the RBI, minus the sacrifice-fly bookkeeping."},
-    {"stat": "tuotu_rate", "pesis": "Tuodut per advance (runs scored)",
+    {"stat": "hr_rbi_per_turn", "pesis": "Lyödyt (HR + RBI)",
+     "mlb": "HR+RBI / 600 PA", "mean": 92.0, "sd": 30.0, "dir": +1, "fmt": ".0f",
+     "blurb": "The Finnish lyödyt line is read as home runs plus runs batted "
+              "in — e.g. 5+44 means 5 HR and 44 RBI."},
+    {"stat": "tuotu_rate", "pesis": "Tuodut (runs scored)",
      "mlb": "R / 600 PA", "mean": 76.0, "sd": 18.0, "dir": +1, "fmt": ".0f",
-     "blurb": "Tuodut credit the runner who scores. Every pesäpallo run "
-              "produces exactly one lyöty and one tuotu."},
+     "blurb": "Tuodut are runs scored: the runner who crosses home gets the "
+              "run, paired with a batter's lyöty credit."},
     {"stat": "palo_rate", "pesis": "Palot per turn (burned outs)",
      "mlb": "K%", "mean": 0.222, "sd": 0.055, "dir": -1, "fmt": ".1%",
      "blurb": "A palo 'burns' the runner — the ball beats you to the base. "
@@ -98,19 +102,30 @@ def _counting_equivalents(line: dict, context: dict) -> dict:
         return round(line[stat] * target_games / games)
 
     return {
-        "actual": {"HR": line["kunnarit"], "RBI": line["lyodyt"], "R": line["tuodut"]},
+        "actual": {"H": line["karkilyonnit"], "HR": line["kunnarit"],
+                   "RBI": line["lyodyt"], "HR_RBI": line["kunnarit"] + line["lyodyt"],
+                   "R": line["tuodut"], "PROD": line["tehot"]},
         "mlb_month": {"games": context["mlb_month_games"],
+                      "H": scaled("karkilyonnit", context["mlb_month_games"]),
                       "HR": scaled("kunnarit", context["mlb_month_games"]),
                       "RBI": scaled("lyodyt", context["mlb_month_games"]),
-                      "R": scaled("tuodut", context["mlb_month_games"])},
+                      "HR_RBI": round((line["kunnarit"] + line["lyodyt"]) * context["mlb_month_games"] / games),
+                      "R": scaled("tuodut", context["mlb_month_games"]),
+                      "PROD": round(line["tehot"] * context["mlb_month_games"] / games)},
         "regular_normalized": {"games": context["regular_games"],
+                               "H": scaled("karkilyonnit", context["regular_games"]),
                                "HR": scaled("kunnarit", context["regular_games"]),
                                "RBI": scaled("lyodyt", context["regular_games"]),
-                               "R": scaled("tuodut", context["regular_games"])},
+                               "HR_RBI": round((line["kunnarit"] + line["lyodyt"]) * context["regular_games"] / games),
+                               "R": scaled("tuodut", context["regular_games"]),
+                               "PROD": round(line["tehot"] * context["regular_games"] / games)},
         "mlb_full_pace": {"games": context["mlb_full_games"],
+                          "H": scaled("karkilyonnit", context["mlb_full_games"]),
                           "HR": scaled("kunnarit", context["mlb_full_games"]),
                           "RBI": scaled("lyodyt", context["mlb_full_games"]),
+                          "HR_RBI": round((line["kunnarit"] + line["lyodyt"]) * context["mlb_full_games"] / games),
                           "R": scaled("tuodut", context["mlb_full_games"]),
+                          "PROD": round(line["tehot"] * context["mlb_full_games"] / games),
                           "extrapolation": round(context["mlb_full_games"] / games, 1)},
     }
 
@@ -147,7 +162,9 @@ def translate_line(line: dict, context: dict) -> dict:
             "context": context,
             "avg_equiv": rowmap.get("AVG", {}).get("mlb_value"),
             "hr600_equiv": rowmap.get("HR / 600 PA", {}).get("mlb_value"),
-            "rbi600_equiv": rowmap.get("RBI / 600 PA", {}).get("mlb_value"),
+            "h600_equiv": rowmap.get("H / 600 PA", {}).get("mlb_value"),
+            "hr_rbi600_equiv": rowmap.get("HR+RBI / 600 PA", {}).get("mlb_value"),
+            "rbi600_equiv": rowmap.get("HR+RBI / 600 PA", {}).get("mlb_value"),
             "r600_equiv": rowmap.get("R / 600 PA", {}).get("mlb_value"),
             "k_pct_equiv": rowmap.get("K%", {}).get("mlb_value")}
 
@@ -173,8 +190,9 @@ def translate_player(conn: sqlite3.Connection, player_id: int,
 
 def translate_season(conn: sqlite3.Connection, season_id: int,
                      sort: str = "wrc_plus", limit: int = 100) -> list[dict]:
-    allowed = {"wrc_plus", "avg_equiv", "hr600_equiv", "rbi600_equiv",
-               "r600_equiv", "k_pct_equiv", "teho_plus"}
+    allowed = {"wrc_plus", "h600_equiv", "avg_equiv", "hr600_equiv",
+               "hr_rbi600_equiv", "rbi600_equiv", "r600_equiv",
+               "k_pct_equiv", "teho_plus"}
     if sort not in allowed:
         sort = "wrc_plus"
     rows = [r for r in translated_season_lines(conn, season_id) if r["qualified"]]

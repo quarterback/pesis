@@ -45,8 +45,9 @@ def test_counting_stats_lead_with_mlb_month_normalization():
     t = translate.translate_player(conn, 2)
     assert t["games"] == 10
     assert t["context"]["regular_games"] == 10
-    assert t["counting"]["mlb_month"]["HR"] == 33  # 1 kunnari/game over MLB-month window
-    assert t["counting"]["mlb_full_pace"]["HR"] == 162  # secondary pace only
+    assert t["counting"]["mlb_month"]["H"] == 231  # 7 kärkilyönnit/game over MLB-month window
+    assert t["counting"]["mlb_month"]["HR_RBI"] == 132  # (1 HR + 3 RBI)/game
+    assert t["counting"]["mlb_full_pace"]["HR_RBI"] == 648  # secondary pace only
     assert t["tier"] is not None
 
 
@@ -55,7 +56,7 @@ def test_translate_runs_on_demo_league():
     demo.build_demo(conn, seed=9, years=(2026,), matches_per_season=12)
     t = translate.translate_player(conn, 1)
     assert t and t["qualified"]
-    assert len(t["rows"]) == 5
+    assert len(t["rows"]) == 6
 
 
 def test_translate_season_supports_comparison_table():
@@ -64,6 +65,8 @@ def test_translate_season_supports_comparison_table():
     rows = translate.translate_season(conn, sid, sort="wrc_plus")
     assert [r["name"] for r in rows][:2] == ["Elite Eero", "Avg Antti"]
     assert rows[0]["avg_equiv"] is not None
+    assert rows[0]["h600_equiv"] is not None
+    assert rows[0]["hr_rbi600_equiv"] is not None
 
 
 def test_missing_player_returns_none():

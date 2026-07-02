@@ -264,3 +264,20 @@ For baseball equivalence labels, the site should continue treating the current
 MLB analogs as placeholders until the owner supplies the intended baseball
 context for each pesäpallo skill. The translation framework can carry those
 labels and blurbs without changing the underlying percentile method.
+
+## Follow-up: owner-provided baseball equivalence labels
+
+Owner context clarified the baseball-facing labels:
+
+- **Kärkilyönnit = hits.** The translation now includes an H/600 PA analog.
+- **Kärkilyöntiprosentti = batting average.** AVG remains the percentile map
+  for KL%.
+- **Lyödyt line = HR+RBI.** Finnish lines such as `5+44` should read as home
+  runs plus batted-in runs, so the translation now uses HR+RBI rather than RBI
+  alone for that production bucket.
+- **Tuodut = runs scored.**
+- **Tehot = HR+RBI+runs scored.** Month-normalized counting context now carries
+  that production total.
+- **Hutunkeiton voitot = opening faceoffs won.** This is a useful translation,
+  but the current normalized schema does not ingest huttu/choice-win fields yet;
+  add it only after confirming which upstream match or raw field stores it.

@@ -292,8 +292,9 @@ def create_app(db_path: str | None = None) -> Flask:
         season = pick_season(all_seasons)
         sort = request.args.get("sort", "wrc_plus")
         rows = translate.translate_season(conn(), season["id"], sort=sort, limit=100)
-        sort_options = ["wrc_plus", "avg_equiv", "hr600_equiv",
-                        "rbi600_equiv", "r600_equiv", "k_pct_equiv", "teho_plus"]
+        sort_options = ["wrc_plus", "h600_equiv", "avg_equiv", "hr600_equiv",
+                        "hr_rbi600_equiv", "r600_equiv", "k_pct_equiv",
+                        "teho_plus"]
         return render_template("baseball_leaderboard.html", rows=rows,
                                season=season, seasons=all_seasons, sort=sort,
                                sort_options=sort_options)

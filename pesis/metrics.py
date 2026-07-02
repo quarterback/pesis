@@ -75,6 +75,13 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
         line["tehot_per_turn"] = (
             line["tehot"] / line["turns_at_bat"] if line["turns_at_bat"] else None
         )
+        line["kl_per_turn"] = (
+            line["karkilyonnit"] / line["turns_at_bat"] if line["turns_at_bat"] else None
+        )
+        line["hr_rbi_per_turn"] = (
+            (line["kunnarit"] + line["lyodyt"]) / line["turns_at_bat"]
+            if line["turns_at_bat"] else None
+        )
         _add_raw_base_splits(line, r["raw_rows"] if "raw_rows" in r.keys() else None)
         lines.append(line)
 
