@@ -47,6 +47,13 @@ const POS_MAP = {
 const POS_ORDER = ['P','C','1B','2B','3B','LSS','RSS','LF','RF','DH'];
 function posLabel(code) { return code ? (POS_MAP[code] || code) : 'DH'; }
 
+// Contact address assembled at runtime — no literal email (and no "@") lives in
+// the source, so source/regex scrapers come up empty; only a JS-executing client
+// ever sees the real address.
+function contactAddr() {
+  return ['ron', ['ronbronson', 'com'].join('.')].join(String.fromCharCode(64));
+}
+
 async function fetchJSON(url) {
   if (_cache[url]) return _cache[url];
   const r = await fetch(url);
@@ -775,7 +782,7 @@ function showAbout() {
         ensimmäinen versio, jonka kokoamisesta olin innoissani.</p>
         <p>Jos haluat tietää hieman siitä, miten päädyin seuraamaan lajia — olen ollut fani vuodesta
         2011 — lue <a href="https://www.superpesis.fi/ajankohtaista/superpesis-yhdysvaltalainen-ron-bronson-toteutti-unelmansa-ja-matkusti-suomeen-katsomaan-pesapalloa">juttuni Superpesiksen sivuilla</a>.</p>
-        <p>Yhteydenotot: <a href="mailto:ron@ronbronson.com">ron@ronbronson.com</a>.</p>
+        <p>✉️ <a href="mailto:${contactAddr()}">${contactAddr()}</a></p>
       </div>
     </div>`;
 }
