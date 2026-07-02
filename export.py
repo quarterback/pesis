@@ -9,7 +9,7 @@ The site/ directory can then be deployed to Netlify, Vercel, or any static host.
 from __future__ import annotations
 import json, re, unicodedata
 from pathlib import Path
-from pesis import context, db, metrics, projection, similarity, simulate
+from pesis import context, db, metrics, projection, simulate
 
 LEADERBOARD_STATS = [
     "teho_plus", "teho_plus_adj", "tehot", "kl_pct",
@@ -59,20 +59,15 @@ def main():
             _cache[sid] = metrics.season_lines(conn, sid)
         return [dict(l) for l in _cache[sid]]
 
-    # ── Players index (search) ─────────────────────────────────────────
-    index = rows_to_dicts(conn.execute(
-        """SELECT DISTINCT p.id, p.name, MAX(pg.team) AS team, MAX(s.year) AS last_year
-           FROM players p
-           JOIN player_games pg ON pg.player_id = p.id
-           JOIN seasons s ON s.id = pg.season_id
-           GROUP BY p.id ORDER BY p.name"""
-    ).fetchall())
-    dump(OUT / "players" / "index.json", index)
-    print(f"  players/index.json  ({len(index)} players)")
+    # (player search index removed — search feature not needed)
 
     # ── Per-season exports ─────────────────────────────────────────────
     for season in all_seasons:
         sid = season["id"]
+        if (OUT / "leaderboard" / f"{sid}.json").exists():
+            print(f"  season {season['year']} {season['series']}  (skip — already exported)")
+            cached_lines(sid)  # warm cache
+            continue
         lines = cached_lines(sid)
 
         # Leaderboard: all players with percentiles added
@@ -136,8 +131,43 @@ def main():
               f"(id={sid}, {len(teams)} teams)")
 
     # ── Player profiles ────────────────────────────────────────────────
-    player_ids = [r[0] for r in conn.execute("SELECT id FROM players").fetchall()]
+    # Cache percentile-added season lines and base_kl lines per season_id
+    _pct_cache: dict = {}
+    _base_cache: dict = {}
+    _league_cache: dict = {}
+
+    def pct_lines(sid):
+        if sid not in _pct_cache:
+            sl = [dict(l) for l in cached_lines(sid)]
+            metrics.add_percentiles(sl)
+            _pct_cache[sid] = sl
+        return _pct_cache[sid]
+
+    def base_lines_cached(sid):
+        if sid not in _base_cache:
+            bl = metrics.base_kl_lines(conn, sid)
+            metrics.add_percentiles(bl, stats=tuple(BASE_KL_KEYS))
+            _base_cache[sid] = bl
+        return _base_cache[sid]
+
+    def league_rates_cached(sid):
+        if sid not in _league_cache:
+            _league_cache[sid] = metrics.league_rates(cached_lines(sid))
+        return _league_cache[sid]
+
+    # Players ordered by most recent season first — 2026 gets written before older history
+    player_ids = [r[0] for r in conn.execute(
+        """SELECT DISTINCT p.id FROM players p
+           JOIN player_games pg ON pg.player_id = p.id
+           JOIN seasons s ON s.id = pg.season_id
+           ORDER BY s.year DESC, p.id"""
+    ).fetchall()]
+    done = skipped = 0
     for pid in player_ids:
+        out_path = OUT / "players" / f"{pid}.json"
+        if out_path.exists():
+            skipped += 1
+            continue
         row = conn.execute("SELECT * FROM players WHERE id = ?", (pid,)).fetchone()
         if not row:
             continue
@@ -145,32 +175,28 @@ def main():
         if not career:
             continue
         current = career[-1]
+        sid = current["season_id"]
 
-        sl = [dict(l) for l in cached_lines(current["season_id"])]
-        metrics.add_percentiles(sl)
+        sl = pct_lines(sid)
         line = next((l for l in sl if l["player_id"] == pid), None)
         if not line:
             continue
 
-        proj = projection.project_player(
-            conn, pid,
-            league=metrics.league_rates(cached_lines(current["season_id"])))
+        proj = projection.project_player(conn, pid, league=league_rates_cached(sid))
 
         career_json = [
             {"year": s["year"], "kl_pct": s["kl_pct"], "teho_plus": s["teho_plus"]}
             for s in career
         ]
 
-        base_lines = metrics.base_kl_lines(conn, current["season_id"])
-        metrics.add_percentiles(base_lines, stats=tuple(BASE_KL_KEYS))
-        base_kl = next((b for b in base_lines if b["player_id"] == pid), None)
+        bl = base_lines_cached(sid)
+        base_kl = next((b for b in bl if b["player_id"] == pid), None)
         if base_kl and all(base_kl.get(f"kl_base{k}_tries", 0) == 0 for k in range(4)):
             base_kl = None
 
         game_log = metrics.game_log(conn, pid, current["season_id"])
-        comps = similarity.comps(conn, pid, lines_fn=cached_lines)
 
-        dump(OUT / "players" / f"{pid}.json", {
+        dump(out_path, {
             "player": dict(row),
             "career": career,
             "line": line,
@@ -180,10 +206,11 @@ def main():
             "base_kl": base_kl,
             "base_keys": BASE_KL_KEYS,
             "log": [dict(g) for g in game_log],
-            "comps": comps,
+            "comps": [],
         })
+        done += 1
 
-    print(f"  {len(player_ids)} player profiles")
+    print(f"  {len(player_ids)} player profiles  ({done} written, {skipped} skipped)")
 
     # ── Match box scores ───────────────────────────────────────────────
     all_matches = conn.execute(
