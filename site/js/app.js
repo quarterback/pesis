@@ -710,75 +710,70 @@ function showAbout() {
 }
 
 function showGlossary() {
+  // glossary tables have long text — allow wrapping in the Huomio column
+  const gtable = (rows) => `
+    <table style="table-layout:fixed;width:100%">
+      <colgroup>
+        <col style="width:160px">
+        <col>
+        <col style="width:220px">
+      </colgroup>
+      <thead><tr>
+        <th class="name">Tilasto</th>
+        <th class="name">Kaava</th>
+        <th class="name">Huomio</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  const gr = (name, formula, note) =>
+    `<tr>
+      <td class="name">${name}</td>
+      <td style="text-align:left">${formula}</td>
+      <td style="text-align:left;white-space:normal;color:var(--ink3)">${note}</td>
+    </tr>`;
+
   main().innerHTML = `
     <div class="page">
       <h1>Kaavat</h1>
       <p class="sub">Jokainen tilasto selitettynä — laskentakaava ja tulkintaohje.</p>
       <h2>Perustilastot</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th class="name">Tilasto</th>
-            <th class="name">Kaava</th><th class="name">Huomio</th>
-          </tr></thead>
-          <tbody>
-            <tr><td class="name">Tehot</td><td><code>K + L + T</code></td><td>perinteinen tuotantoluku</td></tr>
-            <tr><td class="name">KL%</td><td><code>kärkilyönnit / KLY</code></td><td>kärjen eteneminen per yritys</td></tr>
-            <tr><td class="name">Saatto-%</td><td><code>saatot / saattoyritykset</code></td><td>takaetenijän vieminen lyöjänä</td></tr>
-            <tr><td class="name">Etenemis-%</td><td><code>etenemiset / etenemisyritykset</code></td><td>kärki- + takaetenemiset etenijänä</td></tr>
-            <tr><td class="name">Kunnarit/vuoro</td><td><code>K / V</code></td><td></td></tr>
-            <tr><td class="name">Lyödyt/vuoro</td><td><code>L / V</code></td><td></td></tr>
-            <tr><td class="name">Tuodut/yritys</td><td><code>T / etenemisyritykset</code></td><td>etenijän tuotto</td></tr>
-            <tr><td class="name">Palo-%</td><td><code>palot / V</code></td><td>pienempi parempi</td></tr>
-            <tr><td class="name">Tehot/vuoro</td><td><code>(K + L + T) / V</code></td><td></td></tr>
-          </tbody>
-        </table>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('Tehot','<code>K + L + T</code>','perinteinen tuotantoluku') +
+          gr('KL%','<code>kärkilyönnit / KLY</code>','kärjen eteneminen per yritys') +
+          gr('Saatto-%','<code>saatot / saattoyritykset</code>','takaetenijän vieminen lyöjänä') +
+          gr('Etenemis-%','<code>etenemiset / etenemisyritykset</code>','kärki- + takaetenemiset etenijänä') +
+          gr('Kunnarit/vuoro','<code>K / V</code>','') +
+          gr('Lyödyt/vuoro','<code>L / V</code>','') +
+          gr('Tuodut/yritys','<code>T / etenemisyritykset</code>','etenijän tuotto') +
+          gr('Palo-%','<code>palot / V</code>','pienempi parempi') +
+          gr('Tehot/vuoro','<code>(K + L + T) / V</code>','')
+        )}
       </div>
       <h2>Indeksit</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th class="name">Tilasto</th>
-            <th class="name">Kaava</th><th class="name">Huomio</th>
-          </tr></thead>
-          <tbody>
-            <tr><td class="name">TEHO+</td><td><code>100 × (tehot/V) / (sarjan tehot/V)</code></td><td>100 = sarjan keskitaso; kärki ~250–350</td></tr>
-            <tr><td class="name">kTEHO+</td><td><code>100 × Σ(tehot/kerroin) / V / sarjataso</code></td><td>kenttäkorjattu TEHO+</td></tr>
-            <tr><td class="name">Kenttäkerroin (PF)</td><td><code>100 × (juoksut/ottelu kotona) / (juoksut/ottelu vieraissa)</code></td><td>regressoitu kohti 100:aa</td></tr>
-            <tr><td class="name">Prosenttipiste</td><td><code>100 × (pienemmät + ½·samat) / n</code></td><td>sarjan vakiopelaajien joukossa (≥40 vuoroa)</td></tr>
-          </tbody>
-        </table>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('TEHO+','<code>100 × (tehot/V) / (sarjan tehot/V)</code>','100 = sarjan keskitaso; kärki ~250–350') +
+          gr('kTEHO+','<code>100 × Σ(tehot/kerroin) / V / sarjataso</code>','kenttäkorjattu TEHO+') +
+          gr('Kenttäkerroin (PF)','<code>100 × (juoksut/ottelu kotona) / (juoksut/ottelu vieraissa)</code>','regressoitu kohti 100:aa') +
+          gr('Prosenttipiste','<code>100 × (pienemmät + ½·samat) / n</code>','sarjan vakiopelaajien joukossa (≥40 vuoroa)')
+        )}
       </div>
       <h2>PARE <span class="muted">— Painotettu ja Regressoitu Ennuste</span></h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th class="name">Tilasto</th>
-            <th class="name">Kaava</th><th class="name">Huomio</th>
-          </tr></thead>
-          <tbody>
-            <tr><td class="name">eTilasto (esim. eKL%)</td>
-              <td><code>(Σ β<sup>t</sup>·onnistumiset + κ·sarjataso) / (Σ β<sup>t</sup>·yritykset + κ)</code></td>
-              <td>t = päiviä ottelusta; β ja κ per tilasto</td></tr>
-            <tr><td class="name">eTEHO+</td>
-              <td><code>100 × ennustettu tehot/V / sarjataso</code></td><td></td></tr>
-          </tbody>
-        </table>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('eTilasto (esim. eKL%)','<code>(Σ β<sup>t</sup>·onnistumiset + κ·sarjataso) / (Σ β<sup>t</sup>·yritykset + κ)</code>','t = päiviä ottelusta; β ja κ per tilasto') +
+          gr('eTEHO+','<code>100 × ennustettu tehot/V / sarjataso</code>','')
+        )}
         <p class="legend" style="padding:10px 16px">e- = ennustettu · k- = kenttäkorjattu.</p>
       </div>
       <h2>Muut</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th class="name">Tilasto</th>
-            <th class="name">Kaava</th><th class="name">Huomio</th>
-          </tr></thead>
-          <tbody>
-            <tr><td class="name">Pisteet</td><td><code>3 / 2 / 1 / 0</code></td><td>suora voitto 2–0 / muu voitto / tappio ratkaisussa / muu tappio</td></tr>
-            <tr><td class="name">Pudotuspeli-%</td><td><code>osuus 300+ simulaatiosta, joissa top-4</code></td><td>joukkueen taso = juoksuero/ottelu, regressoitu</td></tr>
-            <tr><td class="name">Vertailupisteet</td><td><code>1000 − 100 × d</code></td><td>z-skaalattu euklidinen etäisyys kausilinjojen välillä</td></tr>
-          </tbody>
-        </table>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('Pisteet','<code>3 / 2 / 1 / 0</code>','suora voitto 2–0 / muu voitto / tappio ratkaisussa / muu tappio') +
+          gr('Pudotuspeli-%','<code>osuus 300+ simulaatiosta, joissa top-4</code>','joukkueen taso = juoksuero/ottelu, regressoitu') +
+          gr('Vertailupisteet','<code>1000 − 100 × d</code>','z-skaalattu euklidinen etäisyys kausilinjojen välillä')
+        )}
       </div>
     </div>`;
 }
