@@ -316,8 +316,8 @@ async function showLeague(sid) {
     </div>
     ${history ? `<div class="page" style="padding-top:0">
       <h2>Pudotuspelitodennäköisyydet kaudella</h2>
-      <div class="card" style="position:relative;min-height:180px">
-        <div id="fangraph" style="width:100%;height:200px"></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="fangraph" style="width:100%"></div>
       </div></div>` : ''}
     <div class="page" style="padding-top:0">
       <h2>Sarjataulukko</h2>
