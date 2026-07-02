@@ -203,6 +203,23 @@ tr:hover td{background:color-mix(in srgb,var(--track) 50%,transparent)}
   font-size:11px;font-weight:700;text-transform:uppercase;
   letter-spacing:.06em;color:var(--ink3);flex-shrink:0;
 }
+/* Season/series dropdown */
+.sel-wrap{position:relative;display:inline-flex;align-items:center}
+.sel-wrap::after{
+  content:"▾";position:absolute;right:10px;pointer-events:none;
+  color:var(--ink3);font-size:11px;
+}
+select.season-sel{
+  appearance:none;-webkit-appearance:none;
+  background:var(--surface1);border:1px solid var(--grid);border-radius:8px;
+  color:var(--ink1);font-size:13px;font-weight:500;
+  padding:5px 28px 5px 10px;cursor:pointer;
+  transition:border-color .15s,background .15s;
+  max-width:260px;
+}
+select.season-sel:hover{border-color:var(--accent)}
+select.season-sel:focus{outline:2px solid var(--ring);outline-offset:1px;border-color:var(--accent)}
+/* Pill filters (stats — small set, stays as pills) */
 .seg{display:flex;gap:4px;flex-wrap:wrap}
 .seg a,.filters a{
   padding:4px 12px;border-radius:999px;
