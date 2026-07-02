@@ -174,6 +174,61 @@ def leaderboard(conn: sqlite3.Connection, season_id: int, stat: str,
     return lines[:limit]
 
 
+BASE_KL_LABELS = {  # upstream batpe_*_N indexes target bases 1..3 + home
+    "kl_base0": "KL 1. pesälle", "kl_base1": "KL 2. pesälle",
+    "kl_base2": "KL 3. pesälle", "kl_base3": "KL kotipesään",
+}
+
+
+def base_kl_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
+    """Kärkilyönti-% split by TARGET BASE, per player, from the raw upstream
+    rows (batpe_succeeded_N / batpe_tries_N). The most pesäpallo-native skill
+    fingerprint there is — advancing to 1st is routine, bringing the runner
+    home is the money skill. Returns lines ready for add_percentiles()
+    (keys kl_base0..3 + tries, turns_at_bat for qualification)."""
+    import json as _json
+    sums: dict[int, dict] = {}
+    for r in conn.execute(
+            "SELECT player_id, turns_at_bat, raw FROM player_games "
+            "WHERE season_id = ?", (season_id,)):
+        line = sums.setdefault(r["player_id"], {"player_id": r["player_id"],
+                                                "turns_at_bat": 0,
+                                                **{f"n{i}": 0 for i in range(4)},
+                                                **{f"d{i}": 0 for i in range(4)}})
+        line["turns_at_bat"] += r["turns_at_bat"]
+        raw = _json.loads(r["raw"] or "{}")
+        src = raw.get("_v1", raw)
+        for i in range(4):
+            line[f"n{i}"] += src.get(f"batpe_succeeded_{i}") or 0
+            line[f"d{i}"] += src.get(f"batpe_tries_{i}") or 0
+    out = []
+    for line in sums.values():
+        for i in range(4):
+            n, d = line.pop(f"n{i}"), line.pop(f"d{i}")
+            line[f"kl_base{i}"] = n / d if d else None
+            line[f"kl_base{i}_tries"] = d
+        out.append(line)
+    return out
+
+
+def game_log(conn: sqlite3.Connection, player_id: int,
+             season_id: int) -> list[dict]:
+    """Per-match lines for the player page's game log."""
+    rows = conn.execute(
+        """SELECT pg.*, m.stadium FROM player_games pg
+           LEFT JOIN matches m ON m.id = pg.match_id
+           WHERE pg.player_id = ? AND pg.season_id = ?
+           ORDER BY pg.date""", (player_id, season_id)).fetchall()
+    out = []
+    for r in rows:
+        line = dict(r)
+        line["tehot"] = r["kunnarit"] + r["lyodyt"] + r["tuodut"]
+        line["kl_pct"] = (r["karkilyonnit"] / r["karki_yritykset"]
+                          if r["karki_yritykset"] else None)
+        out.append(line)
+    return out
+
+
 def player_seasons(conn: sqlite3.Connection, player_id: int) -> list[dict]:
     """Season-by-season lines for one player (career page / trajectories)."""
     season_ids = [r[0] for r in conn.execute(

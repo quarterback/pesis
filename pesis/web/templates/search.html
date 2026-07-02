@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Haku{% endblock %}
+{% block content %}
+<h1>Pelaajahaku</h1>
+<form method="get" action="/search" style="margin: 12px 0 20px">
+  <input name="q" value="{{ q }}" placeholder="Pelaajan nimi…" autofocus
+         style="padding:8px 12px; font-size:15px; width:280px; border:1px solid var(--grid);
+                border-radius:8px; background:var(--surface-1); color:var(--ink-1)">
+  <button style="padding:8px 14px; border-radius:8px; border:0; background:var(--series-1);
+                 color:#fff; font-weight:600">Hae</button>
+</form>
+{% if q and not results %}
+<p class="sub">Ei osumia haulle "{{ q }}".</p>
+{% elif results %}
+<div class="card">
+<table>
+  <thead><tr><th class="name">Pelaaja</th><th class="name">Joukkue</th><th>Viimeisin kausi</th></tr></thead>
+  <tbody>
+    {% for r in results %}
+    <tr>
+      <td class="name"><a href="/player/{{ r.id }}">{{ r.name }}</a></td>
+      <td class="name"><a href="/team/{{ r.team }}">{{ r.team }}</a></td>
+      <td>{{ r.last_year }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

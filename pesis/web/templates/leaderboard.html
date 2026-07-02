@@ -15,6 +15,7 @@
   {% endfor %}
 </div>
 
+<p class="sub"><a href="/leaderboard.csv?stat={{ stat }}&amp;sid={{ season.id }}">Lataa CSV ↓</a></p>
 <div class="card">
 <table>
   <thead>
@@ -27,7 +28,7 @@
     <tr>
       <td>{{ loop.index }}</td>
       <td class="name"><a href="/player/{{ l.player_id }}">{{ l.name }}</a></td>
-      <td class="name">{{ l.team }}</td>
+      <td class="name"><a href="/team/{{ l.team }}">{{ l.team }}</a></td>
       <td>{{ l.games }}</td><td>{{ l.turns_at_bat }}</td>
       <td>{{ l.kunnarit }}</td><td>{{ l.lyodyt }}</td><td>{{ l.tuodut }}</td>
       <td>{{ l.tehot }}</td>

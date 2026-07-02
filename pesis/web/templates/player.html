@@ -2,7 +2,7 @@
 {% block title %}{{ player.name }}{% endblock %}
 {% block content %}
 <h1>{{ player.name }}</h1>
-<p class="sub">{{ line.team }}{% if line.age %} · {{ line.age }} v{% endif %} · kausi {{ line.year }}
+<p class="sub"><a href="/team/{{ line.team }}">{{ line.team }}</a>{% if line.age %} · {{ line.age }} v{% endif %} · kausi {{ line.year }}
 · <a href="/player/{{ player.id }}/baseball">Baseball translation 🇺🇸</a></p>
 
 <div class="tiles">
@@ -33,6 +33,26 @@
   {% endfor %}
   <p class="sub" style="margin:10px 0 0">Punainen = sarjan häntäpää, sininen = kärki. Numero = prosenttipiste.</p>
 </div>
+
+{% if base_kl %}
+<h2>Kärkilyönnit pesittäin {{ line.year }} <span style="font-weight:400;color:var(--ink-3)">(mihin pesään kärki eteni)</span></h2>
+<div class="card">
+  {% for key, label in base_labels.items() %}
+  {% set pct = base_kl["pct_" ~ key] %}
+  <div class="pctrow">
+    <div class="label">{{ label }} <span style="color:var(--ink-3)">({{ base_kl[key ~ "_tries"] }} yritystä)</span></div>
+    <div class="track">
+      {% if pct is not none %}
+      {% set b = pct_bucket(pct) %}
+      <div class="fill b{{ b }}" style="width: {{ [pct, 3] | max }}%"></div>
+      <div class="badge b{{ b }}" style="left: {{ [pct, 3] | max }}%">{{ pct }}</div>
+      {% endif %}
+    </div>
+    <div class="value">{{ base_kl[key] | rate }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 
 {% if spark %}
 <h2>Kärkilyönti-% urakehitys</h2>
@@ -69,6 +89,32 @@
   </tbody>
 </table>
 </div>
+
+{% if log %}
+<h2>Ottelut {{ line.year }}</h2>
+<div class="card">
+<table>
+  <thead>
+    <tr><th>Pvm</th><th class="name">Vastustaja</th><th></th><th>Vuorot</th>
+        <th>K</th><th>L</th><th>T</th><th>Tehot</th><th>KL</th><th>KLY</th><th>Palot</th></tr>
+  </thead>
+  <tbody>
+    {% for g_ in log %}
+    <tr>
+      <td><a href="/match/{{ g_.match_id }}">{{ g_.date }}</a></td>
+      <td class="name">{{ g_.opponent }}</td>
+      <td>{{ "koti" if g_.home else "vieras" }}</td>
+      <td>{{ g_.turns_at_bat }}</td>
+      <td>{{ g_.kunnarit }}</td><td>{{ g_.lyodyt }}</td><td>{{ g_.tuodut }}</td>
+      <td>{{ g_.tehot }}</td>
+      <td>{{ g_.karkilyonnit }}</td><td>{{ g_.karki_yritykset }}</td>
+      <td>{{ g_.palot }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
 
 {% if comps %}
 <h2>Vertailukelpoiset kaudet <span style="font-weight:400;color:var(--ink-3)">(1000 = identtinen)</span></h2>

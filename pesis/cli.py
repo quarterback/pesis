@@ -27,15 +27,25 @@ def cmd_ingest(args) -> None:
 
 
 def cmd_ingest_v1(args) -> None:
+    import time as _time
+
     from . import v1import
     conn = db.connect(args.db)
     series = ["miehet", "naiset"] if args.series == "both" else [args.series]
     catalog = v1import.fetch_catalog()
-    for s in series:
-        stats = v1import.import_series(conn, args.year, s, phase=args.phase,
-                                       catalog=catalog)
-        print(f"{args.year} {s}: {stats['rows']} player-game rows, "
-              f"{stats['matches']} matches, {stats['players']} players")
+    years = range(args.from_year or args.year, (args.to_year or args.year) + 1)
+    for year in years:
+        for s in series:
+            try:
+                stats = v1import.import_series(conn, year, s, phase=args.phase,
+                                               catalog=catalog)
+            except LookupError as exc:
+                print(f"{year} {s}: skipped ({exc})")
+                continue
+            print(f"{year} {s}: {stats['rows']} player-game rows, "
+                  f"{stats['matches']} matches, {stats['players']} players",
+                  flush=True)
+            _time.sleep(1)  # be polite on multi-season backfills
 
 
 def _season_id(conn, year: int | None) -> int:
@@ -163,6 +173,9 @@ def main(argv=None) -> None:
     p = sub.add_parser("ingest-v1",
                        help="keyless import of real data via v1.pesistulokset.fi")
     p.add_argument("--year", type=int, default=2026)
+    p.add_argument("--from-year", type=int, default=None,
+                   help="backfill start (granular data exists from 1991)")
+    p.add_argument("--to-year", type=int, default=None)
     p.add_argument("--series", choices=["miehet", "naiset", "both"], default="both")
     p.add_argument("--phase", type=int, default=1, help="1 = runkosarja")
     p.set_defaults(func=cmd_ingest_v1)

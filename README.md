@@ -24,6 +24,8 @@ baseball analytics canon:
 pip install -r requirements.txt
 python -m pesis ingest-v1     # REAL current-season Superpesis (men + women),
                               # keylessly via v1.pesistulokset.fi
+python -m pesis ingest-v1 --from-year 1991 --to-year 2026   # full history
+                              # (granular per-game data exists from 1991)
 python -m pesis runserver     # web UI at http://localhost:5000
 ```
 

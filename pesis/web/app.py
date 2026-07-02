@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import sqlite3
 
-from flask import Flask, abort, g, render_template, request
+import csv
+import io
+
+from flask import Flask, Response, abort, g, render_template, request
 
 from .. import context, db, metrics, projection, similarity, simulate, translate
 
@@ -136,6 +139,88 @@ def create_app(db_path: str | None = None) -> Flask:
     def about():
         return render_template("about.html")
 
+    @app.route("/leaderboard.csv")
+    def leaderboard_csv():
+        all_seasons = seasons()
+        if not all_seasons:
+            abort(404)
+        season = pick_season(all_seasons)
+        stat = request.args.get("stat", "teho_plus")
+        if stat not in LEADERBOARD_STATS:
+            abort(400)
+        lines = metrics.leaderboard(conn(), season["id"], stat, limit=1000)
+        cols = ["name", "team", "games", "turns_at_bat", "kunnarit", "lyodyt",
+                "tuodut", "tehot", "kl_pct", "saatto_pct", "eten_pct",
+                "palo_rate", "teho_plus", "teho_plus_adj"]
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(cols)
+        for l in lines:
+            w.writerow([l.get(c) for c in cols])
+        return Response(buf.getvalue(), mimetype="text/csv", headers={
+            "Content-Disposition":
+                f"attachment; filename={season['series']}-{season['year']}-{stat}.csv"})
+
+    @app.route("/search")
+    def search():
+        q = (request.args.get("q") or "").strip()
+        rows = conn().execute(
+            """SELECT DISTINCT p.id, p.name, MAX(pg.team) AS team,
+                      MAX(s.year) AS last_year
+               FROM players p JOIN player_games pg ON pg.player_id = p.id
+               JOIN seasons s ON s.id = pg.season_id
+               WHERE p.name LIKE ? GROUP BY p.id ORDER BY p.name LIMIT 50""",
+            (f"%{q}%",)).fetchall() if len(q) >= 2 else []
+        return render_template("search.html", q=q, results=rows)
+
+    @app.route("/team/<team>")
+    def team(team: str):
+        all_seasons = seasons()
+        if not all_seasons:
+            return render_template("empty.html")
+        c = conn()
+        season = pick_season(all_seasons)
+        # default to the latest season this team actually appears in
+        if not request.args.get("sid"):
+            row = c.execute(
+                """SELECT season_id FROM player_games WHERE team = ?
+                   ORDER BY date DESC LIMIT 1""", (team,)).fetchone()
+            if row:
+                season = next((s for s in all_seasons if s["id"] == row[0]), season)
+        roster = [l for l in metrics.season_lines(c, season["id"])
+                  if l["team"] == team]
+        if not roster:
+            abort(404)
+        roster.sort(key=lambda l: l["tehot"], reverse=True)
+        matches = c.execute(
+            """SELECT * FROM matches WHERE season_id = ?
+               AND (home_team = ? OR away_team = ?) ORDER BY date""",
+            (season["id"], team, team)).fetchall()
+        standing = next((t for t in simulate.standings(c, season["id"])
+                         if t["team"] == team), None)
+        return render_template("team.html", team=team, season=season,
+                               roster=roster, matches=matches,
+                               standing=standing)
+
+    @app.route("/match/<int:match_id>")
+    def match(match_id: int):
+        c = conn()
+        m = c.execute("SELECT m.*, s.series, s.year FROM matches m "
+                      "JOIN seasons s ON s.id = m.season_id WHERE m.id = ?",
+                      (match_id,)).fetchone()
+        if not m:
+            abort(404)
+        lines = c.execute(
+            """SELECT pg.*, p.name,
+                      pg.kunnarit + pg.lyodyt + pg.tuodut AS tehot
+               FROM player_games pg JOIN players p ON p.id = pg.player_id
+               WHERE pg.match_id = ?
+               ORDER BY pg.team, tehot DESC""", (match_id,)).fetchall()
+        sides = {}
+        for l in lines:
+            sides.setdefault(l["team"], []).append(l)
+        return render_template("match.html", m=m, sides=sides)
+
     @app.route("/player/<int:player_id>/baseball")
     def baseball(player_id: int):
         t = translate.translate_player(conn(), player_id,
@@ -179,9 +264,19 @@ def create_app(db_path: str | None = None) -> Flask:
         line = next(l for l in season_lines if l["player_id"] == player_id)
         proj = projection.project_player(c, player_id)
         spark = sparkline([s["kl_pct"] for s in career])
+        base_lines = metrics.base_kl_lines(c, current["season_id"])
+        metrics.add_percentiles(base_lines, stats=tuple(metrics.BASE_KL_LABELS))
+        base_kl = next((b for b in base_lines if b["player_id"] == player_id), None)
+        if base_kl and all(base_kl.get(f"{k}_tries", 0) == 0
+                           for k in metrics.BASE_KL_LABELS):
+            base_kl = None  # no per-base data (demo league)
         return render_template("player.html", player=row, career=career,
                                line=line, proj=proj, spark=spark,
                                pct_stats=PCT_STATS,
+                               base_kl=base_kl,
+                               base_labels=metrics.BASE_KL_LABELS,
+                               log=metrics.game_log(c, player_id,
+                                                    current["season_id"]),
                                comps=similarity.comps(c, player_id))
 
     return app
