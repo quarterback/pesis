@@ -59,6 +59,7 @@ function qs(params) {
 function main() { return document.getElementById('main'); }
 
 function loading() {
+  if (typeof closeSarja === 'function') closeSarja();
   main().innerHTML = '<div class="empty"><div class="big">Ladataan…</div></div>';
 }
 
@@ -87,6 +88,84 @@ function seasonSelHtml(allSeasons, curSid, baseHash, extraParam) {
     <select class="sel" onchange="location.hash=this.value.slice(1)">${opts}</select>`;
 }
 
+/* ── Leaderboard controls: Sarja (division) + sex + Kausi ─────────────────── */
+// We only import Superpesis and Ykköspesis — no lower tiers.
+const TIERS = ['Superpesis', 'Ykköspesis'];
+
+function parseSeries(series) {
+  if (series.startsWith('Miesten ')) return { sex: 'M', tier: series.slice(8) };
+  if (series.startsWith('Naisten ')) return { sex: 'N', tier: series.slice(8) };
+  return { sex: null, tier: series };
+}
+
+function leaderboardControls(sid) {
+  const seasons = META.seasons;
+  const cur = seasons.find(s => s.id === sid) || seasons[0];
+  const { sex: curSex, tier: curTier } = parseSeries(cur.series);
+  const curYear = cur.year;
+  const find = (sex, tier, year) => seasons.find(s => {
+    const p = parseSeries(s.series);
+    return p.sex === sex && p.tier === tier && s.year === year;
+  });
+
+  // Sarja popover: Miehet / Naiset columns × available tiers
+  const col = (sex, label) => {
+    const items = TIERS.map(tier => {
+      const m = find(sex, tier, curYear);
+      if (!m) return '';   // tier not imported for this sex/year — omit entirely
+      const on = sex === curSex && tier === curTier ? ' class="on"' : '';
+      return `<button${on} onclick="location.hash='/?sid=${m.id}'">${tier}</button>`;
+    }).join('');
+    return `<div class="col"><div class="colh">${label}</div>${items}</div>`;
+  };
+  const sarja = `<span class="lab">Sarja</span>
+    <div class="dropwrap">
+      <button class="seldrop" type="button" onclick="toggleSarja(event)">${curTier}<span class="caret"></span></button>
+      <div class="menu" id="sarjaMenu" style="display:none">${col('M','Miehet')}${col('N','Naiset')}</div>
+    </div>`;
+
+  // Miehet / Naiset segmented — same tier, other sex
+  const seg = ['M', 'N'].map(sex => {
+    const m = find(sex, curTier, curYear);
+    const label = sex === 'M' ? 'Miehet' : 'Naiset';
+    if (!m) return `<a class="disabled" aria-disabled="true" style="opacity:.4;pointer-events:none">${label}</a>`;
+    return `<a href="#/?sid=${m.id}"${sex===curSex?' class="on"':''}>${label}</a>`;
+  }).join('');
+
+  // Kausi — years available for the current series (sex + tier)
+  const years = seasons
+    .filter(s => { const p = parseSeries(s.series); return p.sex === curSex && p.tier === curTier; })
+    .sort((a, b) => b.year - a.year);
+  const yearOpts = years.map(s =>
+    `<option value="#/?sid=${s.id}"${s.id===sid?' selected':''}>${s.year}</option>`).join('');
+
+  return `<div class="controls">
+    ${sarja}
+    <div class="seg">${seg}</div>
+    <span class="spacer"></span>
+    <span class="lab">Kausi</span>
+    <select class="sel" onchange="location.hash=this.value.slice(1)">${yearOpts}</select>
+  </div>`;
+}
+
+function closeSarja() {
+  const m = document.getElementById('sarjaMenu');
+  if (m) m.style.display = 'none';
+  const b = document.getElementById('menuback');
+  if (b) b.remove();
+}
+
+window.toggleSarja = function (e) {
+  e.stopPropagation();
+  const m = document.getElementById('sarjaMenu');
+  if (!m) return;
+  if (m.style.display !== 'none') { closeSarja(); return; }
+  m.style.display = 'flex';
+  const b = document.createElement('div');
+  b.className = 'menuback'; b.id = 'menuback'; b.onclick = closeSarja;
+  document.body.appendChild(b);
+};
+
 /* ── Nav ─────────────────────────────────────────────────────────────────── */
 function renderNav() {
   const nav = document.getElementById('nav');
@@ -95,15 +174,13 @@ function renderNav() {
   const page = hash.split('?')[0];
   const curSid = parseInt(qs('sid') || '0', 10);
 
-  let html = '';
-  for (const s of META.nav_seasons) {
-    const isOn = (page === '#/' || page === '#/leaderboard') && curSid === s.id;
-    html += `<a href="#/?sid=${s.id}"${isOn?' class="active"':''}>${s.series}</a>`;
-  }
   const defaultSid = META.nav_seasons[0]?.id || '';
+  const statsSid = curSid || defaultSid;
+  const onStats = page === '#/' || page === '#/leaderboard' || page === '#/player' || page === '#/team';
+  let html = '';
+  html += `<a href="#/?sid=${statsSid}"${onStats?' class="active"':''}>Tilastot</a>`;
   html += `<a href="#/projections?sid=${defaultSid}"${page==='#/projections'?' class="active"':''}>PARE-ennusteet</a>`;
   html += `<a href="#/league?sid=${defaultSid}"${page==='#/league'?' class="active"':''}>Sarjataulukko</a>`;
-  html += `<a href="#/glossary"${page==='#/glossary'?' class="active"':''}>Kaava</a>`;
   html += `<a href="#/about"${page==='#/about'?' class="active"':''}>About</a>`;
   nav.innerHTML = html;
 }
@@ -205,11 +282,9 @@ async function showLeaderboard(sid, stat) {
     : 'Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).';
 
   main().innerHTML = `
-    <div class="controls">
-      ${seasonSelHtml(META.seasons, sid, '/', `&stat=${stat}`)}
-    </div>
+    ${leaderboardControls(sid)}
     <div class="page" style="padding-bottom:6px">
-      <h1>${season.series} ${season.year}</h1>
+      <h1>${parseSeries(season.series).tier} ${season.year}</h1>
       <p class="sub">${subText}</p>
     </div>
     <div class="filters">
@@ -616,32 +691,28 @@ async function showTeam(teamRaw, sid) {
 function showAbout() {
   main().innerHTML = `
     <div class="page">
-      <h1>What is Mallo?</h1>
-      <p class="sub">The first analytics site for pesäpallo (Finnish baseball). English, because
-      the ideas came from the baseball and basketball analytics world — Finnish UI everywhere else.</p>
+      <h1>About</h1>
       <div class="prose">
-        <p class="lead">Public analytics transformed how baseball (Baseball Savant, FanGraphs,
-        Baseball-Reference) and basketball (DARKO, LEBRON) are understood — but pesäpallo, a sport
-        with a century of history and a results service that records every plate turn, has never had
-        an analytics layer. Mallo is an attempt to build one, on top of the official
-        <a href="https://www.pesistulokset.fi/">pesistulokset.fi</a> data service.</p>
-        <p><strong>PARE</strong> (Painotettu ja Regressoitu Ennuste — a nod to
-        <a href="https://www.darko.app/">DARKO</a>, its methodological parent) is a daily-updating
-        estimate of every player's true talent in every rate stat. Every game a player has ever played
-        counts, weighted by an exponential decay fitted per stat — no arbitrary "last 10 games" windows —
-        and blended with the league average in proportion to how much evidence exists.</p>
-        <p><strong>TEHO+</strong> is league-indexed production per plate turn (100 = league average,
-        150 = MVP season) in the spirit of baseball's OPS+/wRC+. <strong>kTEHO+</strong> is the
-        park-adjusted version.</p>
-        <p><strong>Percentile profiles</strong> show where a player ranks among qualified peers in each
-        skill, Baseball Savant style. <strong>Kenttäkertoimet</strong> are the sport's first published
-        park factors. <strong>Playoff odds</strong> come from Monte Carlo simulation of the remaining
-        schedule.</p>
-        <p>Data: the official pesistulokset.fi results service, per-player per-match statistics back
-        to 1991.</p>
-        <p>Open source, work in progress. The roadmap — run expectancy from play-by-play, lukkari
-        metrics, manager decision analysis, win probability — lives in
-        <code>docs/design.md</code>.</p>
+        <p class="lead">Like my entire Finnish baseball fandom, this site came together mostly as an
+        accident. I've been wondering for a very long time what advanced metrics in pesäpallo, released
+        to the actual public, would look like. The sport is inherently noisy for a bat &amp; ball sport
+        (only around 30ish games per year) but the best players rise to the occasion and you can make
+        sense of it all very quickly.</p>
+        <p>So I've decided to use the pesistulokset data service metrics and come up with the
+        first-ever analytics site for pesis. Does anyone need this? Probably not. But I know lots of
+        pesis fans also watch baseball, NFL and other sports, they might bet on games, they might be
+        fans of fantasy sports. I know for a fact this is true — I've played in two different fantasy
+        leagues with Finns for NFL and MLB.</p>
+        <p>So maybe for us it's overdue. If you're new to pesis, this is a chance for you to start to
+        contextualize it. As an avid watcher, my translation layer between baseball and pesis is my
+        favorite thing to do, because both sports help you appreciate the other because they are truly
+        cousins in a way that nothing else is. Not quite as close as American football is to Canadian
+        football, but certainly the only thing closer to baseball than softball is Finnish baseball.
+        Alas, you'll watch and learn.</p>
+        <p>
+          <a href="https://blog.ronbronson.com/my-pesapallo-story">My pesäpallo story</a> ·
+          <a href="https://www.superpesis.fi/ajankohtaista/superpesis-yhdysvaltalainen-ron-bronson-toteutti-unelmansa-ja-matkusti-suomeen-katsomaan-pesapalloa">Superpesis: Ron Bronson toteutti unelmansa</a>
+        </p>
       </div>
     </div>`;
 }
