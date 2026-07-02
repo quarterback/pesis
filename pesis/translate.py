@@ -59,11 +59,12 @@ WRC_TIERS = ((75, "replacement level"), (90, "bench bat"),
              (110, "league-average regular"), (125, "solid starter"),
              (140, "All-Star"), (160, "MVP candidate"))
 MLB_SEASON_GAMES = 162
-# A Superpesis regular season is ~30 games — almost exactly one month of MLB
-# baseball. The 162-game pace is therefore a ~5.5× extrapolation and is
-# presented as pace trivia, not a projection; the quantile-mapped rate stats
-# above it are the real translation (they're schedule-length-free).
-SUPERPESIS_SEASON_GAMES = 30
+# A Superpesis regular season runs 28–33 games (33 in 2025, high-20s/30ish in
+# earlier years) — roughly one month of MLB baseball. The 162-game pace is
+# therefore a ~5× extrapolation and is presented as pace trivia, not a
+# projection; the quantile-mapped rate stats above it are the real
+# translation (they're schedule-length-free).
+SUPERPESIS_SEASON_GAMES = 30  # nominal; the page uses actual games played
 
 
 def _quantile_value(pct: int, mean: float, sd: float, direction: int) -> float:

@@ -99,7 +99,7 @@ def _game_row(rng: random.Random, p: DemoPlayer, year: int, match_id: int,
 
 def build_demo(conn: sqlite3.Connection, seed: int = 27,
                years: tuple[int, ...] = (2024, 2025, 2026),
-               matches_per_season: int = 26) -> dict:
+               matches_per_season: int = 30) -> dict:
     """Populate ``conn`` with a deterministic synthetic league.
 
     Returns {player_id: DemoPlayer} so callers (tests) can compare TAHKO
