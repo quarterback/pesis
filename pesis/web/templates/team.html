@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ team }}{% endblock %}
+{% block content %}
+<h1>{{ team }}</h1>
+<p class="sub">{{ season.series }} {{ season.year }}</p>
+
+{% if standing %}
+<div class="tiles">
+  <div class="tile"><div class="label">{{ t("tm.matches") }}</div><div class="value">{{ standing.games }}</div></div>
+  <div class="tile"><div class="label">{{ t("tm.wl") }}</div><div class="value">{{ standing.wins }}–{{ standing.losses }}</div></div>
+  <div class="tile"><div class="label">{{ t("th.points") }}</div><div class="value">{{ standing.points }}</div></div>
+  <div class="tile"><div class="label">{{ t("tm.rundiff") }}</div><div class="value">{{ "%+d" | format(standing.run_diff) }}</div></div>
+</div>
+{% endif %}
+
+<h2>{{ t("tm.players") }}</h2>
+<div class="card">
+<table>
+  <thead>
+    <tr><th class="name">{{ t("th.player") }}</th><th>{{ t("th.games") }}</th><th>{{ t("th.turns") }}</th><th>K</th><th>L</th><th>T</th>
+        <th>Tehot</th><th>KL%</th><th>TEHO+</th></tr>
+  </thead>
+  <tbody>
+    {% for l in roster %}
+    <tr>
+      <td class="name"><a href="/player/{{ l.player_id }}">{{ l.name }}</a></td>
+      <td>{{ l.games }}</td><td>{{ l.turns_at_bat }}</td>
+      <td>{{ l.kunnarit }}</td><td>{{ l.lyodyt }}</td><td>{{ l.tuodut }}</td>
+      <td>{{ l.tehot }}</td><td>{{ l.kl_pct | rate }}</td><td>{{ l.teho_plus }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>{{ t("tm.matches") }}</h2>
+<div class="card">
+<table>
+  <thead><tr><th>{{ t("th.date") }}</th><th class="name">{{ t("pl.home") | capitalize }}</th><th class="name">{{ t("pl.away") | capitalize }}</th>
+             <th>{{ t("th.result") }}</th><th>{{ t("th.periods") }}</th><th class="name">{{ t("th.stadium") }}</th></tr></thead>
+  <tbody>
+    {% for m in matches %}
+    <tr>
+      <td><a href="/match/{{ m.id }}">{{ m.date }}</a></td>
+      <td class="name">{{ m.home_team }}</td>
+      <td class="name">{{ m.away_team }}</td>
+      <td>{{ m.home_runs }}–{{ m.away_runs }}</td>
+      <td>{% if m.periods_home is not none %}{{ m.periods_home }}–{{ m.periods_away }}{% if m.tiebreak %} k{% endif %}{% else %}—{% endif %}</td>
+      <td class="name">{{ m.stadium or "—" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

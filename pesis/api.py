@@ -61,7 +61,7 @@ class PesisApi:
         query = urllib.parse.urlencode({**params, "apikey": self.api_key})
         url = f"{BASE_URL}{path}?{query}"
         self._throttle()
-        req = urllib.request.Request(url, headers={"User-Agent": "karki-analytics/0.1"})
+        req = urllib.request.Request(url, headers={"User-Agent": "mallo-analytics/0.1"})
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read().decode("utf-8"))
 

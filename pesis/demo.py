@@ -3,12 +3,12 @@
 Generates a plausible Superpesis-shaped dataset: teams, players with latent
 per-stat true talent, an aging arc, and per-match stat lines sampled from that
 talent. The point is NOT realism — it is a deterministic sandbox for the
-metrics layer, the TAHKO projections, and the web UI, sized like a real
+metrics layer, the projections, and the web UI, sized like a real
 backfill (a few seasons × ~120 players × ~26 matches).
 
 Because every line is sampled from known latent talent, the demo also doubles
-as a test harness: TAHKO's projections can be scored against the true rates
-that generated the data (see tests/test_tahko.py).
+as a test harness: the projections can be scored against the true rates
+that generated the data (see tests/test_projection.py).
 """
 
 from __future__ import annotations
@@ -102,7 +102,7 @@ def build_demo(conn: sqlite3.Connection, seed: int = 27,
                matches_per_season: int = 30) -> dict:
     """Populate ``conn`` with a deterministic synthetic league.
 
-    Returns {player_id: DemoPlayer} so callers (tests) can compare TAHKO
+    Returns {player_id: DemoPlayer} so callers (tests) can compare projection
     output against the latent truth.
     """
     rng = random.Random(seed)

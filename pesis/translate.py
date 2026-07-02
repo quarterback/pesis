@@ -9,11 +9,15 @@ percentile kärkilyönti hitter" becomes "his hit tool ranks like a .290 MLB
 bat" — a statement about *rank in his league*, translated into a scale
 baseball fans have intuition for.
 
-Two translations are direct rather than quantile-mapped:
-  * TEHO+ ↔ wRC+ — both are 100-indexed league-relative production, so the
-    number carries over as-is.
+One translation is direct rather than quantile-mapped:
   * 162-game pace — counting stats rescaled from the pesäpallo schedule to a
     162-game season (a pace, not an equivalency, and labeled as such).
+
+The wRC+ equivalent is ALSO quantile-mapped (percentile of tehot-per-turn
+onto a wRC+ distribution of mean 100, sd 25). It is deliberately NOT a copy
+of TEHO+: real Superpesis production concentrates in the top of the order
+far more than MLB's (defensive specialists bat with near-zero tehot), so raw
+TEHO+ runs to 300+ and would label half the league MVP candidates.
 
 MLB reference distributions are approximations for qualified hitters in the
 2023–25 era (means/SDs eyeballed from FanGraphs leaderboards); they're
@@ -92,7 +96,8 @@ def translate_player(conn: sqlite3.Connection, player_id: int,
         return None
     target = next((s for s in career if s["year"] == year), career[-1])
     lines = season_lines(conn, target["season_id"])
-    add_percentiles(lines, stats=tuple(m["stat"] for m in MAPPINGS))
+    add_percentiles(lines, stats=tuple(m["stat"] for m in MAPPINGS)
+                    + ("tehot_per_turn",))
     line = next(l for l in lines if l["player_id"] == player_id)
 
     rows = []
@@ -116,10 +121,12 @@ def translate_player(conn: sqlite3.Connection, player_id: int,
         "R": round(line["tuodut"] * MLB_SEASON_GAMES / games),
         "extrapolation": round(MLB_SEASON_GAMES / max(games, 1), 1),
     }
-    wrc = line["teho_plus"]
+    pct_prod = line.get("pct_tehot_per_turn")
+    wrc = (round(_quantile_value(pct_prod, 100.0, 25.0, +1))
+           if pct_prod is not None else None)
     return {"player_id": player_id, "name": line["name"], "team": line["team"],
             "year": line["year"], "age": line.get("age"),
             "games": line["games"], "qualified": bool(rows),
-            "rows": rows, "wrc_plus": wrc,
+            "rows": rows, "wrc_plus": wrc, "teho_plus": line["teho_plus"],
             "tier": wrc_tier(wrc) if wrc is not None else None,
             "pace": pace}

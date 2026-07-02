@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ t("nav.search") }}{% endblock %}
+{% block content %}
+<h1>{{ t("se.title") }}</h1>
+<form method="get" action="/search" style="margin: 12px 0 20px">
+  <input name="q" value="{{ q }}" placeholder="{{ t('se.placeholder') }}" autofocus
+         style="padding:8px 12px; font-size:15px; width:280px; border:1px solid var(--grid);
+                border-radius:8px; background:var(--surface-1); color:var(--ink-1)">
+  <button style="padding:8px 14px; border-radius:8px; border:0; background:var(--series-1);
+                 color:#fff; font-weight:600">{{ t("se.button") }}</button>
+</form>
+{% if q and not results %}
+<p class="sub">{{ t("se.none") }} "{{ q }}".</p>
+{% elif results %}
+<div class="card">
+<table>
+  <thead><tr><th class="name">{{ t("th.player") }}</th><th class="name">{{ t("th.team") }}</th><th>{{ t("th.last_season") }}</th></tr></thead>
+  <tbody>
+    {% for r in results %}
+    <tr>
+      <td class="name"><a href="/player/{{ r.id }}">{{ r.name }}</a></td>
+      <td class="name"><a href="/team/{{ r.team }}">{{ r.team }}</a></td>
+      <td>{{ r.last_year }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

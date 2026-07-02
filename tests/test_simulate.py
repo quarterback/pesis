@@ -35,9 +35,51 @@ def test_playoff_odds_are_sane_and_deterministic():
     assert a[0]["odds"] > a[-1]["odds"]
 
 
+def test_period_points_rule_3_2_1_0():
+    """The real rule, validated against official 2026 result boards:
+    3 = clean 2-0; 2 = any other win; 1 = loss with tiebreak played;
+    0 = loss without tiebreak. All shapes below occur in real data."""
+    from pesis import db as db_, ingest
+    conn = db_.connect(":memory:")
+    sid = ingest.upsert_season(conn, 2026, "Testisarja")
+    matches = [
+        # (id, ph, pa, tiebreak, home runs, away runs, A pts, B pts)
+        (1, 2, 0, 0, 8, 3, 3, 0),  # clean win
+        (2, 2, 1, 1, 6, 9, 2, 1),  # tiebreak win DESPITE fewer runs
+        (3, 1, 2, 1, 5, 5, 1, 2),  # B wins tiebreak on equal runs
+        (4, 1, 0, 0, 7, 7, 2, 0),  # drawn period, no tiebreak: 1-0 (x-x, y<z)
+        (5, 0, 1, 1, 4, 4, 1, 2),  # both periods drawn, decided in contest
+    ]
+    for mid, ph, pa, tb, hr, ar, _, _ in matches:
+        ingest.insert_match(conn, sid, {
+            "id": mid, "date": f"2026-06-0{mid}", "home_team": "A",
+            "away_team": "B", "home_runs": hr, "away_runs": ar,
+            "periods_home": ph, "periods_away": pa, "tiebreak": tb,
+        })
+    table = {t["team"]: t for t in simulate.standings(conn, sid)}
+    assert table["A"]["points"] == sum(m[6] for m in matches)
+    assert table["B"]["points"] == sum(m[7] for m in matches)
+    assert table["A"]["wins"] == 3 and table["A"]["super_wins"] == 2
+    assert table["A"]["super_losses"] == 2 and table["A"]["losses"] == 2
+    assert table["B"]["super_wins"] == 2 and table["B"]["super_losses"] == 1
+
+
 def test_full_season_odds_match_final_table():
     conn = _conn()
     sid = _season(conn)
     table = simulate.playoff_odds(conn, sid, as_of="2026-12-31", sims=50)
     for i, t in enumerate(table):
         assert t["odds"] == (100.0 if i < simulate.PLAYOFF_SPOTS else 0.0)
+
+
+def test_odds_history_converges_to_final_table():
+    conn = _conn()
+    sid = _season(conn)
+    hist = simulate.odds_history(conn, sid, sims=100, step_days=14)
+    assert len(hist["teams"]) == 10
+    n = len(hist["dates"])
+    assert all(len(v) == n for v in hist["teams"].values())
+    # last cutoff = season fully played -> odds resolve to 100/0
+    finals = sorted((v[-1] for v in hist["teams"].values()), reverse=True)
+    assert finals[:simulate.PLAYOFF_SPOTS] == [100.0] * simulate.PLAYOFF_SPOTS
+    assert set(finals[simulate.PLAYOFF_SPOTS:]) == {0.0}

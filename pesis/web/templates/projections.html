@@ -1,17 +1,21 @@
 {% extends "base.html" %}
-{% block title %}TAHKO-ennusteet{% endblock %}
+{% block title %}{{ t("proj.title") }}{% endblock %}
 {% block content %}
-<h1>TAHKO-ennusteet</h1>
-<p class="sub">Päivittyvä arvio jokaisen pelaajan todellisesta tasosta: koko urahistoria
-eksponentiaalisesti painotettuna + regressio sarjakeskiarvoon. Ei mielivaltaisia
-"viimeiset N ottelua" -rajauksia.</p>
+<h1>{{ t("proj.title") }} · {{ season.series }} {{ season.year }}</h1>
+<p class="sub">{{ t("proj.sub") }}</p>
+
+<div class="filters">
+  {% for s in seasons %}
+  <a href="?sid={{ s.id }}" class="{{ 'active' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
+  {% endfor %}
+</div>
 
 <div class="card">
 <table>
   <thead>
-    <tr><th>#</th><th class="name">Pelaaja</th><th>Ikä</th>
-        <th>KL% (enn.)</th><th>Saatto% (enn.)</th><th>Etenemis% (enn.)</th>
-        <th>Palo% (enn.)</th><th>TEHO+ (enn.)</th></tr>
+    <tr><th>#</th><th class="name">{{ t("th.player") }}</th><th>{{ t("th.age") }}</th>
+        <th>eKL%</th><th>eSaatto%</th><th>eEtenemis%</th>
+        <th>ePalo%</th><th>eTEHO+</th></tr>
   </thead>
   <tbody>
     {% for p in projs %}

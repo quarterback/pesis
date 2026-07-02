@@ -1,47 +1,58 @@
 {% extends "base.html" %}
-{% block title %}Sarjataulukko {{ season.year }}{% endblock %}
+{% block title %}{{ t("nav.standings") }} {{ season.year }}{% endblock %}
 {% block content %}
 <h1>{{ season.series }} {{ season.year }}</h1>
 <p class="sub">
-  {% if as_of %}Tilanne {{ as_of }} · pudotuspeliprosentit 2000 simuloinnista (4 paikkaa).
-  {% else %}Koko kausi. Lisää <code>?as_of=YYYY-MM-DD</code> osoitteeseen nähdäksesi
-  pudotuspelitodennäköisyydet kesken kauden.{% endif %}
+  {% if as_of %}{{ t("lg.asof_sub").replace("{d}", as_of) }}
+  {% else %}{{ t("lg.points_rule") }} {{ t("lg.asof_hint") }}{% endif %}
 </p>
 
 <div class="filters">
   {% for s in seasons %}
-  <a href="?year={{ s.year }}{% if as_of %}&amp;as_of={{ as_of }}{% endif %}"
-     class="{{ 'active' if s.year == season.year }}">{{ s.year }}</a>
+  <a href="?sid={{ s.id }}{% if as_of %}&amp;as_of={{ as_of }}{% endif %}"
+     class="{{ 'active' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
   {% endfor %}
 </div>
 
 <div class="card">
 <table>
   <thead>
-    <tr><th>#</th><th class="name">Joukkue</th><th>O</th><th>V</th><th>T</th><th>H</th>
-        <th>Pisteet</th><th>Juoksut</th><th>±</th>
-        {% if as_of %}<th>Jäljellä</th><th>Pudotuspelit-%</th>{% endif %}</tr>
+    <tr><th>#</th><th class="name">{{ t("th.team") }}</th><th>{{ t("th.games") }}</th><th>{{ t("th.wins") }}</th>
+        <th>{{ t("th.super_wins") }}</th>
+        <th>{{ t("th.super_losses") }}</th>
+        <th>{{ t("th.losses") }}</th><th>{{ t("th.points") }}</th><th>{{ t("th.runs") }}</th><th>±</th>
+        {% if as_of %}<th>{{ t("th.remaining") }}</th><th>{{ t("th.playoff_pct") }}</th>{% endif %}</tr>
   </thead>
   <tbody>
-    {% for t in table %}
+    {% for row in table %}
     <tr>
       <td>{{ loop.index }}</td>
-      <td class="name">{{ t.team }}</td>
-      <td>{{ t.games }}</td><td>{{ t.wins }}</td><td>{{ t.ties }}</td><td>{{ t.losses }}</td>
-      <td><strong>{{ t.points }}</strong></td>
-      <td>{{ t.runs_for }}–{{ t.runs_against }}</td>
-      <td>{{ "%+d" | format(t.run_diff) }}</td>
-      {% if as_of %}<td>{{ t.remaining }}</td><td><strong>{{ t.odds }}</strong></td>{% endif %}
+      <td class="name">{{ row.team }}</td>
+      <td>{{ row.games }}</td><td>{{ row.wins }}</td>
+      <td>{{ row.super_wins }}</td><td>{{ row.super_losses }}</td>
+      <td>{{ row.losses }}</td>
+      <td><strong>{{ row.points }}</strong></td>
+      <td>{{ row.runs_for }}–{{ row.runs_against }}</td>
+      <td>{{ "%+d" | format(row.run_diff) }}</td>
+      {% if as_of %}<td>{{ row.remaining }}</td><td><strong>{{ row.odds }}</strong></td>{% endif %}
     </tr>
     {% endfor %}
   </tbody>
 </table>
 </div>
 
-<h2>Kenttäkertoimet <span style="font-weight:400;color:var(--ink-3)">(100 = neutraali juoksuympäristö)</span></h2>
+{% if graph_json %}
+<h2>{{ t("lg.fangraph_title") }} <span style="font-weight:400;color:var(--ink-3)">{{ t("lg.fangraph_note") }}</span></h2>
+<div class="card">
+  <div id="fangraph"></div>
+  <p class="sub" style="margin:8px 0 0">{{ t("lg.fangraph_sub") }}</p>
+</div>
+{% endif %}
+
+<h2>{{ t("lg.parks_title") }} <span style="font-weight:400;color:var(--ink-3)">{{ t("lg.parks_note") }}</span></h2>
 <div class="card">
 <table>
-  <thead><tr><th class="name">Stadion</th><th>Ottelut</th><th>Juoksua/ottelu</th><th>PF</th></tr></thead>
+  <thead><tr><th class="name">{{ t("th.stadium") }}</th><th>{{ t("tm.matches") }}</th><th>{{ t("lg.rpg") }}</th><th>PF</th></tr></thead>
   <tbody>
     {% for p in parks %}
     <tr><td class="name">{{ p.stadium }}</td><td>{{ p.games }}</td>
@@ -51,10 +62,10 @@
 </table>
 </div>
 
-<h2>Tuuli ja kunnarit</h2>
+<h2>{{ t("lg.weather_title") }}</h2>
 <div class="card">
 <table>
-  <thead><tr><th class="name">Tuuli</th><th>Ottelut</th><th>Kunnarit/vuoro</th><th>Juoksua/ottelu</th></tr></thead>
+  <thead><tr><th class="name">{{ t("lg.wind") }}</th><th>{{ t("tm.matches") }}</th><th>{{ t("lg.k_per_turn") }}</th><th>{{ t("lg.rpg") }}</th></tr></thead>
   <tbody>
     {% for w in weather %}
     <tr><td class="name">{{ w.wind }}</td><td>{{ w.games }}</td>
@@ -62,7 +73,17 @@
     {% endfor %}
   </tbody>
 </table>
-<p class="sub" style="margin:10px 0 0">Sää joka ottelusta suoraan tulospalvelun datasta —
-kenttäkertoimia tai säävaikutuksia ei ole aiemmin julkaistu pesäpallosta.</p>
+<p class="sub" style="margin:10px 0 0">{{ t("lg.weather_sub") }}</p>
 </div>
+{% endblock %}
+{% block scripts %}
+{% if graph_json %}
+<script src="/static/d3.v7.min.js"></script>
+<script src="/static/charts.js"></script>
+<script type="application/json" id="fangraph-data">{{ graph_json | safe }}</script>
+<script>
+renderFangraph(document.getElementById("fangraph"),
+               JSON.parse(document.getElementById("fangraph-data").textContent));
+</script>
+{% endif %}
 {% endblock %}

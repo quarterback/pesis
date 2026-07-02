@@ -12,7 +12,8 @@ Key definitions
     palo-%       palot / turns at bat (negative — like strikeout rate)
     TEHO+        100 × (player tehot per turn) / (league tehot per turn):
                  era/league-adjusted production index in the spirit of OPS+ —
-                 100 is league average, 150 is an MVP season.
+                 100 is league average; the league's best run 250–350 (real
+                 data: production concentrates at the top of the order).
     TEHO+adj     TEHO+ with each game's production deflated/inflated by the
                  run environment it happened in (the stadium's kenttäkerroin).
                  A short season is rich in recorded context — park, weather,
@@ -90,7 +91,14 @@ def _add_park_adjusted(conn: sqlite3.Connection, season_id: int,
     multiplier, re-indexed so the adjusted league average is 100. Without
     match/stadium data every multiplier is 1.0 and adj == raw."""
     from .context import park_factors
-    pf = {p["stadium"]: p["pf"] / 100 for p in park_factors(conn)}
+    # estimate PF from all seasons of the SAME series (stability), never
+    # across series — men's and women's run environments differ
+    series = conn.execute("SELECT series FROM seasons WHERE id = ?",
+                          (season_id,)).fetchone()
+    sids = [r[0] for r in conn.execute(
+        "SELECT id FROM seasons WHERE series = ?",
+        (series[0] if series else "",))]
+    pf = {p["stadium"]: p["pf"] / 100 for p in park_factors(conn, sids or None)}
     mult = {m["id"]: pf.get(m["stadium"], 1.0) for m in conn.execute(
         "SELECT id, stadium FROM matches WHERE season_id = ?", (season_id,))}
 
@@ -120,7 +128,7 @@ def _league_tehot_per_turn(lines: list[dict]) -> float | None:
 
 
 def league_rates(lines: list[dict]) -> dict[str, float]:
-    """Attempt-weighted league mean for every rate — the TAHKO priors."""
+    """Attempt-weighted league mean for every rate — the projection priors."""
     out = {}
     for rate, (num, den) in RATES.items():
         d = sum(l[den] for l in lines)
@@ -166,14 +174,75 @@ def leaderboard(conn: sqlite3.Connection, season_id: int, stat: str,
     return lines[:limit]
 
 
-def player_seasons(conn: sqlite3.Connection, player_id: int) -> list[dict]:
-    """Season-by-season lines for one player (career page / trajectories)."""
+BASE_KL_LABELS = {  # upstream batpe_*_N indexes target bases 1..3 + home
+    "kl_base0": "KL 1. pesälle", "kl_base1": "KL 2. pesälle",
+    "kl_base2": "KL 3. pesälle", "kl_base3": "KL kotipesään",
+}
+
+
+def base_kl_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
+    """Kärkilyönti-% split by TARGET BASE, per player, from the raw upstream
+    rows (batpe_succeeded_N / batpe_tries_N). The most pesäpallo-native skill
+    fingerprint there is — advancing to 1st is routine, bringing the runner
+    home is the money skill. Returns lines ready for add_percentiles()
+    (keys kl_base0..3 + tries, turns_at_bat for qualification)."""
+    import json as _json
+    sums: dict[int, dict] = {}
+    for r in conn.execute(
+            "SELECT player_id, turns_at_bat, raw FROM player_games "
+            "WHERE season_id = ?", (season_id,)):
+        line = sums.setdefault(r["player_id"], {"player_id": r["player_id"],
+                                                "turns_at_bat": 0,
+                                                **{f"n{i}": 0 for i in range(4)},
+                                                **{f"d{i}": 0 for i in range(4)}})
+        line["turns_at_bat"] += r["turns_at_bat"]
+        raw = _json.loads(r["raw"] or "{}")
+        src = raw.get("_v1", raw)
+        for i in range(4):
+            line[f"n{i}"] += src.get(f"batpe_succeeded_{i}") or 0
+            line[f"d{i}"] += src.get(f"batpe_tries_{i}") or 0
+    out = []
+    for line in sums.values():
+        for i in range(4):
+            n, d = line.pop(f"n{i}"), line.pop(f"d{i}")
+            line[f"kl_base{i}"] = n / d if d else None
+            line[f"kl_base{i}_tries"] = d
+        out.append(line)
+    return out
+
+
+def game_log(conn: sqlite3.Connection, player_id: int,
+             season_id: int) -> list[dict]:
+    """Per-match lines for the player page's game log."""
+    rows = conn.execute(
+        """SELECT pg.*, m.stadium FROM player_games pg
+           LEFT JOIN matches m ON m.id = pg.match_id
+           WHERE pg.player_id = ? AND pg.season_id = ?
+           ORDER BY pg.date""", (player_id, season_id)).fetchall()
+    out = []
+    for r in rows:
+        line = dict(r)
+        line["tehot"] = r["kunnarit"] + r["lyodyt"] + r["tuodut"]
+        line["kl_pct"] = (r["karkilyonnit"] / r["karki_yritykset"]
+                          if r["karki_yritykset"] else None)
+        out.append(line)
+    return out
+
+
+def player_seasons(conn: sqlite3.Connection, player_id: int,
+                   lines_fn=None) -> list[dict]:
+    """Season-by-season lines for one player (career page / trajectories).
+
+    ``lines_fn(season_id)`` overrides season_lines — the web app passes a
+    cached provider (with 35 years of history a career page would otherwise
+    recompute dozens of full-season aggregations)."""
+    lines_fn = lines_fn or (lambda sid: season_lines(conn, sid))
     season_ids = [r[0] for r in conn.execute(
         "SELECT DISTINCT season_id FROM player_games WHERE player_id = ?",
         (player_id,)).fetchall()]
     out = []
     for sid in season_ids:
-        for line in season_lines(conn, sid):
+        for line in lines_fn(sid):
             if line["player_id"] == player_id:
                 line["season_id"] = sid
                 out.append(line)
