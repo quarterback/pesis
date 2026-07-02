@@ -15,6 +15,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return os.path.join(ROOT, "index.html")
         return p
 
+    def do_GET(self):
+        # For missing .json files return a JSON 404, not an HTML error page
+        path_clean = self.path.split('?')[0].split('#')[0]
+        if path_clean.endswith('.json'):
+            fs_path = super().translate_path(path_clean)
+            if not os.path.exists(fs_path):
+                body = b'{"error":"not found"}'
+                self.send_response(404)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+        super().do_GET()
+
     def log_message(self, fmt, *args):
         pass
 

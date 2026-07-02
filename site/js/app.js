@@ -36,7 +36,12 @@ const STAT_LABEL = {
 async function fetchJSON(url) {
   if (_cache[url]) return _cache[url];
   const r = await fetch(url);
-  if (!r.ok) throw new Error(`${r.status} ${url}`);
+  if (!r.ok) throw new Error(`${r.status}: ${url}`);
+  const ct = r.headers.get('content-type') || '';
+  if (!ct.includes('json')) {
+    const snippet = (await r.text()).slice(0, 80);
+    throw new Error(`Ei JSON-vastausta: ${url} (${snippet})`);
+  }
   const d = await r.json();
   _cache[url] = d;
   return d;
