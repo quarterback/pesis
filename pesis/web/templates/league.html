@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Sarjataulukko {{ season.year }}{% endblock %}
+{% block title %}{{ t("nav.standings") }} {{ season.year }}{% endblock %}
 {% block content %}
 <h1>{{ season.series }} {{ season.year }}</h1>
 <p class="sub">
@@ -111,6 +111,17 @@
 <script>
 const fgData = JSON.parse(document.getElementById("fg-data").textContent);
 renderFangraph(document.getElementById("fangraph"), fgData);
+</script>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if graph_json %}
+<script src="/static/d3.v7.min.js"></script>
+<script src="/static/charts.js"></script>
+<script type="application/json" id="fangraph-data">{{ graph_json | safe }}</script>
+<script>
+renderFangraph(document.getElementById("fangraph"),
+               JSON.parse(document.getElementById("fangraph-data").textContent));
 </script>
 {% endif %}
 {% endblock %}

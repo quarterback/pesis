@@ -1,81 +1,16 @@
-# Kärki — pesäpallo analytics
+[![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)](https://github.com/quarterback/pesis/blob/main/LICENSE) [![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python&logoColor=white)](https://www.python.org/) [![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML) [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript) [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/) [![Deployed on Fly](https://img.shields.io/badge/Deploy-Fly.io-007ACE?logo=fly-io&logoColor=white)](https://fly.io)
 
-An analytics engine and site for Finnish baseball (pesäpallo), built on data
-from the official results service [pesistulokset.fi](https://www.pesistulokset.fi/).
+# Mallo — pesäpallo analytics
+
+I'd long wondered what a pesäpallo site would look like. Working on a different project, I explored the viability of a tool like this 
+and then enlisted an agent to build it. An analytics engine and site for Finnish baseball (pesäpallo), built on data
+from the official results site [pesistulokset.fi](https://www.pesistulokset.fi/).
+
 There is no sabermetrics/analytics site anywhere for pesäpallo — this project
 is an attempt to be the first, borrowing what works from the basketball and
-baseball analytics canon:
+baseball analytics canon and my own long-running sims both from text-sim games and real-life experiments from baseball to college football rankings and others.
 
-- **[DARKO](https://www.darko.app/)** → **TAHKO**, a daily-updating Bayesian
-  projection of every player's true talent per stat (exponential decay over
-  the full game log + regression to league mean; named for Lauri "Tahko"
-  Pihkala, the inventor of pesäpallo).
-- **[Baseball Savant](https://baseballsavant.mlb.com/)** → player pages with
-  percentile sliders across the skill profile.
-- **FanGraphs / Baseball-Reference** → honest rate stats with real
-  denominators, league-indexed **TEHO+** (100 = league average), sortable
-  leaderboards, season-by-season career tables.
 
-## Quickstart (no API key needed)
+## License
 
-```bash
-pip install -r requirements.txt
-python -m pesis demo          # build a seeded synthetic league (data/pesis.db)
-python -m pesis leaderboard   # CLI leaderboard
-python -m pesis project       # TAHKO projections for everyone
-python -m pesis standings --as-of 2026-06-15   # standings + playoff odds
-python -m pesis parks         # park factors (kenttäkertoimet) + weather effects
-python -m pesis comps --player 1               # similarity scores (B-Ref style)
-python -m pesis mlb --player 1                 # pesis → baseball translation
-python -m pesis runserver     # web UI at http://localhost:5000
-python -m pytest -q           # test suite
-```
-
-## Deploying
-
-This is a long-running Flask server with a SQLite file on disk — it does
-**not** fit static/serverless hosts like Netlify or Vercel (no persistent
-process, read-only filesystem). Deploy it like the sibling projects, with the
-included `Dockerfile` + `fly.toml`:
-
-```bash
-fly launch --copy-config   # first time; accept or rename the app
-fly deploy
-```
-
-The image bakes the demo league at build time so a fresh deploy serves
-content immediately. Any Docker host (Railway, Render, a VPS) works the same
-way: `docker build -t karki . && docker run -p 8080:8080 karki`.
-
-## Real data
-
-pesistulokset.fi is an SPA fed by a documented JSON API
-(`https://api.pesistulokset.fi/api/v1`, docs at
-[ttk.pesistulokset.fi/api-docs](https://ttk.pesistulokset.fi/api-docs)).
-Keys are free: email **tulospalvelu@pesis.fi**. Per-player per-match stat rows
-(~82 fields) go back to **1990**; play-by-play with runner base states exists
-for recent seasons. Then:
-
-```bash
-export PESISTULOKSET_API_KEY=...
-python -m pesis ingest --year 2026 --series-id <id> --series-name "Superpesis (miehet)"
-```
-
-Before a full backfill, confirm `ingest.FIELD_MAP` against
-`/public/stats-definitions` — see `docs/design.md`.
-
-## Layout
-
-| Path | What |
-| --- | --- |
-| `pesis/api.py` | pesistulokset.fi API client (cached, throttled) |
-| `pesis/db.py` / `ingest.py` | SQLite store + payload normalization |
-| `pesis/demo.py` | seeded synthetic league (also the test harness) |
-| `pesis/metrics.py` | rate stats, league baselines, TEHO+, percentiles |
-| `pesis/tahko.py` | TAHKO projections: decay + empirical-Bayes + aging |
-| `pesis/context.py` | park factors (kenttäkertoimet) + weather effects |
-| `pesis/similarity.py` | B-Ref-style similarity scores / player comps |
-| `pesis/simulate.py` | standings + Monte Carlo playoff odds |
-| `pesis/translate.py` | pesis → baseball quantile translation (shareable EN pages) |
-| `pesis/web/` | Flask UI: leaderboards, player pages, projections, league, about |
-| `docs/design.md` | the full design doc: data source, metrics, model, roadmap |
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). See the LICENSE file for details: https://github.com/quarterback/pesis/blob/main/LICENSE

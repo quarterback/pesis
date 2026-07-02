@@ -7,12 +7,24 @@ primary_region = 'cdg'
 [build]
   dockerfile = "Dockerfile"
 
+[env]
+  PESIS_DB_PATH = "/data/pesis.db"
+
+# Persistent DB: create the volume ONCE in the Fly web dashboard
+# (app → Volumes → "pesis_data", region cdg, 3 GB — history is ~1.1 GB).
+# After that everything is push-to-deploy; the app backfills itself.
+[mounts]
+  source = "pesis_data"
+  destination = "/data"
+
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'stop'
+  # keep the site always-on: no auto-stop on idle (it read as "the site
+  # inexplicably shut down"); one machine always running
+  auto_stop_machines = 'off'
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
   processes = ['app']
 
 [[vm]]
