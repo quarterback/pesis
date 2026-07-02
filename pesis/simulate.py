@@ -4,7 +4,7 @@ Team strength is the average run differential per match up to the cutoff
 date, shrunk toward 0 by a games-based prior. A future match's margin is
 modeled as Normal(strength difference + home edge, sigma of observed
 margins); simulating the unplayed schedule a few thousand times yields
-playoff odds. Deliberately model-light: once TAHKO-aggregated rosters exist
+playoff odds. Deliberately model-light: once projection-aggregated rosters exist
 this is where they plug in.
 
 Points: 2 for a win, 1 for a tie, 0 for a loss. (Real Superpesis resolves

@@ -127,7 +127,7 @@ def _league_tehot_per_turn(lines: list[dict]) -> float | None:
 
 
 def league_rates(lines: list[dict]) -> dict[str, float]:
-    """Attempt-weighted league mean for every rate — the TAHKO priors."""
+    """Attempt-weighted league mean for every rate — the projection priors."""
     out = {}
     for rate, (num, den) in RATES.items():
         d = sum(l[den] for l in lines)

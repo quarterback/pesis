@@ -101,8 +101,12 @@ footer { color: var(--ink-3); font-size: 12px; text-align: center; margin: 32px 
 <header>
   <span class="brand">Kärki</span>
   <nav>
+    {% for s in nav_seasons %}
+    <a href="/?sid={{ s.id }}">{{ s.series }}</a>
+    {% else %}
     <a href="/">Tilastot</a>
-    <a href="/projections">TAHKO-ennusteet</a>
+    {% endfor %}
+    <a href="/projections">Ennusteet</a>
     <a href="/league">Sarjataulukko</a>
     <a href="/about">About</a>
   </nav>

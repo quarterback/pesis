@@ -1,7 +1,7 @@
 """SQLite schema for the analytics store.
 
 One row of ``player_games`` per player per match — the grain both the metrics
-layer and TAHKO projections operate on. Normalized columns cover the core
+layer and the projections operate on. Normalized columns cover the core
 pesäpallo stat line; the full upstream payload is kept in ``raw`` (JSON) so new
 metrics never require a re-fetch.
 

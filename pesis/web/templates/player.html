@@ -11,7 +11,7 @@
   <div class="tile"><div class="label">Tehot (K+L+T)</div><div class="value">{{ line.tehot }}</div></div>
   <div class="tile"><div class="label">TEHO+</div><div class="value">{{ line.teho_plus or "—" }}</div></div>
   {% if proj.teho_plus_proj %}
-  <div class="tile"><div class="label">TAHKO TEHO+ (ennuste)</div><div class="value">{{ proj.teho_plus_proj }}</div></div>
+  <div class="tile"><div class="label">TEHO+ (ennuste)</div><div class="value">{{ proj.teho_plus_proj }}</div></div>
   {% endif %}
 </div>
 
@@ -88,7 +88,7 @@
 </div>
 {% endif %}
 
-<h2>TAHKO-ennuste ({{ proj.as_of }})</h2>
+<h2>Ennuste ({{ proj.as_of }})</h2>
 <div class="card">
 <table>
   <thead><tr><th class="name">Tilasto</th><th>Ennuste</th><th>Havaittu (painotettu)</th><th>Efektiivinen otos</th></tr></thead>

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from . import context, db, demo, metrics, similarity, simulate, tahko, translate
+from . import context, db, demo, metrics, projection, similarity, simulate, translate
 
 
 def cmd_demo(args) -> None:
@@ -62,14 +62,14 @@ def cmd_leaderboard(args) -> None:
 
 def cmd_project(args) -> None:
     conn = db.connect(args.db)
-    league = tahko.latest_league_means(conn)
+    league = projection.latest_league_means(conn)
     if args.player:
-        proj = tahko.project_player(conn, args.player, league=league)
+        proj = projection.project_player(conn, args.player, league=league)
         print(json.dumps(proj, indent=2, ensure_ascii=False))
         return
     ids = [r[0] for r in conn.execute(
         "SELECT DISTINCT player_id FROM player_games").fetchall()]
-    projs = [tahko.project_player(conn, pid, league=league) for pid in ids]
+    projs = [projection.project_player(conn, pid, league=league) for pid in ids]
     projs = [p for p in projs if p["teho_plus_proj"] is not None]
     projs.sort(key=lambda p: p["teho_plus_proj"], reverse=True)
     fmt = "{:<3} {:<22} {:>4} {:>10} {:>8}"
@@ -81,9 +81,9 @@ def cmd_project(args) -> None:
 
 def cmd_fit(args) -> None:
     conn = db.connect(args.db)
-    league = tahko.latest_league_means(conn)
-    for spec in tahko.DEFAULT_SPECS:
-        tuned = tahko.fit_decay(conn, spec, league_mean=league.get(spec.name, 0.0))
+    league = projection.latest_league_means(conn)
+    for spec in projection.DEFAULT_SPECS:
+        tuned = projection.fit_decay(conn, spec, league_mean=league.get(spec.name, 0.0))
         print(f"{spec.name:<14} beta={tuned.beta:<6} prior_strength={tuned.prior_strength}")
 
 
@@ -173,7 +173,7 @@ def main(argv=None) -> None:
     p.add_argument("--limit", type=int, default=25)
     p.set_defaults(func=cmd_leaderboard)
 
-    p = sub.add_parser("project", help="TAHKO projections (all players or one)")
+    p = sub.add_parser("project", help="player projections (all players or one)")
     p.add_argument("--player", type=int, default=None)
     p.add_argument("--limit", type=int, default=25)
     p.set_defaults(func=cmd_project)

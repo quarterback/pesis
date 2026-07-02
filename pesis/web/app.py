@@ -11,7 +11,7 @@ import sqlite3
 
 from flask import Flask, abort, g, render_template, request
 
-from .. import context, db, metrics, similarity, simulate, tahko, translate
+from .. import context, db, metrics, projection, similarity, simulate, translate
 
 PCT_STATS = [
     ("kl_pct", "Kärkilyönti-%"),
@@ -77,6 +77,20 @@ def create_app(db_path: str | None = None) -> Flask:
         return conn().execute(
             "SELECT id, year, series FROM seasons ORDER BY year DESC, series").fetchall()
 
+    @app.context_processor
+    def nav_context():
+        # one nav entry per series' latest season — every league (women's and
+        # men's alike) is a first-class, one-click destination
+        try:
+            rows = conn().execute(
+                """SELECT id, year, series FROM seasons s
+                   WHERE year = (SELECT MAX(year) FROM seasons
+                                 WHERE series = s.series)
+                   ORDER BY series""").fetchall()
+        except sqlite3.Error:
+            rows = []
+        return {"nav_seasons": rows}
+
     def pick_season(all_seasons):
         sid = request.args.get("sid", type=int)
         year = request.args.get("year", type=int)
@@ -111,7 +125,7 @@ def create_app(db_path: str | None = None) -> Flask:
         ids = [r[0] for r in c.execute(
             "SELECT DISTINCT player_id FROM player_games WHERE season_id = ?",
             (season["id"],)).fetchall()]
-        projs = [tahko.project_player(c, pid, league=league) for pid in ids]
+        projs = [projection.project_player(c, pid, league=league) for pid in ids]
         projs = [p for p in projs if p["teho_plus_proj"] is not None
                  and p["stats"]["kl_pct"]["effective_n"] >= 20]
         projs.sort(key=lambda p: p["teho_plus_proj"], reverse=True)
@@ -163,7 +177,7 @@ def create_app(db_path: str | None = None) -> Flask:
         season_lines = metrics.season_lines(c, current["season_id"])
         metrics.add_percentiles(season_lines)
         line = next(l for l in season_lines if l["player_id"] == player_id)
-        proj = tahko.project_player(c, player_id)
+        proj = projection.project_player(c, player_id)
         spark = sparkline([s["kl_pct"] for s in career])
         return render_template("player.html", player=row, career=career,
                                line=line, proj=proj, spark=spark,

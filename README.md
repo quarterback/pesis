@@ -6,10 +6,10 @@ There is no sabermetrics/analytics site anywhere for pesäpallo — this project
 is an attempt to be the first, borrowing what works from the basketball and
 baseball analytics canon:
 
-- **[DARKO](https://www.darko.app/)** → **TAHKO**, a daily-updating Bayesian
-  projection of every player's true talent per stat (exponential decay over
-  the full game log + regression to league mean; named for Lauri "Tahko"
-  Pihkala, the inventor of pesäpallo).
+- **[DARKO](https://www.darko.app/)** → daily-updating Bayesian **player
+  projections** of every player's true talent per stat (exponential decay
+  over the full game log + regression to league mean). Stat names here are
+  deliberately literal, in the WAR/OPS+ tradition — no branded acronyms.
 - **[Baseball Savant](https://baseballsavant.mlb.com/)** → player pages with
   percentile sliders across the skill profile.
 - **FanGraphs / Baseball-Reference** → honest rate stats with real
@@ -30,7 +30,7 @@ Or fully offline:
 ```bash
 python -m pesis demo          # seeded synthetic league (also the test harness)
 python -m pesis leaderboard   # CLI leaderboard
-python -m pesis project       # TAHKO projections for everyone
+python -m pesis project       # player projections for everyone
 python -m pesis standings --as-of 2026-06-15   # standings + playoff odds
 python -m pesis parks         # park factors (kenttäkertoimet) + weather effects
 python -m pesis comps --player 1               # similarity scores (B-Ref style)
@@ -50,8 +50,8 @@ fly launch --copy-config   # first time; accept or rename the app
 fly deploy
 ```
 
-The image bakes the demo league at build time so a fresh deploy serves
-content immediately. Any Docker host (Railway, Render, a VPS) works the same
+The image fetches the REAL current Superpesis season at build time (demo
+fallback if offline) — re-deploying refreshes the data snapshot. Any Docker host (Railway, Render, a VPS) works the same
 way: `docker build -t karki . && docker run -p 8080:8080 karki`.
 
 ## Data sources
@@ -78,7 +78,7 @@ attendance, kärkilyönnit by base, the lot):
 | `pesis/v1import.py` | keyless real-data import via v1.pesistulokset.fi |
 | `pesis/demo.py` | seeded synthetic league (also the test harness) |
 | `pesis/metrics.py` | rate stats, league baselines, TEHO+, percentiles |
-| `pesis/tahko.py` | TAHKO projections: decay + empirical-Bayes + aging |
+| `pesis/projection.py` | player projections: decay + empirical-Bayes + aging |
 | `pesis/context.py` | park factors (kenttäkertoimet) + weather effects |
 | `pesis/similarity.py` | B-Ref-style similarity scores / player comps |
 | `pesis/simulate.py` | standings + Monte Carlo playoff odds |

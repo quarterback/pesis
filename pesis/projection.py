@@ -1,9 +1,10 @@
-"""TAHKO — Talent-Adjusted, History-weighted Kalman-Oriented projections.
+"""Player projections — daily-updating true-talent estimates per rate stat.
 
-A daily-updating true-talent estimate for every pesäpallo rate stat, named for
-Lauri "Tahko" Pihkala (as DARKO, its inspiration, is named for an NBA draft
-pick). The core question is DARKO's: how much of a hot or cold stretch is a
-real talent change, and how much is noise?
+Named literally on purpose (owner call: stat names follow the WAR/OPS+
+convention — descriptive, no backronyms; an earlier cute name collided with
+Tahko, an actual Superpesis club). Methodologically this is a DARKO
+transplant, and the core question is DARKO's: how much of a hot or cold
+stretch is a real talent change, and how much is noise?
 
 The v0 model is deliberately the simplest thing that is honest:
 
@@ -103,7 +104,7 @@ def project_player(conn: sqlite3.Connection, player_id: int,
                    specs: tuple[StatSpec, ...] = DEFAULT_SPECS,
                    league: dict[str, float] | None = None,
                    aging: dict[str, dict[int, float]] | None = None) -> dict:
-    """TAHKO line for one player: every spec'd stat as of ``as_of`` (default:
+    """Projection line for one player: every spec'd stat as of ``as_of`` (default:
     day after their last game), plus a projected TEHO+ style composite."""
     games = game_log(conn, player_id)
     league = league or latest_league_means(conn)

@@ -35,12 +35,12 @@ Nobody has built an analytics layer on any of this. The niche is empty.
 
 | Source | Borrowed idea | Kärki incarnation |
 | --- | --- | --- |
-| DARKO | daily-updating Bayesian projections; per-stat exponential decay with *fitted* decay constants; no arbitrary "last N games" windows; aging curves per stat; shrinking to a prior with confidence-dependent learning rate | **TAHKO** (`pesis/tahko.py`) |
+| DARKO | daily-updating Bayesian projections; per-stat exponential decay with *fitted* decay constants; no arbitrary "last N games" windows; aging curves per stat; shrinking to a prior with confidence-dependent learning rate | the projection engine (`pesis/projection.py`) |
 | Baseball Savant | percentile sliders as the player's skill fingerprint; diverging red↔blue = bad↔good; spray/hit charts | player page percentile bars (shipped); hit-map page (roadmap — API has the endpoint) |
 | FanGraphs | league-indexed rate stats (wRC+ → **TEHO+**), qualified leaderboards, career tables | `pesis/metrics.py` + web leaderboards |
 | Baseball-Reference | season-by-season career lines, era adjustment | player page "Kaudet" table |
 | LEBRON / DPM | box-score prior blended with on/off impact | roadmap: lineup-level plus-minus from PBP once ingested |
-| Tango et al. | delta-method aging curves, attempt-weighted | `tahko.aging_curve` |
+| Tango et al. | delta-method aging curves, attempt-weighted | `projection.aging_curve` |
 
 ## Metric definitions (v0)
 
@@ -60,9 +60,13 @@ honest denominators and league context:
 
 Known v0 crudeness, deliberate: tehot-per-turn mixes runner production
 (tuodut) into a batter denominator. A proper split needs runner exposure from
-PBP (see roadmap). `tahko._tuotu_proxy` is the placeholder and says so.
+PBP (see roadmap). `projection._tuotu_proxy` is the placeholder and says so.
 
-## TAHKO — the projection model
+## The projection model
+
+*(Naming note, owner call 2026-07: stat and system names are literal, in the
+WAR/OPS+ tradition — no cute backronyms. The engine's original name "TAHKO"
+also collided with Tahko, an actual Superpesis club.)*
 
 DARKO's core question, transplanted: *how much of a hot streak is real?*
 
@@ -78,7 +82,7 @@ DARKO's core question, transplanted: *how much of a hot streak is real?*
    differential-evolution search, grid is fine at our scale.
 
 Validation shipped with the code: the demo league generates every stat line
-from *known latent talent*, and `tests/test_tahko.py` asserts the projections
+from *known latent talent*, and `tests/test_projection.py` asserts the projections
 recover it (truth–projection correlation), that small samples shrink harder,
 and that recent evidence outweighs old.
 
@@ -90,7 +94,7 @@ wrong frame (owner decision, 2026-07). The same short season is unusually
 temperature, attendance and opponent, and the PBP carries base states. So
 observed stats stay the headline, **adjusted for the context they happened
 in** (TEHO+adj is the first: park-adjusted; weather- and opponent-adjusted
-come next). TAHKO remains the forward-looking companion, not a replacement
+come next). The projections remain the forward-looking companion, not a replacement
 for what actually happened.
 
 ### Shipped: REAL current-season data, keylessly (`v1import.py`)
@@ -126,7 +130,7 @@ baseball page quantile-maps its wRC+ equivalent instead of copying TEHO+.
   neighbor over z-scored rates + age, 1000 = identical, own seasons excluded.
 - **Standings + playoff odds** (`simulate.py`): run-diff strength (shrunken)
   → Normal margin model → Monte Carlo over the remaining schedule. Plug in
-  TAHKO-aggregated rosters later. Real Superpesis points rules (2–1 supervuoro
+  projection-aggregated rosters later. Real Superpesis points rules (2–1 supervuoro
   splits) pending real per-jakso data.
 - **Pesis → baseball translation** (`translate.py`, `/player/<id>/baseball`):
   rank-preserving quantile map from Superpesis percentiles onto MLB
