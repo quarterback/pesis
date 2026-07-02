@@ -26,6 +26,18 @@ def cmd_ingest(args) -> None:
     print(f"ingested {n} player-game rows for {args.series_name} {args.year}")
 
 
+def cmd_ingest_v1(args) -> None:
+    from . import v1import
+    conn = db.connect(args.db)
+    series = ["miehet", "naiset"] if args.series == "both" else [args.series]
+    catalog = v1import.fetch_catalog()
+    for s in series:
+        stats = v1import.import_series(conn, args.year, s, phase=args.phase,
+                                       catalog=catalog)
+        print(f"{args.year} {s}: {stats['rows']} player-game rows, "
+              f"{stats['matches']} matches, {stats['players']} players")
+
+
 def _season_id(conn, year: int | None) -> int:
     row = conn.execute(
         "SELECT id FROM seasons WHERE (? IS NULL OR year = ?) ORDER BY year DESC LIMIT 1",
@@ -147,6 +159,13 @@ def main(argv=None) -> None:
     p.add_argument("--series-id", type=int, required=True)
     p.add_argument("--series-name", required=True)
     p.set_defaults(func=cmd_ingest)
+
+    p = sub.add_parser("ingest-v1",
+                       help="keyless import of real data via v1.pesistulokset.fi")
+    p.add_argument("--year", type=int, default=2026)
+    p.add_argument("--series", choices=["miehet", "naiset", "both"], default="both")
+    p.add_argument("--phase", type=int, default=1, help="1 = runkosarja")
+    p.set_defaults(func=cmd_ingest_v1)
 
     p = sub.add_parser("leaderboard", help="print a season leaderboard")
     p.add_argument("--stat", default="teho_plus")

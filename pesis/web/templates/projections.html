@@ -1,10 +1,16 @@
 {% extends "base.html" %}
 {% block title %}TAHKO-ennusteet{% endblock %}
 {% block content %}
-<h1>TAHKO-ennusteet</h1>
+<h1>TAHKO-ennusteet · {{ season.series }} {{ season.year }}</h1>
 <p class="sub">Päivittyvä arvio jokaisen pelaajan todellisesta tasosta: koko urahistoria
 eksponentiaalisesti painotettuna + regressio sarjakeskiarvoon. Ei mielivaltaisia
 "viimeiset N ottelua" -rajauksia.</p>
+
+<div class="filters">
+  {% for s in seasons %}
+  <a href="?sid={{ s.id }}" class="{{ 'active' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
+  {% endfor %}
+</div>
 
 <div class="card">
 <table>

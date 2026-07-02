@@ -16,18 +16,25 @@ baseball analytics canon:
   denominators, league-indexed **TEHO+** (100 = league average), sortable
   leaderboards, season-by-season career tables.
 
-## Quickstart (no API key needed)
+## Quickstart — real data, no API key needed
 
 ```bash
 pip install -r requirements.txt
-python -m pesis demo          # build a seeded synthetic league (data/pesis.db)
+python -m pesis ingest-v1     # REAL current-season Superpesis (men + women),
+                              # keylessly via v1.pesistulokset.fi
+python -m pesis runserver     # web UI at http://localhost:5000
+```
+
+Or fully offline:
+
+```bash
+python -m pesis demo          # seeded synthetic league (also the test harness)
 python -m pesis leaderboard   # CLI leaderboard
 python -m pesis project       # TAHKO projections for everyone
 python -m pesis standings --as-of 2026-06-15   # standings + playoff odds
 python -m pesis parks         # park factors (kenttäkertoimet) + weather effects
 python -m pesis comps --player 1               # similarity scores (B-Ref style)
 python -m pesis mlb --player 1                 # pesis → baseball translation
-python -m pesis runserver     # web UI at http://localhost:5000
 python -m pytest -q           # test suite
 ```
 
@@ -47,22 +54,20 @@ The image bakes the demo league at build time so a fresh deploy serves
 content immediately. Any Docker host (Railway, Render, a VPS) works the same
 way: `docker build -t karki . && docker run -p 8080:8080 karki`.
 
-## Real data
+## Data sources
 
-pesistulokset.fi is an SPA fed by a documented JSON API
-(`https://api.pesistulokset.fi/api/v1`, docs at
-[ttk.pesistulokset.fi/api-docs](https://ttk.pesistulokset.fi/api-docs)).
-Keys are free: email **tulospalvelu@pesis.fi**. Per-player per-match stat rows
-(~82 fields) go back to **1990**; play-by-play with runner base states exists
-for recent seasons. Then:
+Two paths to the same per-player per-match rows (~82 fields: weather,
+attendance, kärkilyönnit by base, the lot):
 
-```bash
-export PESISTULOKSET_API_KEY=...
-python -m pesis ingest --year 2026 --series-id <id> --series-name "Superpesis (miehet)"
-```
-
-Before a full backfill, confirm `ingest.FIELD_MAP` against
-`/public/stats-definitions` — see `docs/design.md`.
+1. **Keyless (`ingest-v1`)** — the legacy site v1.pesistulokset.fi serves the
+   stats-tool data same-origin without an api key; one polite GET per
+   series-season. This is what the Dockerfile bakes at build time.
+2. **Official API key** — `https://api.pesistulokset.fi/api/v1` (docs at
+   [ttk.pesistulokset.fi/api-docs](https://ttk.pesistulokset.fi/api-docs));
+   free keys from **tulospalvelu@pesis.fi**. Unlocks historical backfill
+   (1990→) and play-by-play. `export PESISTULOKSET_API_KEY=...` then
+   `python -m pesis ingest --year ... --series-id ...`; confirm
+   `ingest.FIELD_MAP` against `/public/stats-definitions` first.
 
 ## Layout
 
@@ -70,6 +75,7 @@ Before a full backfill, confirm `ingest.FIELD_MAP` against
 | --- | --- |
 | `pesis/api.py` | pesistulokset.fi API client (cached, throttled) |
 | `pesis/db.py` / `ingest.py` | SQLite store + payload normalization |
+| `pesis/v1import.py` | keyless real-data import via v1.pesistulokset.fi |
 | `pesis/demo.py` | seeded synthetic league (also the test harness) |
 | `pesis/metrics.py` | rate stats, league baselines, TEHO+, percentiles |
 | `pesis/tahko.py` | TAHKO projections: decay + empirical-Bayes + aging |

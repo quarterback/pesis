@@ -6,12 +6,12 @@
 
 <div class="filters">
   {% for s in stats %}
-  <a href="?stat={{ s }}&amp;year={{ season.year }}" class="{{ 'active' if s == stat }}">{{ s }}</a>
+  <a href="?stat={{ s }}&amp;sid={{ season.id }}" class="{{ 'active' if s == stat }}">{{ s }}</a>
   {% endfor %}
 </div>
 <div class="filters">
   {% for s in seasons %}
-  <a href="?stat={{ stat }}&amp;year={{ s.year }}" class="{{ 'active' if s.year == season.year }}">{{ s.year }}</a>
+  <a href="?stat={{ stat }}&amp;sid={{ s.id }}" class="{{ 'active' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
   {% endfor %}
 </div>
 

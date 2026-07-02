@@ -90,7 +90,14 @@ def _add_park_adjusted(conn: sqlite3.Connection, season_id: int,
     multiplier, re-indexed so the adjusted league average is 100. Without
     match/stadium data every multiplier is 1.0 and adj == raw."""
     from .context import park_factors
-    pf = {p["stadium"]: p["pf"] / 100 for p in park_factors(conn)}
+    # estimate PF from all seasons of the SAME series (stability), never
+    # across series — men's and women's run environments differ
+    series = conn.execute("SELECT series FROM seasons WHERE id = ?",
+                          (season_id,)).fetchone()
+    sids = [r[0] for r in conn.execute(
+        "SELECT id FROM seasons WHERE series = ?",
+        (series[0] if series else "",))]
+    pf = {p["stadium"]: p["pf"] / 100 for p in park_factors(conn, sids or None)}
     mult = {m["id"]: pf.get(m["stadium"], 1.0) for m in conn.execute(
         "SELECT id, stadium FROM matches WHERE season_id = ?", (season_id,))}
 

@@ -80,7 +80,7 @@
     <tr>
       <td>{{ c.score }}</td>
       <td class="name"><a href="/player/{{ c.player_id }}">{{ c.name }}</a></td>
-      <td>{{ c.year }}</td><td>{{ c.age }}</td><td>{{ c.teho_plus }}</td>
+      <td>{{ c.year }}</td><td>{{ c.age or "—" }}</td><td>{{ c.teho_plus }}</td>
     </tr>
     {% endfor %}
   </tbody>

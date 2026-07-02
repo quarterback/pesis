@@ -93,6 +93,23 @@ in** (TEHO+adj is the first: park-adjusted; weather- and opponent-adjusted
 come next). TAHKO remains the forward-looking companion, not a replacement
 for what actually happened.
 
+### Shipped: REAL current-season data, keylessly (`v1import.py`)
+
+v1.pesistulokset.fi (the legacy results site) proxies the stats-tool API
+same-origin **without an api key**: one GET to
+``/api/v1/stats-tool/players?season=&seasonSeries=&phase=`` returns every
+per-player per-match row for a series-season plus name/team/match maps with
+real stadiums, weather flags (0/1 windy/rainy — not m/s), temperature and
+attendance. Season/series ids come from the catalog blob embedded in the
+site HTML (82 seasons, 1945→). The Dockerfile bakes the 2026 men's + women's
+Superpesis at build time (demo fallback if offline); each deploy refreshes
+the snapshot. The official key remains wanted for: 1990→ backfill,
+play-by-play, per-base stats definitions confirmation, and not depending on
+a legacy site staying up. Note from real data: born years are NOT in the v1
+payload (ages/aging need the key or a roster source), and raw TEHO+ runs to
+300+ because production concentrates in the top order — which is why the
+baseball page quantile-maps its wRC+ equivalent instead of copying TEHO+.
+
 ### Shipped since v0 (Tier A — per-game rows + match context)
 
 - **TEHO+adj** (`metrics._add_park_adjusted`): per-game production deflated

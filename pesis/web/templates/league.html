@@ -10,8 +10,8 @@
 
 <div class="filters">
   {% for s in seasons %}
-  <a href="?year={{ s.year }}{% if as_of %}&amp;as_of={{ as_of }}{% endif %}"
-     class="{{ 'active' if s.year == season.year }}">{{ s.year }}</a>
+  <a href="?sid={{ s.id }}{% if as_of %}&amp;as_of={{ as_of }}{% endif %}"
+     class="{{ 'active' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
   {% endfor %}
 </div>
 

@@ -75,7 +75,15 @@ def create_app(db_path: str | None = None) -> Flask:
 
     def seasons():
         return conn().execute(
-            "SELECT id, year, series FROM seasons ORDER BY year DESC").fetchall()
+            "SELECT id, year, series FROM seasons ORDER BY year DESC, series").fetchall()
+
+    def pick_season(all_seasons):
+        sid = request.args.get("sid", type=int)
+        year = request.args.get("year", type=int)
+        for s in all_seasons:
+            if s["id"] == sid or (sid is None and s["year"] == year):
+                return s
+        return all_seasons[0]
 
     @app.route("/")
     @app.route("/leaderboard")
@@ -83,11 +91,10 @@ def create_app(db_path: str | None = None) -> Flask:
         all_seasons = seasons()
         if not all_seasons:
             return render_template("empty.html")
-        year = request.args.get("year", type=int) or all_seasons[0]["year"]
         stat = request.args.get("stat", "teho_plus")
         if stat not in LEADERBOARD_STATS:
             abort(400)
-        season = next((s for s in all_seasons if s["year"] == year), all_seasons[0])
+        season = pick_season(all_seasons)
         lines = metrics.leaderboard(conn(), season["id"], stat, limit=50)
         return render_template("leaderboard.html", lines=lines, stat=stat,
                                stats=LEADERBOARD_STATS, season=season,
@@ -96,14 +103,20 @@ def create_app(db_path: str | None = None) -> Flask:
     @app.route("/projections")
     def projections():
         c = conn()
-        league = tahko.latest_league_means(c)
+        all_seasons = seasons()
+        if not all_seasons:
+            return render_template("empty.html")
+        season = pick_season(all_seasons)
+        league = metrics.league_rates(metrics.season_lines(c, season["id"]))
         ids = [r[0] for r in c.execute(
-            "SELECT DISTINCT player_id FROM player_games").fetchall()]
+            "SELECT DISTINCT player_id FROM player_games WHERE season_id = ?",
+            (season["id"],)).fetchall()]
         projs = [tahko.project_player(c, pid, league=league) for pid in ids]
         projs = [p for p in projs if p["teho_plus_proj"] is not None
                  and p["stats"]["kl_pct"]["effective_n"] >= 20]
         projs.sort(key=lambda p: p["teho_plus_proj"], reverse=True)
-        return render_template("projections.html", projs=projs[:50])
+        return render_template("projections.html", projs=projs[:50],
+                               season=season, seasons=all_seasons)
 
     @app.route("/about")
     def about():
@@ -122,8 +135,7 @@ def create_app(db_path: str | None = None) -> Flask:
         all_seasons = seasons()
         if not all_seasons:
             return render_template("empty.html")
-        year = request.args.get("year", type=int) or all_seasons[0]["year"]
-        season = next((s for s in all_seasons if s["year"] == year), all_seasons[0])
+        season = pick_season(all_seasons)
         c = conn()
         as_of = request.args.get("as_of") or None
         if as_of:
@@ -131,10 +143,12 @@ def create_app(db_path: str | None = None) -> Flask:
         else:
             table = simulate.standings(c, season["id"])
         # mid-season default demo: suggest a cutoff that leaves games to play
+        same_series = [s["id"] for s in all_seasons
+                       if s["series"] == season["series"]]
         return render_template("league.html", table=table, season=season,
                                seasons=all_seasons, as_of=as_of,
-                               parks=context.park_factors(c),
-                               weather=context.weather_effects(c))
+                               parks=context.park_factors(c, same_series),
+                               weather=context.weather_effects(c, same_series))
 
     @app.route("/player/<int:player_id>")
     def player(player_id: int):

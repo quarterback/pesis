@@ -25,7 +25,7 @@ def _pool(conn: sqlite3.Connection) -> list[dict]:
     lines = []
     for sid, in conn.execute("SELECT id FROM seasons").fetchall():
         for line in season_lines(conn, sid):
-            if line["turns_at_bat"] >= QUALIFY_TURNS and line.get("age"):
+            if line["turns_at_bat"] >= QUALIFY_TURNS:
                 line["season_id"] = sid
                 lines.append(line)
     return lines
@@ -35,6 +35,9 @@ def _zscale(pool: list[dict]) -> dict[str, tuple[float, float]]:
     scale = {}
     for feat in FEATURES + ("age",):
         vals = [l[feat] for l in pool if l.get(feat) is not None]
+        if not vals:  # e.g. no birth years in keyless real data
+            scale[feat] = (0.0, 1.0)
+            continue
         mean = sum(vals) / len(vals)
         sd = math.sqrt(sum((v - mean) ** 2 for v in vals) / len(vals)) or 1.0
         scale[feat] = (mean, sd)
@@ -48,8 +51,9 @@ def _distance(a: dict, b: dict, scale: dict) -> float | None:
             return None
         mean, sd = scale[feat]
         total += ((a[feat] - b[feat]) / sd) ** 2
-    mean, sd = scale["age"]
-    total += (AGE_WEIGHT * (a["age"] - b["age"]) / sd) ** 2
+    if a.get("age") is not None and b.get("age") is not None:
+        mean, sd = scale["age"]
+        total += (AGE_WEIGHT * (a["age"] - b["age"]) / sd) ** 2
     return math.sqrt(total)
 
 
@@ -76,7 +80,7 @@ def comps(conn: sqlite3.Connection, player_id: int, year: int | None = None,
         if d is None:
             continue
         scored.append({"player_id": line["player_id"], "name": line["name"],
-                       "year": line["year"], "age": line["age"],
+                       "year": line["year"], "age": line.get("age"),
                        "team": line["team"], "teho_plus": line["teho_plus"],
                        "score": max(0, round(1000 - 100 * d))})
     scored.sort(key=lambda c: c["score"], reverse=True)
