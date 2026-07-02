@@ -243,27 +243,30 @@ series). The corrected framing is:
 - provide a `/baseball` comparison table so translated stats can be browsed
   across a whole season, not only one player page at a time.
 
-## Follow-up: target-base advancement splits
+## Follow-up: official 1% / 2% / 3% / K% advancement splits
 
-The preserved raw rows can also support the “1% / 2% / 3%” style view of hitter
-advancement by target base. The implementation now aliases the existing
-per-base KL splits into clearer leaderboard metrics:
+Owner context clarified that the official `1 %`, `2 %`, `3 %`, and `K %`
+columns are not batter destinations. They are runner-advancement movements
+created by the hitter:
 
-- **1B/1P ADV%**: success rate when the hitter is trying to move the lead
-  runner to first base;
-- **2B/2P ADV%**: success rate to second;
-- **3B/3P ADV%**: success rate to third;
-- **Home/Koti ADV%**: success rate bringing the lead runner home;
-- matching **ADV+** versions index each target-base split to league average.
+- **1 %**: success rate advancing the lead runner from first to second;
+- **2 %**: success rate from second to third;
+- **3 %**: success rate from third to home;
+- **K %**: scoring/home advancement situations.
 
-These are still hitter advancement splits, not full run-value stats. The next
-step is to combine them with base/out state and run expectancy once play-by-play
-is available.
+This matters because pesäpallo does not have the one-plate-appearance,
+one-result shape of baseball. During one lyöntivuoro a batter can earn multiple
+kärkilyönnit — up to three advancement hits in one batting turn — and the three
+designated hitters (`jokerit`) can pinch hit for anyone in the order at least
+once per time through. A strong hitter can therefore record seven or eight
+batting turns in a match across the two jaksot, while still accumulating
+multiple advancement events inside those turns.
 
-For baseball equivalence labels, the site should continue treating the current
-MLB analogs as placeholders until the owner supplies the intended baseball
-context for each pesäpallo skill. The translation framework can carry those
-labels and blurbs without changing the underlying percentile method.
+The implementation keeps the existing raw-field plumbing but labels the metrics
+with the official split language: `1%`, `2%`, `3%`, `K%`, plus league-indexed
+`1%+`, `2%+`, `3%+`, and `K%+`. These are still hitter advancement splits, not
+full run-value stats. The next step is to combine them with base/out state and
+run expectancy once play-by-play is available.
 
 ## Follow-up: owner-provided baseball equivalence labels
 

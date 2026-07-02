@@ -57,7 +57,7 @@ def test_mallo_indices_are_league_indexed_and_distinct():
     assert lines["A"]["spark_index"] != lines["A"]["teho_plus"]
 
 
-def test_target_base_advancement_splits_from_raw_rows():
+def test_official_1_2_3_k_advancement_splits_from_raw_rows():
     conn = db.connect(":memory:")
     sid = ingest.upsert_season(conn, 2026, "Testisarja")
     ingest.insert_player_game(conn, sid, _row(

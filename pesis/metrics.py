@@ -98,11 +98,12 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
 
 
 def _add_raw_base_splits(line: dict, raw_rows_json: str | None) -> None:
-    """Attach target-base KL rates from preserved upstream raw rows.
+    """Attach official 1%/2%/3%/K% KL splits from raw rows.
 
-    The official aggregate pages expose the same counting rows everywhere; these
-    splits use the lower-level batpe_succeeded_N / batpe_tries_N fields when
-    they exist, especially N=3 (bringing the lead runner home).
+    In pesäpallo a batter can record multiple advancement hits during one turn
+    at bat. The official columns split those lead-runner advancements by the
+    runner movement: 1% = first-to-second, 2% = second-to-third, 3% =
+    third-to-home, K% = scoring/home attempt.
     """
     import json as _json
 
@@ -264,18 +265,19 @@ def leaderboard(conn: sqlite3.Connection, season_id: int, stat: str,
     return lines[:limit]
 
 
-BASE_KL_LABELS = {  # upstream batpe_*_N indexes target bases 1..3 + home
-    "kl_base0": "KL 1. pesälle", "kl_base1": "KL 2. pesälle",
-    "kl_base2": "KL 3. pesälle", "kl_base3": "KL kotipesään",
+BASE_KL_LABELS = {  # upstream batpe_*_N indexes official 1%/2%/3%/K% columns
+    "kl_base0": "1 % (1→2)", "kl_base1": "2 % (2→3)",
+    "kl_base2": "3 % (3→koti)", "kl_base3": "K % (kotiutus)",
 }
 
 
 def base_kl_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
-    """Kärkilyönti-% split by TARGET BASE, per player, from the raw upstream
-    rows (batpe_succeeded_N / batpe_tries_N). The most pesäpallo-native skill
-    fingerprint there is — advancing to 1st is routine, bringing the runner
-    home is the money skill. Returns lines ready for add_percentiles()
-    (keys kl_base0..3 + tries, turns_at_bat for qualification)."""
+    """Kärkilyönti-% split by official 1%/2%/3%/K% columns, per player,
+    from the raw upstream rows (batpe_succeeded_N / batpe_tries_N). These are
+    runner-advancement movements, not batter destinations: first-to-second,
+    second-to-third, third-to-home, and the separate scoring/home column.
+    Returns lines ready for add_percentiles() (keys kl_base0..3 + tries,
+    turns_at_bat for qualification)."""
     import json as _json
     sums: dict[int, dict] = {}
     for r in conn.execute(
