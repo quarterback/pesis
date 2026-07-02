@@ -11,12 +11,13 @@ import json, re, unicodedata
 from pathlib import Path
 from pesis import context, db, metrics, projection, simulate
 
+# Mallo-native analytics only — the site is additive to pesistulokset, never a
+# clone of its counting columns (kunnarit/lyodyt/tuodut/tehot) or published rates.
 LEADERBOARD_STATS = [
     "spark_index", "adv_plus", "runner_plus", "out_avoid_plus", "money_kl_plus",
     "adv1_pct", "adv2_pct", "adv3_pct", "adv_home_pct",
     "adv1_plus", "adv2_plus", "adv3_plus", "adv_home_plus",
-    "teho_plus", "teho_plus_adj", "tehot", "kl_pct",
-    "saatto_pct", "eten_pct", "kunnarit", "lyodyt", "tuodut", "palo_rate",
+    "teho_plus", "teho_plus_adj",
 ]
 PCT_STATS = ["kl_pct", "saatto_pct", "eten_pct", "kunnari_rate",
              "lyoty_rate", "palo_rate", "tehot_per_turn"]
@@ -37,14 +38,6 @@ def dump(path: Path, data):
 
 def rows_to_dicts(rows) -> list[dict]:
     return [dict(r) for r in rows]
-
-
-def row_no_raw(r) -> dict:
-    """A player_games row as a dict without the heavy upstream `raw` payload,
-    which the static frontend never reads (only the metrics layer consumes it)."""
-    d = dict(r)
-    d.pop("raw", None)
-    return d
 
 
 def main():
@@ -118,24 +111,21 @@ def main():
             "season": season, "projections": projs[:50],
         })
 
-        # Teams
+        # Teams — roster ranked by SPARK (Mallo composite), unqualified players last
         teams = {l["team"] for l in lines if l.get("team")}
         for team in teams:
             roster = sorted(
                 [l for l in cached_lines(sid) if l.get("team") == team],
-                key=lambda l: l["tehot"], reverse=True)
+                key=lambda l: (l.get("spark_index") if l.get("spark_index") is not None
+                               else -1, l["tehot"]), reverse=True)
             if not roster:
                 continue
-            matches = rows_to_dicts(conn.execute(
-                """SELECT * FROM matches WHERE season_id = ?
-                   AND (home_team = ? OR away_team = ?) ORDER BY date""",
-                (sid, team, team)).fetchall())
             standing = next(
                 (t for t in simulate.standings(conn, sid) if t["team"] == team), None)
             slug = slugify(team)
             dump(OUT / "teams" / f"{slug}-{sid}.json", {
                 "team": team, "slug": slug, "season": season,
-                "roster": roster, "matches": matches, "standing": standing,
+                "roster": roster, "standing": standing,
             })
 
         print(f"  season {season['year']} {season['series']}  "
@@ -205,8 +195,6 @@ def main():
         if base_kl and all(base_kl.get(f"kl_base{k}_tries", 0) == 0 for k in range(4)):
             base_kl = None
 
-        game_log = metrics.game_log(conn, pid, current["season_id"])
-
         dump(out_path, {
             "player": dict(row),
             "career": career,
@@ -216,32 +204,13 @@ def main():
             "pct_stats": PCT_STATS,
             "base_kl": base_kl,
             "base_keys": BASE_KL_KEYS,
-            "log": [row_no_raw(g) for g in game_log],
             "comps": [],
         })
         done += 1
 
     print(f"  {len(player_ids)} player profiles  ({done} written, {skipped} skipped)")
-
-    # ── Match box scores ───────────────────────────────────────────────
-    all_matches = conn.execute(
-        "SELECT m.*, s.series, s.year FROM matches m "
-        "JOIN seasons s ON s.id = m.season_id"
-    ).fetchall()
-    for m in all_matches:
-        mid = m["id"]
-        lines = conn.execute(
-            """SELECT pg.*, p.name,
-                      pg.kunnarit + pg.lyodyt + pg.tuodut AS tehot
-               FROM player_games pg JOIN players p ON p.id = pg.player_id
-               WHERE pg.match_id = ? ORDER BY pg.team, tehot DESC""",
-            (mid,)).fetchall()
-        sides: dict = {}
-        for l in lines:
-            sides.setdefault(l["team"], []).append(row_no_raw(l))
-        dump(OUT / "matches" / f"{mid}.json", {"match": dict(m), "sides": sides})
-
-    print(f"  {len(all_matches)} match box scores")
+    # Match box scores are intentionally NOT exported — the site is additive to
+    # pesistulokset, not a re-hosting of its per-match line scores.
     print("Done.")
 
 

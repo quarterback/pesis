@@ -143,17 +143,18 @@ async function showLeaderboard(sid, stat) {
   const data = await fetchJSON(`data/leaderboard/${sid}.json`);
   const season = data.season;
   const players = data.players;
-  const STATS = data.stats || ['teho_plus','teho_plus_adj','tehot','kl_pct',
-    'saatto_pct','eten_pct','kunnarit','lyodyt','tuodut','palo_rate'];
+  const STATS = data.stats || ['spark_index','adv_plus','runner_plus','out_avoid_plus',
+    'money_kl_plus','adv1_pct','adv2_pct','adv3_pct','adv_home_pct',
+    'adv1_plus','adv2_plus','adv3_plus','adv_home_plus','teho_plus','teho_plus_adj'];
 
   if (!stat || !STATS.includes(stat)) stat = STATS[0];
 
-  // stats where lower = better
-  const LOWER_BETTER = new Set(['palo_rate']);
+  // every Mallo metric is "higher = better" (indices centred on 100)
+  const LOWER_BETTER = new Set();
   // stats that are plain index numbers (no decimal formatting)
   const INDEX_STATS = new Set(['spark_index','adv_plus','runner_plus','out_avoid_plus',
     'money_kl_plus','adv1_plus','adv2_plus','adv3_plus','adv_home_plus',
-    'teho_plus','teho_plus_adj','kunnarit','lyodyt','tuodut','tehot']);
+    'teho_plus','teho_plus_adj']);
 
   const sorted = [...players].filter(p => p.turns_at_bat >= 40)
     .sort((a,b) => {
@@ -168,41 +169,35 @@ async function showLeaderboard(sid, stat) {
     `<a href="#" onclick="nav('leaderboard',${sid},'${s}');return false;"
        class="${s===stat?'active':''}">${STAT_LABEL[s]||s}</a>`).join('');
 
-  // determine what to show in the "featured" column (replaces TEHO+ when sorting by something else)
+  // SPARK + TEHO+ are the always-on anchors; the sorted stat gets its own
+  // highlighted column unless it is already one of the anchors.
   const featuredStat = stat;
-  const showTehoBar = ['teho_plus','teho_plus_adj'].includes(stat);
-  const showTehoAlways = !['kunnarit','lyodyt','tuodut','tehot'].includes(stat);
+  const ANCHOR_STATS = ['spark_index', 'teho_plus'];
+  const showFeat = !ANCHOR_STATS.includes(stat);
 
   let rows = '';
   sorted.forEach((l, i) => {
-    const fv = l[featuredStat];
-    let featCell;
-    if (showTehoBar) {
-      const barW = Math.min(Math.round((fv||0)/2.1), 100);
-      featCell = `<div class="teho-cell">
-        <span class="val">${fv??'—'}</span>
-        <span class="bar"><i style="width:${barW}%"></i></span>
-      </div>`;
-    } else {
-      featCell = `<span class="val">${fv===null||fv===undefined?'—':INDEX_STATS.has(stat)?fv:rate(fv)}</span>`;
+    let featCell = '';
+    if (showFeat) {
+      const fv = l[featuredStat];
+      const isIdx = INDEX_STATS.has(stat);
+      const shown = fv === null || fv === undefined ? '—' : isIdx ? fv : rate(fv);
+      const bar = isIdx
+        ? `<span class="bar"><i style="width:${Math.min(Math.round((fv||0)/2.2),100)}%"></i></span>` : '';
+      featCell = `<td><div class="teho-cell"><span class="val">${shown}</span>${bar}</div></td>`;
     }
-    const tehoExtra = showTehoAlways && !showTehoBar
-      ? `<td class="num">${l.teho_plus??'—'}</td>` : '';
     rows += `<tr${i===0?' class="leader"':''}>
-      <td><span class="rank">${i===0?'1':i+1}</span></td>
+      <td><span class="rank">${i+1}</span></td>
       <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a></td>
       <td class="name team"><a href="#/team/${encodeURIComponent(l.team)}?sid=${sid}">${l.team||'—'}</a></td>
       <td class="num">${l.games}</td><td class="num">${l.turns_at_bat}</td>
-      <td class="num">${l.kunnarit}</td><td class="num">${l.lyodyt}</td><td class="num">${l.tuodut}</td>
-      <td class="num">${l.tehot}</td>
-      <td class="num">${rate(l.kl_pct)}</td>
-      ${tehoExtra}
-      <td>${featCell}</td>
+      <td class="num strong">${l.spark_index??'—'}</td>
+      <td class="num">${l.teho_plus??'—'}</td>
+      ${featCell}
     </tr>`;
   });
 
   const featTh = STAT_LABEL[stat]||stat;
-  const tehoExtraTh = showTehoAlways && !showTehoBar ? `<th>TEHO+</th>` : '';
 
   const subText = ['spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
     'adv1_plus','adv2_plus','adv3_plus','adv_home_plus'].includes(stat)
@@ -227,15 +222,16 @@ async function showLeaderboard(sid, stat) {
       <thead><tr>
         <th style="width:36px">#</th>
         <th class="name">Pelaaja</th><th class="name">Joukkue</th>
-        <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-        <th>Tehot</th><th>KL%</th>${tehoExtraTh}<th>${featTh}</th>
+        <th>O</th><th>Vuorot</th><th>SPARK</th><th>TEHO+</th>
+        ${showFeat?`<th>${featTh}</th>`:''}
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 
   window.dlLB = function(sid, stat) {
-    const cols = ['name','team','games','turns_at_bat','kunnarit','lyodyt','tuodut',
-                  'tehot','kl_pct','saatto_pct','eten_pct','palo_rate','teho_plus','teho_plus_adj'];
+    const cols = ['name','team','games','turns_at_bat',
+                  'spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
+                  'adv1_pct','adv2_pct','adv3_pct','adv_home_pct','teho_plus','teho_plus_adj'];
     downloadCSV(sorted, cols, `${season.series}-${season.year}-${stat}.csv`);
   };
   window.nav = function(page, sid, stat) {
@@ -395,7 +391,7 @@ const BASE_KL_KEYS = ['kl_base0','kl_base1','kl_base2','kl_base3'];
 
 async function showPlayer(pid) {
   const data = await fetchJSON(`data/players/${pid}.json`);
-  const {player, career, line, proj, career_json, base_kl, base_keys, log, comps} = data;
+  const {player, career, line, proj, career_json, base_kl, base_keys, comps} = data;
 
   const projTile = proj?.teho_plus_proj
     ? `<div class="tile"><div class="label">PARE enn.</div><div class="value">${proj.teho_plus_proj}</div></div>` : '';
@@ -423,10 +419,11 @@ async function showPlayer(pid) {
       <td class="name">${s.year}</td>
       <td class="num">${s.age||'—'}</td>
       <td class="num">${s.games}</td><td class="num">${s.turns_at_bat}</td>
-      <td class="num">${s.kunnarit}</td><td class="num">${s.lyodyt}</td><td class="num">${s.tuodut}</td>
-      <td class="num">${s.tehot}</td>
-      <td class="num">${rate(s.kl_pct)}</td><td class="num">${rate(s.saatto_pct)}</td>
-      <td class="num">${rate(s.eten_pct)}</td><td class="num">${rate(s.palo_rate)}</td>
+      <td class="num strong">${s.spark_index??'—'}</td>
+      <td class="num">${s.adv_plus??'—'}</td>
+      <td class="num">${s.runner_plus??'—'}</td>
+      <td class="num">${s.out_avoid_plus??'—'}</td>
+      <td class="num">${s.money_kl_plus??'—'}</td>
       <td class="num extra">${s.teho_plus??'—'}</td>
       <td class="num">${s.teho_plus_adj||'—'}</td>
     </tr>`;
@@ -464,34 +461,6 @@ async function showPlayer(pid) {
     }
   }
 
-  let logRows = '';
-  for (const g of (log||[])) {
-    logRows += `<tr>
-      <td class="name"><a href="#/match/${g.match_id}">${g.date}</a></td>
-      <td class="name">${g.opponent}</td>
-      <td style="color:var(--ink3);font-size:12px">${g.home?'K':'V'}</td>
-      <td class="num">${g.turns_at_bat}</td>
-      <td class="num">${g.kunnarit}</td><td class="num">${g.lyodyt}</td><td class="num">${g.tuodut}</td>
-      <td class="num">${g.tehot}</td>
-      <td class="num">${g.karkilyonnit}</td>
-      <td class="num">${g.karki_yritykset??g.karkilyonti_yritykset??'—'}</td>
-      <td class="num">${g.palot}</td>
-    </tr>`;
-  }
-  const logHtml = log?.length ? `
-    <h2>Ottelupäiväkirja ${line.year}</h2>
-    <div class="card" style="padding:0;overflow:hidden">
-      <table>
-        <thead><tr>
-          <th class="name">Päivä</th>
-          <th class="name">Vastustaja</th><th></th>
-          <th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-          <th>Tehot</th><th>KL</th><th>KLY</th><th>Palot</th>
-        </tr></thead>
-        <tbody>${logRows}</tbody>
-      </table>
-    </div>` : '';
-
   const careerCharts = career?.length > 1 ? `
     <h2>Urakehitys</h2>
     <div class="card">
@@ -511,8 +480,7 @@ async function showPlayer(pid) {
       </p>
       <div class="tiles">
         <div class="tile"><div class="label">Ottelut</div><div class="value">${line.games}</div></div>
-        <div class="tile"><div class="label">Kunnarit</div><div class="value">${line.kunnarit}</div></div>
-        <div class="tile"><div class="label">Tehot K+L+T</div><div class="value">${line.tehot}</div></div>
+        <div class="tile"><div class="label">SPARK</div><div class="value">${line.spark_index??'—'}</div></div>
         <div class="tile hero"><div class="label">TEHO+</div><div class="value">${line.teho_plus||'—'}</div></div>
         ${projTile}
       </div>
@@ -532,8 +500,7 @@ async function showPlayer(pid) {
             <table>
               <thead><tr>
                 <th class="name">Kausi</th><th>Ikä</th><th>O</th><th>Vuorot</th>
-                <th>K</th><th>L</th><th>T</th><th>Tehot</th>
-                <th>KL%</th><th>Saatto%</th><th>Etenemis%</th><th>Palo%</th>
+                <th>SPARK</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th>KOTI-KL+</th>
                 <th class="extra">TEHO+</th><th title="kenttäkorjattu">kTEHO+</th>
               </tr></thead>
               <tbody>${careerRows}</tbody>
@@ -557,7 +524,6 @@ async function showPlayer(pid) {
           </div>` : ''}
         </div>
       </div>
-      ${logHtml}
     </div>`;
 
   if (career?.length > 1 && typeof renderCareer === 'function') {
@@ -586,7 +552,7 @@ async function showTeam(teamRaw, sid) {
   }
 
   const data = await fetchJSON(`data/teams/${slug}-${actualSid}.json`);
-  const {team, season, roster, matches, standing} = data;
+  const {team, season, roster, standing} = data;
 
   const standingTiles = standing ? `
     <div class="tiles" style="margin-top:16px">
@@ -596,29 +562,17 @@ async function showTeam(teamRaw, sid) {
       <div class="tile"><div class="label">Juoksuero</div><div class="value">${standing.run_diff>=0?'+':''}${standing.run_diff}</div></div>
     </div>` : '';
 
+  // roster ranked by the season line's SPARK order it arrives in; show Mallo indices only
   let rosterRows = '';
   for (const l of roster) {
     rosterRows += `<tr>
       <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a></td>
       <td class="num">${l.games}</td><td class="num">${l.turns_at_bat}</td>
-      <td class="num">${l.kunnarit}</td><td class="num">${l.lyodyt}</td><td class="num">${l.tuodut}</td>
-      <td class="num">${l.tehot}</td>
-      <td class="num">${rate(l.kl_pct)}</td>
+      <td class="num strong">${l.spark_index??'—'}</td>
+      <td class="num">${l.adv_plus??'—'}</td>
+      <td class="num">${l.runner_plus??'—'}</td>
+      <td class="num">${l.out_avoid_plus??'—'}</td>
       <td class="num extra">${l.teho_plus??'—'}</td>
-    </tr>`;
-  }
-
-  let matchRows = '';
-  for (const m of matches) {
-    const periods = m.periods_home != null
-      ? `${m.periods_home}–${m.periods_away}${m.tiebreak?' k':''}` : '—';
-    matchRows += `<tr>
-      <td><a href="#/match/${m.id}">${m.date}</a></td>
-      <td class="name">${m.home_team}</td>
-      <td class="name">${m.away_team}</td>
-      <td class="num">${m.home_runs}–${m.away_runs}</td>
-      <td class="num">${periods}</td>
-      <td class="name" style="color:var(--ink3);font-size:12px">${m.stadium||'—'}</td>
     </tr>`;
   }
 
@@ -632,73 +586,15 @@ async function showTeam(teamRaw, sid) {
         <table>
           <thead><tr>
             <th class="name">Pelaaja</th>
-            <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-            <th>Tehot</th><th>KL%</th><th class="extra">TEHO+</th>
+            <th>O</th><th>Vuorot</th>
+            <th>SPARK</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th class="extra">TEHO+</th>
           </tr></thead>
           <tbody>${rosterRows}</tbody>
         </table>
       </div>
-      <h2>Ottelut</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th>Päivä</th>
-            <th class="name">Koti</th><th class="name">Vieras</th>
-            <th>Tulos</th><th>Erät</th><th class="name">Stadion</th>
-          </tr></thead>
-          <tbody>${matchRows}</tbody>
-        </table>
-      </div>
     </div>`;
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   MATCH
-══════════════════════════════════════════════════════════════════════════ */
-async function showMatch(mid) {
-  const data = await fetchJSON(`data/matches/${mid}.json`);
-  const {match: m, sides} = data;
-
-  let html = `<div class="page">
-    <h1>${m.home_team} – ${m.away_team}</h1>
-    <p class="sub">${m.series} ${m.year} · ${m.date}${m.stadium?` · ${m.stadium}`:''}</p>
-    <div class="tiles" style="margin-top:16px">
-      <div class="tile hero"><div class="label">Tulos</div><div class="value">${m.home_runs}–${m.away_runs}</div></div>
-      ${m.temperature!=null?`<div class="tile"><div class="label">Lämpö</div><div class="value">${m.temperature}°</div></div>`:''}
-      ${m.wind!=null?`<div class="tile"><div class="label">Tuuli</div><div class="value">${m.wind} m/s</div></div>`:''}
-      ${m.attendance?`<div class="tile"><div class="label">Yleisö</div><div class="value">${m.attendance}</div></div>`:''}
-    </div>`;
-
-  for (const [team, lines] of Object.entries(sides)) {
-    let rows = '';
-    for (const l of lines) {
-      rows += `<tr>
-        <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a></td>
-        <td class="num">${l.turns_at_bat}</td>
-        <td class="num">${l.kunnarit}</td><td class="num">${l.lyodyt}</td><td class="num">${l.tuodut}</td>
-        <td class="num extra"><strong>${l.tehot}</strong></td>
-        <td class="num">${l.karkilyonnit}</td>
-        <td class="num">${rate(l.karkilyonnit&&l.karkilyonti_yritykset?l.karkilyonnit/l.karkilyonti_yritykset:null)}</td>
-        <td class="num">${l.palot}</td>
-      </tr>`;
-    }
-    html += `
-      <h2>${team}</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th class="name">Pelaaja</th>
-            <th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-            <th class="extra">Tehot</th><th>KL</th><th>KL%</th><th>Palot</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-  }
-
-  html += '</div>';
-  main().innerHTML = html;
-}
 
 /* ══════════════════════════════════════════════════════════════════════════
    STATIC PAGES
@@ -859,11 +755,6 @@ async function route() {
       const teamRaw = parts[1] || '';
       const sid = params.sid ? parseInt(params.sid, 10) : null;
       await showTeam(teamRaw, sid);
-
-    } else if (page === 'match') {
-      const mid = parseInt(parts[1], 10);
-      if (!mid) throw new Error('bad match id');
-      await showMatch(mid);
 
     } else if (page === 'about') {
       showAbout();
