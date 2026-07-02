@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ m.home_team }}–{{ m.away_team }} {{ m.date }}{% endblock %}
+{% block content %}
+<h1>{{ m.home_team }} {{ m.home_runs }} – {{ m.away_runs }} {{ m.away_team }}</h1>
+<p class="sub">
+  {{ m.series }} · {{ m.date }}{% if m.stadium %} · {{ m.stadium }}{% endif %}
+  {% if m.periods_home is not none %} · Erät {{ m.periods_home }}–{{ m.periods_away }}{% if m.tiebreak %} (kotiutuslyöntikilpailu){% endif %}{% endif %}
+  {% if m.attendance %} · {{ m.attendance }} katsojaa{% endif %}
+  {% if m.temperature is not none %} · {{ m.temperature }} °C{% endif %}
+</p>
+
+{% for team, lines in sides.items() %}
+<h2 class="sech" style="margin-top:20px"><a href="/team/{{ team }}" style="color:inherit">{{ team }}</a></h2>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="tbl-scroll">
+    <table style="min-width:380px">
+      <thead>
+        <tr>
+          <th class="name" style="padding-left:16px">Pelaaja</th>
+          <th>Vuorot</th><th>K</th><th>L</th><th>T</th>
+          <th>Tehot</th><th>KL</th><th>KLY</th><th>Palot</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in lines %}
+        <tr>
+          <td class="name" style="padding-left:16px">
+            <a href="/player/{{ l.player_id }}">{{ l.name }}</a>
+          </td>
+          <td>{{ l.turns_at_bat }}</td>
+          <td>{{ l.kunnarit }}</td><td>{{ l.lyodyt }}</td><td>{{ l.tuodut }}</td>
+          <td>{{ l.tehot }}</td>
+          <td>{{ l.karkilyonnit }}</td><td>{{ l.karki_yritykset }}</td>
+          <td>{{ l.palot }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

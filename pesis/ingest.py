@@ -57,12 +57,15 @@ def insert_match(conn: sqlite3.Connection, season_id: int, match: dict) -> None:
     conn.execute(
         """INSERT OR REPLACE INTO matches
            (id, season_id, date, home_team, away_team, stadium, temperature,
-            wind, rain, attendance, home_runs, away_runs)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            wind, rain, attendance, home_runs, away_runs,
+            periods_home, periods_away, tiebreak)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (match["id"], season_id, match["date"], match["home_team"],
          match["away_team"], match.get("stadium"), match.get("temperature"),
          match.get("wind"), match.get("rain"), match.get("attendance"),
-         match.get("home_runs"), match.get("away_runs")),
+         match.get("home_runs"), match.get("away_runs"),
+         match.get("periods_home"), match.get("periods_away"),
+         match.get("tiebreak")),
     )
 
 

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Pelaajahaku{% endblock %}
+{% block content %}
+<h1>Pelaajahaku</h1>
+
+<form method="get" action="/search" style="margin:16px 0 20px;display:flex;gap:8px;flex-wrap:wrap">
+  <input name="q" value="{{ q }}" placeholder="Kirjoita pelaajan nimi…" autofocus
+         style="padding:9px 14px;font-size:15px;flex:1;min-width:200px;max-width:320px;
+                border:1px solid var(--grid);border-radius:10px;
+                background:var(--surface1);color:var(--ink1);
+                font-family:inherit;outline:none">
+  <button type="submit"
+          style="padding:9px 18px;border-radius:10px;border:0;cursor:pointer;
+                 background:var(--berry);color:#fff;font-weight:600;font-size:14px;
+                 font-family:inherit">Hae</button>
+</form>
+
+{% if q and not results %}
+<p class="sub">Ei tuloksia haulle "{{ q }}".</p>
+{% elif results %}
+<div class="card" style="padding:0;overflow:hidden">
+  <table>
+    <thead>
+      <tr>
+        <th class="name" style="padding-left:16px">Pelaaja</th>
+        <th class="name">Viimeisin joukkue</th>
+        <th>Viimeisin kausi</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in results %}
+      <tr>
+        <td class="name" style="padding-left:16px">
+          <a href="/player/{{ r.id }}" style="font-weight:600;color:var(--ink1)">{{ r.name }}</a>
+        </td>
+        <td class="name">
+          <a href="/team/{{ r.team }}" style="color:var(--ink3);font-size:13px">{{ r.team }}</a>
+        </td>
+        <td>{{ r.last_year }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
