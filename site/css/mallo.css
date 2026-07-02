@@ -228,6 +228,20 @@ tr.leader .rank{ background:var(--rank-top-bg); color:var(--rank-top-ink);
 .teho-cell .bar{ width:56px; height:6px; border-radius:3px; background:var(--tehobar-bg); }
 .teho-cell .bar > i{ display:block; height:100%; border-radius:3px; background:var(--tehobar-fill); box-shadow:var(--tehobar-glow); }
 
+/* sortable column headers + pagination */
+th.sortable{ cursor:pointer; user-select:none; white-space:nowrap; }
+th.sortable:hover{ color:var(--ink-strong); }
+th.sorted{ color:var(--accent); }
+.pager{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:14px 2px 2px;
+        font:600 12px var(--font-body); color:var(--ink3); }
+.pager .pinfo, .pager .ppage{ font-family:var(--font-mono); }
+.pager .psize select{ margin-left:5px; }
+.pager .pnav{ display:flex; align-items:center; gap:10px; }
+.pager .pbtn{ font:600 12px var(--font-body); padding:5px 12px; border:1px solid var(--line-hd);
+              border-radius:8px; background:var(--card); color:var(--ink); cursor:pointer; }
+.pager .pbtn:disabled{ opacity:.4; cursor:default; }
+.pager .pbtn:not(:disabled):hover{ border-color:var(--accent); color:var(--accent); }
+
 /* ----------------------------------------------------------------------------
    STAT TILES  (player header)
    ---------------------------------------------------------------------------- */

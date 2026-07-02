@@ -240,6 +240,80 @@ function pctBar(pct, label, val) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   Interactive table — click-to-sort columns (toggle direction) + pagination
+══════════════════════════════════════════════════════════════════════════ */
+const PAGE_SIZES = [10, 20, 50];
+function makeTable(mount, cfg) {
+  const byKey = {};
+  cfg.columns.forEach(c => (byKey[c.key] = c));
+  let sortKey = cfg.sort.key, sortDir = cfg.sort.dir || -1;   // -1 desc, +1 asc
+  let pageSize = cfg.pageSize || 20, page = 0;
+
+  function sortRows() {
+    const col = byKey[sortKey];
+    const rows = [...cfg.rows];
+    rows.sort((a, b) => {
+      let av = col.get(a), bv = col.get(b);
+      if (typeof av === 'string' || typeof bv === 'string') {
+        av = (av || '').toString().toLowerCase(); bv = (bv || '').toString().toLowerCase();
+        return av < bv ? -sortDir : av > bv ? sortDir : 0;
+      }
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;   // nulls always last
+      if (bv == null) return -1;
+      return av < bv ? -sortDir : av > bv ? sortDir : 0;
+    });
+    return rows;
+  }
+
+  function render() {
+    const rows = sortRows();
+    const total = rows.length;
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    if (page >= pages) page = pages - 1;
+    const start = page * pageSize;
+    const pageRows = rows.slice(start, start + pageSize);
+
+    const thead = cfg.columns.map(c => {
+      const on = c.key === sortKey;
+      const arrow = on ? (sortDir < 0 ? ' ↓' : ' ↑') : '';
+      const cls = [c.sortable === false ? '' : 'sortable', c.thClass || '', on ? 'sorted' : '']
+        .filter(Boolean).join(' ');
+      return `<th class="${cls}" data-k="${c.key}">${c.label}${arrow}</th>`;
+    }).join('');
+    const body = pageRows.map((r, i) => {
+      const gi = start + i;
+      const tds = cfg.columns.map(c => c.cell(r, gi)).join('');
+      return `<tr class="${cfg.rowClass ? cfg.rowClass(r, gi) : ''}">${tds}</tr>`;
+    }).join('');
+    const from = total ? start + 1 : 0, to = Math.min(start + pageSize, total);
+    const sizeOpts = PAGE_SIZES.map(s => `<option value="${s}"${s===pageSize?' selected':''}>${s}</option>`).join('');
+
+    mount.innerHTML = `
+      <table><thead><tr>${thead}</tr></thead><tbody>${body}</tbody></table>
+      <div class="pager">
+        <span class="pinfo">${from}–${to} / ${total}</span>
+        <span class="psize">Näytä <select class="sel">${sizeOpts}</select></span>
+        <span class="pnav">
+          <button class="pbtn pprev"${page<=0?' disabled':''}>‹ Edell.</button>
+          <span class="ppage">${page+1} / ${pages}</span>
+          <button class="pbtn pnext"${page>=pages-1?' disabled':''}>Seur. ›</button>
+        </span>
+      </div>`;
+
+    mount.querySelectorAll('th.sortable').forEach(th => th.onclick = () => {
+      const k = th.dataset.k;
+      if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = -1; }
+      page = 0; render();
+    });
+    mount.querySelector('.psize select').onchange = e => { pageSize = +e.target.value; page = 0; render(); };
+    mount.querySelector('.pprev').onclick = () => { if (page > 0) { page--; render(); } };
+    mount.querySelector('.pnext').onclick = () => { if (page < pages - 1) { page++; render(); } };
+  }
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    LEADERBOARD
 ══════════════════════════════════════════════════════════════════════════ */
 async function showLeaderboard(sid, stat, posFilter) {
@@ -287,31 +361,31 @@ async function showLeaderboard(sid, stat, posFilter) {
   const featuredStat = stat;
   const ANCHOR_STATS = ['spark_index', 'teho_plus'];
   const showFeat = !ANCHOR_STATS.includes(stat);
-  // scale the featured-column bar to the leader's value (works for indices & value stats)
   const maxFeat = Math.max(...sorted.map(x => Math.abs(x[featuredStat] || 0)), 1e-9);
+  const sparkMax = Math.max(...sorted.map(x => Math.abs(x.spark_index || 0)), 1e-9);
+  const featTh = STAT_LABEL[stat] || stat;
 
-  let rows = '';
-  sorted.forEach((l, i) => {
-    let featCell = '';
-    if (showFeat) {
-      const fv = l[featuredStat];
-      const isIdx = INDEX_STATS.has(stat);
-      const shown = fv === null || fv === undefined ? '—' : isIdx ? fv : rate(fv);
-      const w = fv === null || fv === undefined ? 0 : Math.min(Math.abs(fv) / maxFeat * 100, 100);
-      featCell = `<td><div class="teho-cell"><span class="val">${shown}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
-    }
-    rows += `<tr${i===0?' class="leader"':''}>
-      <td><span class="rank">${i+1}</span></td>
-      <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a> <span class="pos">${posLabel(l.pos)}</span></td>
-      <td class="name team"><a href="#/team/${encodeURIComponent(l.team)}?sid=${sid}">${l.team||'—'}</a></td>
-      <td class="num">${l.games}</td><td class="num">${l.turns_at_bat}</td>
-      <td><div class="teho-cell"><span class="val">${l.spark_index??'—'}</span><span class="bar"><i style="width:${Math.min(Math.round((l.spark_index||0)/2.5),100)}%"></i></span></div></td>
-      <td class="num">${l.teho_plus??'—'}</td>
-      ${featCell}
-    </tr>`;
-  });
-
-  const featTh = STAT_LABEL[stat]||stat;
+  const barCell = (v, max) => {
+    const w = v == null ? 0 : Math.min(Math.abs(v) / max * 100, 100);
+    return `<td><div class="teho-cell"><span class="val">${v??'—'}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
+  };
+  const cols = [
+    {key:'rank', label:'#', sortable:false, get:()=>0, cell:(r,i)=>`<td><span class="rank">${i+1}</span></td>`},
+    {key:'name', label:'Pelaaja', thClass:'name', get:r=>r.name,
+     cell:r=>`<td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a> <span class="pos">${posLabel(r.pos)}</span></td>`},
+    {key:'team', label:'Joukkue', thClass:'name', get:r=>r.team,
+     cell:r=>`<td class="name team"><a href="#/team/${encodeURIComponent(r.team)}?sid=${sid}">${r.team||'—'}</a></td>`},
+    {key:'games', label:'O', get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
+    {key:'turns_at_bat', label:'Vuorot', get:r=>r.turns_at_bat, cell:r=>`<td class="num">${r.turns_at_bat}</td>`},
+    {key:'spark_index', label:'SPARK', get:r=>r.spark_index, cell:r=>barCell(r.spark_index, sparkMax)},
+    {key:'teho_plus', label:'TEHO+', get:r=>r.teho_plus, cell:r=>`<td class="num">${r.teho_plus??'—'}</td>`},
+  ];
+  if (showFeat) cols.push({key:stat, label:featTh, get:r=>r[stat], cell:r=>{
+    const fv=r[stat], isIdx=INDEX_STATS.has(stat);
+    const shown = fv==null?'—':isIdx?fv:rate(fv);
+    const w = fv==null?0:Math.min(Math.abs(fv)/maxFeat*100,100);
+    return `<td><div class="teho-cell"><span class="val">${shown}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
+  }});
 
   const subText = ['vyk','jyk','raa'].includes(stat)
     ? 'VYK = voitot yli korvaajan (pesäpallon WAR-vastine), JYK = juoksut yli korvaajan — kertyviä arvomittareita. Vähintään 40 lyöntivuoroa.'
@@ -333,15 +407,12 @@ async function showLeaderboard(sid, stat, posFilter) {
       ${posSel}
       <a href="#" onclick="dlLB(${sid},'${stat}');return false;">↓ CSV</a>
     </div>
-    <table>
-      <thead><tr>
-        <th style="width:36px">#</th>
-        <th class="name">Pelaaja</th><th class="name">Joukkue</th>
-        <th>O</th><th>Vuorot</th><th>SPARK</th><th>TEHO+</th>
-        ${showFeat?`<th>${featTh}</th>`:''}
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+    <div id="lb-table"></div>`;
+
+  makeTable(document.getElementById('lb-table'), {
+    columns: cols, rows: sorted, sort: { key: stat, dir: -1 },
+    rowClass: (r, gi) => gi === 0 ? 'leader' : '',
+  });
 
   window.dlLB = function(sid, stat) {
     const cols = ['name','team','games','turns_at_bat','vyk','jyk','raa',
@@ -363,20 +434,21 @@ async function showLukkarit(sid) {
   const lk = data.lukkarit || [];
   const maxRp = Math.max(...lk.map(l => Math.abs(l.lukkari_rp || 0)), 1e-9);
 
-  let rows = '';
-  lk.forEach((l, i) => {
-    const w = Math.min(Math.abs(l.lukkari_rp || 0) / maxRp * 100, 100);
-    rows += `<tr${i===0?' class="leader"':''}>
-      <td><span class="rank">${i+1}</span></td>
-      <td class="name"><a class="player" href="#/player/${l.player_id}">${l.name}</a> <span class="pos">P</span></td>
-      <td class="name team"><a href="#/team/${encodeURIComponent(l.team)}?sid=${sid}">${l.team||'—'}</a></td>
-      <td class="num">${l.lukkari_games}</td>
-      <td class="num">${l.runs_allowed}</td>
-      <td class="num">${l.lra!=null?l.lra.toFixed(2):'—'}</td>
-      <td class="num">${l.lra_minus??'—'}</td>
-      <td><div class="teho-cell"><span class="val">${l.lukkari_rp??'—'}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>
-    </tr>`;
-  });
+  const cols = [
+    {key:'rank', label:'#', sortable:false, get:()=>0, cell:(r,i)=>`<td><span class="rank">${i+1}</span></td>`},
+    {key:'name', label:'Pelaaja', thClass:'name', get:r=>r.name,
+     cell:r=>`<td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a> <span class="pos">P</span></td>`},
+    {key:'team', label:'Joukkue', thClass:'name', get:r=>r.team,
+     cell:r=>`<td class="name team"><a href="#/team/${encodeURIComponent(r.team)}?sid=${sid}">${r.team||'—'}</a></td>`},
+    {key:'lukkari_games', label:'Ott.', get:r=>r.lukkari_games, cell:r=>`<td class="num">${r.lukkari_games}</td>`},
+    {key:'runs_allowed', label:'Päästetyt', get:r=>r.runs_allowed, cell:r=>`<td class="num">${r.runs_allowed}</td>`},
+    {key:'lra', label:'LRA', get:r=>r.lra, cell:r=>`<td class="num">${r.lra!=null?r.lra.toFixed(2):'—'}</td>`},
+    {key:'lra_minus', label:'LRA-', get:r=>r.lra_minus, cell:r=>`<td class="num">${r.lra_minus??'—'}</td>`},
+    {key:'lukkari_rp', label:'RP', get:r=>r.lukkari_rp, cell:r=>{
+      const w = Math.min(Math.abs(r.lukkari_rp||0)/maxRp*100,100);
+      return `<td><div class="teho-cell"><span class="val">${r.lukkari_rp??'—'}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
+    }},
+  ];
 
   main().innerHTML = `
     ${leaderboardControls(sid, 'lukkari')}
@@ -384,14 +456,12 @@ async function showLukkarit(sid) {
       <h1>${parseSeries(season.series).tier} ${season.year} <span class="muted">· Lukkarit</span></h1>
       <p class="sub">Lukkarin juoksujenesto: RP = juoksut estetty yli sarjan keskiarvon (kertyvä, suurempi parempi). LRA = päästetyt juoksut/ottelu, LRA- indeksinä (100 = keskiarvo, pienempi parempi). Vähintään 3 lukkariottelua. ERA-tyylinen silta kunnes syöttödata on saatavilla.</p>
     </div>
-    ${lk.length ? `<table>
-      <thead><tr>
-        <th style="width:36px">#</th>
-        <th class="name">Pelaaja</th><th class="name">Joukkue</th>
-        <th>Ott.</th><th>Päästetyt</th><th>LRA</th><th>LRA-</th><th>RP</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>` : `<div class="page"><p class="sub">Ei lukkaridataa tälle kaudelle.</p></div>`}`;
+    ${lk.length ? `<div id="lk-table"></div>` : `<div class="page"><p class="sub">Ei lukkaridataa tälle kaudelle.</p></div>`}`;
+
+  if (lk.length) makeTable(document.getElementById('lk-table'), {
+    columns: cols, rows: lk, sort: { key: 'lukkari_rp', dir: -1 },
+    rowClass: (r, gi) => gi === 0 ? 'leader' : '',
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
