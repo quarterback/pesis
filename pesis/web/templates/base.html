@@ -4,33 +4,76 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Mallo{% endblock %} · pesäpallodata</title>
+<!-- Apply saved theme before first paint to prevent flash -->
+<script>
+(function(){
+  var t = localStorage.getItem('mallo-theme');
+  if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
 <style>
-/* ── Mallo design tokens ─────────────────────────────────────────────── */
+/* ── Mallo design tokens: LIGHT ──────────────────────────────────────── */
 body {
   --apricot:    #f9dbbd; --candy:   #ffa5ab;
   --blush:      #da627d; --berry:   #a53860; --bordeaux: #450920;
   --ink1: #1a0a10; --ink2: #6b3a4a; --ink3: #a07080;
   --surface0: #fff8f4; --surface1: #fff2ea;
   --track: #f0ddd5; --grid: #e8cfc5; --ring: rgba(165,56,96,.14);
-  --accent: var(--berry);
+  /* Semantic aliases that flip in dark mode */
+  --accent:          var(--berry);
+  --nav-active-bg:   var(--berry);
+  --pill-active-bg:  var(--berry);
+  --hero-tile-bg:    color-mix(in srgb, var(--candy) 15%, var(--surface1));
+  --hero-tile-ink:   var(--berry);
+  --bar-fill:        var(--blush);
+  --brand-dot:       var(--berry);
+  /* Percentile ramp */
   --p0:#e6ddd2;--p1:#f4d8c2;--p2:#ffc7bb;--p3:#ffa5ab;
   --p4:#da627d;--p5:#a53860;--p6:#450920;
   --pt0:#5a4a3a;--pt1:#7a4a30;--pt2:#8a3a34;--pt3:#7a2438;
   --pt4:#fff;--pt5:#fff;--pt6:#fff;
+  /* D3 categorical */
   --cat1:var(--berry);--cat2:#1baf7a;--cat3:#eda100;--cat4:#008300;
 }
-@media (prefers-color-scheme:dark) {
-  body {
+
+/* ── Mallo design tokens: DARK ───────────────────────────────────────── */
+/* Activates when OS is dark AND no explicit override, OR when [data-theme=dark] */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) body {
     --ink1:#fce8dd;--ink2:#c8909a;--ink3:#8a5060;
     --surface0:#1a0810;--surface1:#240e16;
     --track:#3a1824;--grid:#4a2030;--ring:rgba(255,165,180,.10);
     --accent:var(--candy);
+    --nav-active-bg:   var(--blush);
+    --pill-active-bg:  var(--blush);
+    --hero-tile-bg:    color-mix(in srgb, var(--bordeaux) 60%, var(--surface1));
+    --hero-tile-ink:   var(--candy);
+    --bar-fill:        var(--candy);
+    --brand-dot:       var(--candy);
     --p0:#3c2731;--p1:#5f2c3c;--p2:#8c3a54;--p3:#bd4d6d;
     --p4:#da627d;--p5:#ff909b;--p6:#ffc6ac;
     --pt0:#d9b8c0;--pt1:#f0c8d0;--pt2:#fff;--pt3:#fff;
     --pt4:#2a0f18;--pt5:#2a0f18;--pt6:#2a0f18;
     --cat1:var(--candy);--cat2:#199e70;--cat3:#c98500;--cat4:#008300;
   }
+}
+/* Explicit dark override (manual toggle) */
+html[data-theme="dark"] body {
+  --ink1:#fce8dd;--ink2:#c8909a;--ink3:#8a5060;
+  --surface0:#1a0810;--surface1:#240e16;
+  --track:#3a1824;--grid:#4a2030;--ring:rgba(255,165,180,.10);
+  --accent:var(--candy);
+  --nav-active-bg:   var(--blush);
+  --pill-active-bg:  var(--blush);
+  --hero-tile-bg:    color-mix(in srgb, var(--bordeaux) 60%, var(--surface1));
+  --hero-tile-ink:   var(--candy);
+  --bar-fill:        var(--candy);
+  --brand-dot:       var(--candy);
+  --p0:#3c2731;--p1:#5f2c3c;--p2:#8c3a54;--p3:#bd4d6d;
+  --p4:#da627d;--p5:#ff909b;--p6:#ffc6ac;
+  --pt0:#d9b8c0;--pt1:#f0c8d0;--pt2:#fff;--pt3:#fff;
+  --pt4:#2a0f18;--pt5:#2a0f18;--pt6:#2a0f18;
+  --cat1:var(--candy);--cat2:#199e70;--cat3:#c98500;--cat4:#008300;
 }
 
 /* ── Reset / base ─────────────────────────────────────────────────────── */
@@ -39,6 +82,7 @@ body{
   margin:0;background:var(--surface0);color:var(--ink1);
   font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
   -webkit-font-smoothing:antialiased;
+  transition:background .2s,color .2s;
 }
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
@@ -48,13 +92,13 @@ header{
   background:var(--surface1);border-bottom:1px solid var(--grid);
   padding:0 20px;display:flex;align-items:center;gap:6px;
   min-height:52px;flex-wrap:wrap;row-gap:0;
+  transition:background .2s,border-color .2s;
 }
 .brand{
   font-size:20px;font-weight:800;letter-spacing:-.5px;
   color:var(--ink1);margin-right:18px;flex-shrink:0;white-space:nowrap;
 }
-.brand i{color:var(--berry);font-style:normal}
-@media(prefers-color-scheme:dark){.brand i{color:var(--candy)}}
+.brand i{color:var(--brand-dot);font-style:normal}
 header nav{display:flex;gap:2px;flex-wrap:wrap;flex:1;min-width:0}
 header nav a{
   color:var(--ink2);font-size:13px;font-weight:500;
@@ -62,17 +106,44 @@ header nav a{
   transition:background .1s,color .1s;
 }
 header nav a:hover{background:var(--track);color:var(--ink1);text-decoration:none}
-header nav a.on{background:var(--berry);color:#fff;font-weight:600}
-@media(prefers-color-scheme:dark){header nav a.on{background:var(--blush)}}
-.lang-toggle{
-  margin-left:auto;font-size:12px;color:var(--ink3);
-  white-space:nowrap;flex-shrink:0;padding:6px 0;
+header nav a.on{background:var(--nav-active-bg);color:#fff;font-weight:600}
+
+/* ── Right-side header controls ───────────────────────────────────────── */
+.hdr-right{
+  margin-left:auto;display:flex;align-items:center;gap:10px;
+  flex-shrink:0;padding:6px 0;
 }
+.lang-toggle{font-size:12px;color:var(--ink3);white-space:nowrap}
 .lang-toggle a{color:var(--accent)}
+/* Theme toggle button */
+.theme-btn{
+  background:var(--candy);border:none;border-radius:8px;
+  color:#fff;cursor:pointer;font-size:15px;line-height:1;
+  padding:5px 9px;display:flex;align-items:center;
+  transition:opacity .1s;flex-shrink:0;
+}
+.theme-btn:hover{opacity:.85}
+/* Icon visibility: show ☀︎ in light mode, ☽ in dark mode */
+.theme-btn .icon-sun,
+.theme-btn .icon-moon { display: none }
+/* Default / explicit light: show sun */
+.theme-btn .icon-sun  { display: block }
+html[data-theme="light"] .theme-btn .icon-sun  { display: block }
+html[data-theme="light"] .theme-btn .icon-moon { display: none  }
+/* Explicit dark: show moon */
+html[data-theme="dark"]  .theme-btn .icon-sun  { display: none  }
+html[data-theme="dark"]  .theme-btn .icon-moon { display: block }
+/* OS dark with no explicit override: show moon */
+@media(prefers-color-scheme:dark) {
+  html:not([data-theme]) .theme-btn .icon-sun  { display: none  }
+  html:not([data-theme]) .theme-btn .icon-moon { display: block }
+}
+
 @media(max-width:600px){
   header{padding:10px 14px}
   .brand{font-size:18px;margin-right:10px}
   header nav a{font-size:12px;padding:5px 7px}
+  .lang-toggle{font-size:11px}
 }
 
 /* ── Layout ───────────────────────────────────────────────────────────── */
@@ -85,7 +156,7 @@ h2{font-size:13px;font-weight:700;color:var(--ink2);margin:24px 0 10px}
 .sub{color:var(--ink3);font-size:13px;margin:4px 0 0;line-height:1.5}
 .sech{
   font-size:11px;font-weight:700;text-transform:uppercase;
-  letter-spacing:.07em;color:var(--ink3);margin:0 0 10px
+  letter-spacing:.07em;color:var(--ink3);margin:0 0 10px;
 }
 .secsub{font-weight:400;text-transform:none;letter-spacing:0;font-size:11px}
 @media(max-width:600px){h1{font-size:22px}}
@@ -94,6 +165,7 @@ h2{font-size:13px;font-weight:700;color:var(--ink2);margin:24px 0 10px}
 .card,.contentcard{
   background:var(--surface1);border:1px solid var(--grid);
   border-radius:12px;padding:18px 20px;margin-bottom:18px;
+  transition:background .2s,border-color .2s;
 }
 @media(max-width:600px){.card,.contentcard{padding:14px 14px}}
 .contentcard{font-size:14px;line-height:1.7;color:var(--ink2)}
@@ -141,10 +213,8 @@ tr:hover td{background:color-mix(in srgb,var(--track) 50%,transparent)}
 }
 .seg a:hover,.filters a:hover{background:var(--track);color:var(--ink1);text-decoration:none}
 .seg a.on,.seg a.active,.filters a.active{
-  background:var(--berry);border-color:var(--berry);color:#fff;font-weight:600;
-}
-@media(prefers-color-scheme:dark){
-  .seg a.on,.seg a.active,.filters a.active{background:var(--blush);border-color:var(--blush)}
+  background:var(--pill-active-bg);border-color:var(--pill-active-bg);
+  color:#fff;font-weight:600;
 }
 .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 @media(max-width:600px){.seg a,.filters a{font-size:12px;padding:3px 10px}}
@@ -154,18 +224,15 @@ tr:hover td{background:color-mix(in srgb,var(--track) 50%,transparent)}
 .tile{
   background:var(--surface1);border:1px solid var(--grid);
   border-radius:12px;padding:13px 16px;min-width:100px;flex:1;
+  transition:background .2s,border-color .2s;
 }
 .tile .label,.tile .tl{
   font-size:11px;font-weight:700;text-transform:uppercase;
   letter-spacing:.06em;color:var(--ink3);margin-bottom:4px;
 }
 .tile .value,.tile .tvv{font-size:26px;font-weight:800;color:var(--ink1);line-height:1.1}
-.tile.hero{background:color-mix(in srgb,var(--candy) 15%,var(--surface1))}
-.tile.hero .value,.tile.hero .tvv{color:var(--berry)}
-@media(prefers-color-scheme:dark){
-  .tile.hero{background:color-mix(in srgb,var(--bordeaux) 60%,var(--surface1))}
-  .tile.hero .value,.tile.hero .tvv{color:var(--candy)}
-}
+.tile.hero{background:var(--hero-tile-bg)}
+.tile.hero .value,.tile.hero .tvv{color:var(--hero-tile-ink)}
 @media(max-width:480px){
   .tiles{gap:8px}
   .tile{min-width:80px;padding:10px 12px}
@@ -181,14 +248,13 @@ tr:hover td{background:color-mix(in srgb,var(--track) 50%,transparent)}
   background:var(--berry);color:#fff;font-size:11px;font-weight:700;
 }
 .pl{color:var(--ink1);font-weight:600}
-.pl:hover{color:var(--berry)}
+.pl:hover{color:var(--accent)}
 .tehocell{display:flex;align-items:center;justify-content:flex-end;gap:8px}
 .tv{font-weight:700;font-size:14px;min-width:30px;text-align:right}
 .teho-bar{
   display:inline-block;height:7px;border-radius:3.5px;
-  background:var(--blush);vertical-align:middle;min-width:3px;
+  background:var(--bar-fill);vertical-align:middle;min-width:3px;
 }
-@media(prefers-color-scheme:dark){.teho-bar{background:var(--candy)}}
 @media(max-width:600px){.lb th,.lb td{font-size:12px;padding:6px 6px}}
 
 /* ── Percentile bars ──────────────────────────────────────────────────── */
@@ -225,9 +291,7 @@ tr:hover td{background:color-mix(in srgb,var(--track) 50%,transparent)}
   .pctrow{grid-template-columns:120px 1fr 52px;gap:6px}
   .pctrow .label,.pctrow .pl2{font-size:12px}
 }
-@media(max-width:380px){
-  .pctrow{grid-template-columns:100px 1fr 44px}
-}
+@media(max-width:380px){.pctrow{grid-template-columns:100px 1fr 44px}}
 
 /* ── D3 chart styles ──────────────────────────────────────────────────── */
 .fg-line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
@@ -243,7 +307,7 @@ tr:hover td{background:color-mix(in srgb,var(--track) 50%,transparent)}
   background:var(--surface1);color:var(--ink1);
   border:1px solid var(--grid);border-radius:8px;
   padding:8px 10px;font-size:12px;line-height:1.6;
-  box-shadow:0 2px 8px rgba(0,0,0,.12);min-width:130px;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);min-width:130px;
 }
 .chart-tip .d{color:var(--ink3);margin-bottom:2px}
 .chart-tip b{float:right;margin-left:14px;font-variant-numeric:tabular-nums}
@@ -286,13 +350,32 @@ footer{
     <a href="/glossary"    class="{{ 'on' if request.path=='/glossary' }}">Kaava</a>
     <a href="/about"       class="{{ 'on' if request.path=='/about' }}">About</a>
   </nav>
-  <span class="lang-toggle">
-    {% if lang == "fi" %}FI · <a href="{{ lang_url('en') }}">EN</a>
-    {% else %}<a href="{{ lang_url('fi') }}">FI</a> · EN{% endif %}
-  </span>
+  <div class="hdr-right">
+    <button class="theme-btn" onclick="malloToggleTheme()" title="Toggle light / dark">
+      <span class="icon-sun">☀︎</span>
+      <span class="icon-moon">☽</span>
+    </button>
+    <span class="lang-toggle">
+      {% if lang == "fi" %}FI · <a href="{{ lang_url('en') }}">EN</a>
+      {% else %}<a href="{{ lang_url('fi') }}">FI</a> · EN{% endif %}
+    </span>
+  </div>
 </header>
 <main>{% block content %}{% endblock %}</main>
 {% block scripts %}{% endblock %}
 <footer>Mallo · pesäpallodata · <a href="/glossary">kaavat</a> · <a href="/about">about</a></footer>
+<script>
+function malloToggleTheme() {
+  var html = document.documentElement;
+  var current = html.getAttribute('data-theme');
+  // If no explicit override, detect from OS
+  if (!current) {
+    current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  var next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  try { localStorage.setItem('mallo-theme', next); } catch(e) {}
+}
+</script>
 </body>
 </html>
