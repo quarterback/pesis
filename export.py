@@ -70,16 +70,14 @@ def translation_card(line: dict) -> dict | None:
                      "mlb_value": format(mlb, m["fmt"])})
     if not rows:
         return None
-    games = line["games"] or 1
     pct_prod = line.get("pct_tehot_per_turn")
     wrc = (round(translate._quantile_value(pct_prod, 100.0, 25.0, +1))
            if pct_prod is not None else None)
+    # No 162-game pace: a ~30-game pesäpallo season doesn't extrapolate honestly
+    # to a full MLB season, so it isn't a fair "how good" measure.
     return {
         "wrc_plus": wrc, "tier": translate.wrc_tier(wrc) if wrc is not None else None,
         "rows": rows,
-        "pace": {"HR": round(line["kunnarit"] * 162 / games),
-                 "RBI": round(line["lyodyt"] * 162 / games),
-                 "R": round(line["tuodut"] * 162 / games)},
     }
 
 
