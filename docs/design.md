@@ -146,10 +146,12 @@ baseball page quantile-maps its wRC+ equivalent instead of copying TEHO+.
 
 ### UI requirements for the design pass
 
-- **Site-wide FI/EN language toggle is a hard requirement** — the audience
-  that makes this project interesting (baseball analytics people) doesn't
-  read Finnish. The baseball-translation and About pages are already English;
-  everything else needs string tables, not per-page forks.
+- **FI/EN toggle: SHIPPED** (`web/i18n.py` string table + `t()` helper,
+  `?lang=` param persisted in a cookie, Finnish default — owner call: "only
+  Finns will care about this site", EN one click away). Remaining gaps:
+  glossary formula *notes* and the empty-DB page body are Finnish-only, and
+  the About page is deliberately English-only (owner's voice). The
+  baseball-translation page stays English-only by design.
 - Keep the baseball translation page standalone-shareable (self-explanatory
   with the primer on-page, no context needed from the rest of the site).
 - Layout reference: darko.app's current site — hero cards over the table

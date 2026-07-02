@@ -1,10 +1,8 @@
 {% extends "base.html" %}
-{% block title %}PARE-ennusteet{% endblock %}
+{% block title %}{{ t("proj.title") }}{% endblock %}
 {% block content %}
-<h1>PARE-ennusteet · {{ season.series }} {{ season.year }}</h1>
-<p class="sub">PARE = Painotettu ja Regressoitu Ennuste: päivittyvä arvio jokaisen pelaajan
-todellisesta tasosta — koko urahistoria eksponentiaalisesti painotettuna + regressio
-sarjakeskiarvoon. Ei mielivaltaisia "viimeiset N ottelua" -rajauksia.</p>
+<h1>{{ t("proj.title") }} · {{ season.series }} {{ season.year }}</h1>
+<p class="sub">{{ t("proj.sub") }}</p>
 
 <div class="filters">
   {% for s in seasons %}
@@ -15,7 +13,7 @@ sarjakeskiarvoon. Ei mielivaltaisia "viimeiset N ottelua" -rajauksia.</p>
 <div class="card">
 <table>
   <thead>
-    <tr><th>#</th><th class="name">Pelaaja</th><th>Ikä</th>
+    <tr><th>#</th><th class="name">{{ t("th.player") }}</th><th>{{ t("th.age") }}</th>
         <th>eKL%</th><th>eSaatto%</th><th>eEtenemis%</th>
         <th>ePalo%</th><th>eTEHO+</th></tr>
   </thead>

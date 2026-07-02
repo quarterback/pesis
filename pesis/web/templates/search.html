@@ -1,20 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Haku{% endblock %}
+{% block title %}{{ t("nav.search") }}{% endblock %}
 {% block content %}
-<h1>Pelaajahaku</h1>
+<h1>{{ t("se.title") }}</h1>
 <form method="get" action="/search" style="margin: 12px 0 20px">
-  <input name="q" value="{{ q }}" placeholder="Pelaajan nimi…" autofocus
+  <input name="q" value="{{ q }}" placeholder="{{ t('se.placeholder') }}" autofocus
          style="padding:8px 12px; font-size:15px; width:280px; border:1px solid var(--grid);
                 border-radius:8px; background:var(--surface-1); color:var(--ink-1)">
   <button style="padding:8px 14px; border-radius:8px; border:0; background:var(--series-1);
-                 color:#fff; font-weight:600">Hae</button>
+                 color:#fff; font-weight:600">{{ t("se.button") }}</button>
 </form>
 {% if q and not results %}
-<p class="sub">Ei osumia haulle "{{ q }}".</p>
+<p class="sub">{{ t("se.none") }} "{{ q }}".</p>
 {% elif results %}
 <div class="card">
 <table>
-  <thead><tr><th class="name">Pelaaja</th><th class="name">Joukkue</th><th>Viimeisin kausi</th></tr></thead>
+  <thead><tr><th class="name">{{ t("th.player") }}</th><th class="name">{{ t("th.team") }}</th><th>{{ t("th.last_season") }}</th></tr></thead>
   <tbody>
     {% for r in results %}
     <tr>

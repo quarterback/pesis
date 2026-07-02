@@ -1,14 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Sanasto{% endblock %}
+{% block title %}{{ t("gl.title") }}{% endblock %}
 {% block content %}
-<h1>Sanasto</h1>
-<p class="sub">Tilastot ja kaavat. K = kunnarit, L = lyödyt juoksut, T = tuodut juoksut,
-V = lyöntivuorot, Y = yritykset.</p>
+<h1>{{ t("gl.title") }}</h1>
+<p class="sub">{{ t("gl.sub") }}</p>
 
-<h2>Peruslinja</h2>
+<h2>{{ t("gl.base") }}</h2>
 <div class="card">
 <table>
-  <thead><tr><th class="name">Tilasto</th><th class="name">Kaava</th><th class="name">Huom.</th></tr></thead>
+  <thead><tr><th class="name">{{ t("th.stat") }}</th><th class="name">{{ t("th.formula") }}</th><th class="name">{{ t("th.note") }}</th></tr></thead>
   <tbody>
     <tr><td class="name">Tehot</td><td class="name"><code>K + L + T</code></td><td class="name">perinteinen tuotantoluku</td></tr>
     <tr><td class="name">KL%</td><td class="name"><code>kärkilyönnit / KLY</code></td><td class="name">kärjen eteneminen per yritys</td></tr>
@@ -24,10 +23,10 @@ V = lyöntivuorot, Y = yritykset.</p>
 </table>
 </div>
 
-<h2>Indeksit</h2>
+<h2>{{ t("gl.indices") }}</h2>
 <div class="card">
 <table>
-  <thead><tr><th class="name">Tilasto</th><th class="name">Kaava</th><th class="name">Huom.</th></tr></thead>
+  <thead><tr><th class="name">{{ t("th.stat") }}</th><th class="name">{{ t("th.formula") }}</th><th class="name">{{ t("th.note") }}</th></tr></thead>
   <tbody>
     <tr><td class="name">TEHO+</td><td class="name"><code>100 × (tehot/V) / (sarjan tehot/V)</code></td><td class="name">100 = sarjan keskitaso; kärki ~250–350</td></tr>
     <tr><td class="name">kTEHO+</td><td class="name"><code>100 × Σ(tehot<sub>ottelu</sub> / kerroin<sub>stadion</sub>) / V / sarjataso</code></td><td class="name">kenttäkorjattu TEHO+</td></tr>
@@ -37,10 +36,10 @@ V = lyöntivuorot, Y = yritykset.</p>
 </table>
 </div>
 
-<h2>PARE-ennusteet</h2>
+<h2>{{ t("gl.pare") }}</h2>
 <div class="card">
 <table>
-  <thead><tr><th class="name">Tilasto</th><th class="name">Kaava</th><th class="name">Huom.</th></tr></thead>
+  <thead><tr><th class="name">{{ t("th.stat") }}</th><th class="name">{{ t("th.formula") }}</th><th class="name">{{ t("th.note") }}</th></tr></thead>
   <tbody>
     <tr><td class="name">eTilasto (esim. eKL%)</td>
         <td class="name"><code>(Σ β<sup>t</sup>·onnistumiset + κ·sarjataso) / (Σ β<sup>t</sup>·yritykset + κ)</code></td>
@@ -51,10 +50,10 @@ V = lyöntivuorot, Y = yritykset.</p>
 <p class="sub" style="margin:8px 0 0">e- = ennustettu · k- = kenttäkorjattu.</p>
 </div>
 
-<h2>Sarjataulukko &amp; muut</h2>
+<h2>{{ t("gl.other") }}</h2>
 <div class="card">
 <table>
-  <thead><tr><th class="name">Tilasto</th><th class="name">Kaava</th><th class="name">Huom.</th></tr></thead>
+  <thead><tr><th class="name">{{ t("th.stat") }}</th><th class="name">{{ t("th.formula") }}</th><th class="name">{{ t("th.note") }}</th></tr></thead>
   <tbody>
     <tr><td class="name">Pisteet</td><td class="name"><code>3 / 2 / 1 / 0</code></td>
         <td class="name">suora voitto 2–0 / muu voitto / tappio ratkaisussa (supervuoro tai kotiutuslyöntikilpailu) / muu tappio</td></tr>

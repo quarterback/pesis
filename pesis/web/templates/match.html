@@ -3,8 +3,8 @@
 {% block content %}
 <h1>{{ m.home_team }} {{ m.home_runs }} – {{ m.away_runs }} {{ m.away_team }}</h1>
 <p class="sub">{{ m.series }} · {{ m.date }} · {{ m.stadium or "" }}
-{% if m.periods_home is not none %} · jaksot {{ m.periods_home }}–{{ m.periods_away }}{% if m.tiebreak %} (ratkaisu supervuorossa/kotiutuslyöntikilpailussa){% endif %}{% endif %}
-{% if m.attendance %} · yleisö {{ m.attendance }}{% endif %}
+{% if m.periods_home is not none %} · {{ t("mt.periods") }} {{ m.periods_home }}–{{ m.periods_away }}{% if m.tiebreak %} {{ t("mt.tiebreak") }}{% endif %}{% endif %}
+{% if m.attendance %} · {{ t("mt.attendance") }} {{ m.attendance }}{% endif %}
 {% if m.temperature is not none %} · {{ m.temperature }} °C{% endif %}</p>
 
 {% for team, lines in sides.items() %}
@@ -12,7 +12,7 @@
 <div class="card">
 <table>
   <thead>
-    <tr><th class="name">Pelaaja</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
+    <tr><th class="name">{{ t("th.player") }}</th><th>{{ t("th.turns") }}</th><th>K</th><th>L</th><th>T</th>
         <th>Tehot</th><th>KL</th><th>KLY</th><th>Palot</th></tr>
   </thead>
   <tbody>

@@ -17,16 +17,12 @@ import os
 from flask import Flask, Response, abort, g, render_template, request
 
 from .. import context, db, metrics, projection, similarity, simulate, translate
+from . import i18n
 
-PCT_STATS = [
-    ("kl_pct", "Kärkilyönti-%"),
-    ("saatto_pct", "Saatto-%"),
-    ("eten_pct", "Etenemis-%"),
-    ("kunnari_rate", "Kunnarit / vuoro"),
-    ("lyoty_rate", "Lyödyt / vuoro"),
-    ("palo_rate", "Palot / vuoro"),
-    ("tehot_per_turn", "Tehot / vuoro"),
-]
+PCT_STATS = ["kl_pct", "saatto_pct", "eten_pct", "kunnari_rate",
+             "lyoty_rate", "palo_rate", "tehot_per_turn"]
+
+BASE_KL_KEYS = ["kl_base0", "kl_base1", "kl_base2", "kl_base3"]
 
 LEADERBOARD_STATS = ["teho_plus", "teho_plus_adj", "tehot", "kl_pct",
                      "saatto_pct", "eten_pct", "kunnarit", "lyodyt", "tuodut",
@@ -54,6 +50,35 @@ def create_app(db_path: str | None = None) -> Flask:
         if "db" not in g:
             g.db = db.connect(app.config["DB_PATH"])
         return g.db
+
+    # -- language: Finnish default, ?lang= toggle persisted in a cookie -----
+
+    @app.before_request
+    def resolve_lang():
+        asked = request.args.get("lang")
+        if asked in i18n.LANGS:
+            g.lang = asked
+            g.lang_cookie = asked
+        else:
+            g.lang = request.cookies.get("lang", i18n.DEFAULT_LANG)
+            if g.lang not in i18n.LANGS:
+                g.lang = i18n.DEFAULT_LANG
+
+    @app.after_request
+    def persist_lang(resp):
+        if getattr(g, "lang_cookie", None):
+            resp.set_cookie("lang", g.lang_cookie, max_age=365 * 86400)
+        return resp
+
+    @app.context_processor
+    def lang_context():
+        def lang_url(lang: str) -> str:
+            args = {k: v for k, v in request.args.items() if k != "lang"}
+            args["lang"] = lang
+            from urllib.parse import urlencode
+            return f"{request.path}?{urlencode(args)}"
+        return {"t": lambda key: i18n.t(key, g.lang), "lang": g.lang,
+                "lang_url": lang_url}
 
     # season aggregates only change when an ingest writes the DB (the daily
     # refresh loop), so cache them process-wide and invalidate on the DB
@@ -294,16 +319,16 @@ def create_app(db_path: str | None = None) -> Flask:
             {"year": s["year"], "kl_pct": s["kl_pct"], "teho_plus": s["teho_plus"]}
             for s in career])
         base_lines = metrics.base_kl_lines(c, current["season_id"])
-        metrics.add_percentiles(base_lines, stats=tuple(metrics.BASE_KL_LABELS))
+        metrics.add_percentiles(base_lines, stats=tuple(BASE_KL_KEYS))
         base_kl = next((b for b in base_lines if b["player_id"] == player_id), None)
         if base_kl and all(base_kl.get(f"{k}_tries", 0) == 0
-                           for k in metrics.BASE_KL_LABELS):
+                           for k in BASE_KL_KEYS):
             base_kl = None  # no per-base data (demo league)
         return render_template("player.html", player=row, career=career,
                                line=line, proj=proj, career_json=career_json,
                                pct_stats=PCT_STATS,
                                base_kl=base_kl,
-                               base_labels=metrics.BASE_KL_LABELS,
+                               base_keys=BASE_KL_KEYS,
                                log=metrics.game_log(c, player_id,
                                                     current["season_id"]),
                                comps=similarity.comps(c, player_id,

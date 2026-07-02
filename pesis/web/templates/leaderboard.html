@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Tilastot {{ season.year }}{% endblock %}
+{% block title %}{{ t("nav.stats") }} {{ season.year }}{% endblock %}
 {% block content %}
 <h1>{{ season.series }} {{ season.year }}</h1>
-<p class="sub">Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).</p>
+<p class="sub">{{ t("lb.sub") }}</p>
 
 <div class="filters">
   {% for s in stats %}
@@ -15,12 +15,12 @@
   {% endfor %}
 </div>
 
-<p class="sub"><a href="/leaderboard.csv?stat={{ stat }}&amp;sid={{ season.id }}">Lataa CSV ↓</a></p>
+<p class="sub"><a href="/leaderboard.csv?stat={{ stat }}&amp;sid={{ season.id }}">{{ t("lb.csv") }}</a></p>
 <div class="card">
 <table>
   <thead>
-    <tr><th>#</th><th class="name">Pelaaja</th><th class="name">Joukkue</th>
-        <th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th><th>Tehot</th>
+    <tr><th>#</th><th class="name">{{ t("th.player") }}</th><th class="name">{{ t("th.team") }}</th>
+        <th>{{ t("th.games") }}</th><th>{{ t("th.turns") }}</th><th>K</th><th>L</th><th>T</th><th>Tehot</th>
         <th>KL%</th><th>TEHO+</th><th>{{ stat }}</th></tr>
   </thead>
   <tbody>

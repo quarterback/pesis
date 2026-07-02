@@ -6,18 +6,18 @@
 
 {% if standing %}
 <div class="tiles">
-  <div class="tile"><div class="label">Ottelut</div><div class="value">{{ standing.games }}</div></div>
-  <div class="tile"><div class="label">Voitot–Tappiot</div><div class="value">{{ standing.wins }}–{{ standing.losses }}</div></div>
-  <div class="tile"><div class="label">Pisteet</div><div class="value">{{ standing.points }}</div></div>
-  <div class="tile"><div class="label">Juoksut ±</div><div class="value">{{ "%+d" | format(standing.run_diff) }}</div></div>
+  <div class="tile"><div class="label">{{ t("tm.matches") }}</div><div class="value">{{ standing.games }}</div></div>
+  <div class="tile"><div class="label">{{ t("tm.wl") }}</div><div class="value">{{ standing.wins }}–{{ standing.losses }}</div></div>
+  <div class="tile"><div class="label">{{ t("th.points") }}</div><div class="value">{{ standing.points }}</div></div>
+  <div class="tile"><div class="label">{{ t("tm.rundiff") }}</div><div class="value">{{ "%+d" | format(standing.run_diff) }}</div></div>
 </div>
 {% endif %}
 
-<h2>Pelaajat</h2>
+<h2>{{ t("tm.players") }}</h2>
 <div class="card">
 <table>
   <thead>
-    <tr><th class="name">Pelaaja</th><th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
+    <tr><th class="name">{{ t("th.player") }}</th><th>{{ t("th.games") }}</th><th>{{ t("th.turns") }}</th><th>K</th><th>L</th><th>T</th>
         <th>Tehot</th><th>KL%</th><th>TEHO+</th></tr>
   </thead>
   <tbody>
@@ -33,11 +33,11 @@
 </table>
 </div>
 
-<h2>Ottelut</h2>
+<h2>{{ t("tm.matches") }}</h2>
 <div class="card">
 <table>
-  <thead><tr><th>Pvm</th><th class="name">Koti</th><th class="name">Vieras</th>
-             <th>Tulos</th><th>Jaksot</th><th class="name">Stadion</th></tr></thead>
+  <thead><tr><th>{{ t("th.date") }}</th><th class="name">{{ t("pl.home") | capitalize }}</th><th class="name">{{ t("pl.away") | capitalize }}</th>
+             <th>{{ t("th.result") }}</th><th>{{ t("th.periods") }}</th><th class="name">{{ t("th.stadium") }}</th></tr></thead>
   <tbody>
     {% for m in matches %}
     <tr>

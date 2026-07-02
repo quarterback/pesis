@@ -2,25 +2,25 @@
 {% block title %}{{ player.name }}{% endblock %}
 {% block content %}
 <h1>{{ player.name }}</h1>
-<p class="sub"><a href="/team/{{ line.team }}">{{ line.team }}</a>{% if line.age %} · {{ line.age }} v{% endif %} · kausi {{ line.year }}
-· <a href="/player/{{ player.id }}/baseball">Baseball translation 🇺🇸</a></p>
+<p class="sub"><a href="/team/{{ line.team }}">{{ line.team }}</a>{% if line.age %} · {{ line.age }} v{% endif %} · {{ t("pl.season") }} {{ line.year }}
+· <a href="/player/{{ player.id }}/baseball">{{ t("pl.baseball_link") }}</a></p>
 
 <div class="tiles">
-  <div class="tile"><div class="label">Ottelut</div><div class="value">{{ line.games }}</div></div>
-  <div class="tile"><div class="label">Kunnarit</div><div class="value">{{ line.kunnarit }}</div></div>
-  <div class="tile"><div class="label">Tehot (K+L+T)</div><div class="value">{{ line.tehot }}</div></div>
+  <div class="tile"><div class="label">{{ t("pl.games") }}</div><div class="value">{{ line.games }}</div></div>
+  <div class="tile"><div class="label">{{ t("pl.homeruns") }}</div><div class="value">{{ line.kunnarit }}</div></div>
+  <div class="tile"><div class="label">{{ t("pl.tehot") }}</div><div class="value">{{ line.tehot }}</div></div>
   <div class="tile"><div class="label">TEHO+</div><div class="value">{{ line.teho_plus or "—" }}</div></div>
   {% if proj.teho_plus_proj %}
   <div class="tile"><div class="label">eTEHO+ (PARE)</div><div class="value">{{ proj.teho_plus_proj }}</div></div>
   {% endif %}
 </div>
 
-<h2>Prosenttipisteet {{ line.year }} <span style="font-weight:400;color:var(--ink-3)">(sarjan vakiopelaajien joukossa)</span></h2>
+<h2>{{ t("pl.pct_title") }} {{ line.year }} <span style="font-weight:400;color:var(--ink-3)">{{ t("pl.pct_note") }}</span></h2>
 <div class="card">
-  {% for stat, label in pct_stats %}
+  {% for stat in pct_stats %}
   {% set pct = line["pct_" ~ stat] %}
   <div class="pctrow">
-    <div class="label">{{ label }}</div>
+    <div class="label">{{ t("stat." ~ stat) }}</div>
     <div class="track">
       {% if pct is not none %}
       {% set b = pct_bucket(pct) %}
@@ -31,16 +31,16 @@
     <div class="value">{{ line[stat] | rate }}</div>
   </div>
   {% endfor %}
-  <p class="sub" style="margin:10px 0 0">Punainen = sarjan häntäpää, sininen = kärki. Numero = prosenttipiste.</p>
+  <p class="sub" style="margin:10px 0 0">{{ t("pl.pct_sub") }}</p>
 </div>
 
 {% if base_kl %}
-<h2>Kärkilyönnit pesittäin {{ line.year }} <span style="font-weight:400;color:var(--ink-3)">(mihin pesään kärki eteni)</span></h2>
+<h2>{{ t("pl.basekl_title") }} {{ line.year }} <span style="font-weight:400;color:var(--ink-3)">{{ t("pl.basekl_note") }}</span></h2>
 <div class="card">
-  {% for key, label in base_labels.items() %}
+  {% for key in base_keys %}
   {% set pct = base_kl["pct_" ~ key] %}
   <div class="pctrow">
-    <div class="label">{{ label }} <span style="color:var(--ink-3)">({{ base_kl[key ~ "_tries"] }} yritystä)</span></div>
+    <div class="label">{{ t("stat." ~ key) }} <span style="color:var(--ink-3)">({{ base_kl[key ~ "_tries"] }} {{ t("pl.tries") }})</span></div>
     <div class="track">
       {% if pct is not none %}
       {% set b = pct_bucket(pct) %}
@@ -55,20 +55,20 @@
 {% endif %}
 
 {% if career | length > 1 %}
-<h2>Urakehitys</h2>
+<h2>{{ t("pl.career_title") }}</h2>
 <div class="card">
   <div class="minis">
-    <div class="mini"><div class="label">Kärkilyönti-%</div><div id="career-kl"></div></div>
+    <div class="mini"><div class="label">{{ t("stat.kl_pct") }}</div><div id="career-kl"></div></div>
     <div class="mini"><div class="label">TEHO+</div><div id="career-teho"></div></div>
   </div>
 </div>
 {% endif %}
 
-<h2>Kaudet</h2>
+<h2>{{ t("pl.seasons_title") }}</h2>
 <div class="card">
 <table>
   <thead>
-    <tr><th>Kausi</th><th>Ikä</th><th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
+    <tr><th>{{ t("th.season") }}</th><th>{{ t("th.age") }}</th><th>{{ t("th.games") }}</th><th>{{ t("th.turns") }}</th><th>K</th><th>L</th><th>T</th>
         <th>Tehot</th><th>KL%</th><th>Saatto%</th><th>Etenemis%</th><th>Palo%</th>
         <th>TEHO+</th><th title="kenttäkorjattu">kTEHO+</th></tr>
   </thead>
@@ -89,11 +89,11 @@
 </div>
 
 {% if log %}
-<h2>Ottelut {{ line.year }}</h2>
+<h2>{{ t("pl.log_title") }} {{ line.year }}</h2>
 <div class="card">
 <table>
   <thead>
-    <tr><th>Pvm</th><th class="name">Vastustaja</th><th></th><th>Vuorot</th>
+    <tr><th>{{ t("th.date") }}</th><th class="name">{{ t("th.opponent") }}</th><th></th><th>{{ t("th.turns") }}</th>
         <th>K</th><th>L</th><th>T</th><th>Tehot</th><th>KL</th><th>KLY</th><th>Palot</th></tr>
   </thead>
   <tbody>
@@ -101,7 +101,7 @@
     <tr>
       <td><a href="/match/{{ g_.match_id }}">{{ g_.date }}</a></td>
       <td class="name">{{ g_.opponent }}</td>
-      <td>{{ "koti" if g_.home else "vieras" }}</td>
+      <td>{{ t("pl.home") if g_.home else t("pl.away") }}</td>
       <td>{{ g_.turns_at_bat }}</td>
       <td>{{ g_.kunnarit }}</td><td>{{ g_.lyodyt }}</td><td>{{ g_.tuodut }}</td>
       <td>{{ g_.tehot }}</td>
@@ -115,10 +115,10 @@
 {% endif %}
 
 {% if comps %}
-<h2>Vertailukelpoiset kaudet <span style="font-weight:400;color:var(--ink-3)">(1000 = identtinen)</span></h2>
+<h2>{{ t("pl.comps_title") }} <span style="font-weight:400;color:var(--ink-3)">{{ t("pl.comps_note") }}</span></h2>
 <div class="card">
 <table>
-  <thead><tr><th>Pisteet</th><th class="name">Pelaaja</th><th>Kausi</th><th>Ikä</th><th>TEHO+</th></tr></thead>
+  <thead><tr><th>{{ t("th.score") }}</th><th class="name">{{ t("th.player") }}</th><th>{{ t("th.season") }}</th><th>{{ t("th.age") }}</th><th>TEHO+</th></tr></thead>
   <tbody>
     {% for c in comps %}
     <tr>
@@ -132,10 +132,10 @@
 </div>
 {% endif %}
 
-<h2>PARE-ennuste ({{ proj.as_of }})</h2>
+<h2>{{ t("pl.proj_title") }} ({{ proj.as_of }})</h2>
 <div class="card">
 <table>
-  <thead><tr><th class="name">Tilasto</th><th>Ennuste</th><th>Havaittu (painotettu)</th><th>Efektiivinen otos</th></tr></thead>
+  <thead><tr><th class="name">{{ t("th.stat") }}</th><th>{{ t("pl.proj_estimate") }}</th><th>{{ t("pl.proj_observed") }}</th><th>{{ t("pl.proj_n") }}</th></tr></thead>
   <tbody>
     {% for name, s in proj.stats.items() %}
     <tr>
@@ -147,8 +147,7 @@
     {% endfor %}
   </tbody>
 </table>
-<p class="sub" style="margin:10px 0 0">Ennuste = eksponentiaalisesti painotettu havainto regressoituna
-sarjakeskiarvoon. Pieni otos → lähellä keskiarvoa; iso otos → lähellä havaittua.</p>
+<p class="sub" style="margin:10px 0 0">{{ t("pl.proj_sub") }}</p>
 </div>
 {% endblock %}
 {% block scripts %}
