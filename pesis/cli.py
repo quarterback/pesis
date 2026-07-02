@@ -73,7 +73,7 @@ def cmd_project(args) -> None:
     projs = [p for p in projs if p["teho_plus_proj"] is not None]
     projs.sort(key=lambda p: p["teho_plus_proj"], reverse=True)
     fmt = "{:<3} {:<22} {:>4} {:>10} {:>8}"
-    print(fmt.format("#", "player", "age", "TEHO+proj", "KL%proj"))
+    print(fmt.format("#", "player", "age", "eTEHO+", "KL%proj"))
     for i, p in enumerate(projs[:args.limit], 1):
         print(fmt.format(i, p["name"][:22], p["age"] or "-",
                          p["teho_plus_proj"], f"{p['stats']['kl_pct']['rate']:.3f}"))
@@ -92,12 +92,12 @@ def cmd_standings(args) -> None:
     sid = _season_id(conn, args.year)
     rows = (simulate.playoff_odds(conn, sid, as_of=args.as_of, seed=args.seed)
             if args.as_of else simulate.standings(conn, sid))
-    cols = "{:<3} {:<12} {:>3} {:>3} {:>3} {:>3} {:>4} {:>6}"
-    header = cols.format("#", "team", "G", "W", "T", "L", "pts", "diff")
+    cols = "{:<3} {:<12} {:>3} {:>3} {:>3} {:>3} {:>3} {:>4} {:>6}"
+    header = cols.format("#", "team", "G", "W", "Ws", "Ls", "L", "pts", "diff")
     print(header + ("   playoff%" if args.as_of else ""))
     for i, t in enumerate(rows, 1):
-        line = cols.format(i, t["team"], t["games"], t["wins"], t["ties"],
-                           t["losses"], t["points"], t["run_diff"])
+        line = cols.format(i, t["team"], t["games"], t["wins"], t["super_wins"],
+                           t["super_losses"], t["losses"], t["points"], t["run_diff"])
         if args.as_of:
             line += f"   {t['odds']:>6.1f}"
         print(line)
@@ -173,7 +173,7 @@ def main(argv=None) -> None:
     p.add_argument("--limit", type=int, default=25)
     p.set_defaults(func=cmd_leaderboard)
 
-    p = sub.add_parser("project", help="player projections (all players or one)")
+    p = sub.add_parser("project", help="PARE projections (all players or one)")
     p.add_argument("--player", type=int, default=None)
     p.add_argument("--limit", type=int, default=25)
     p.set_defaults(func=cmd_project)

@@ -1,10 +1,10 @@
-"""Player projections — daily-updating true-talent estimates per rate stat.
+"""PARE (Painotettu ja Regressoitu Ennuste) — daily player projections.
 
-Named literally on purpose (owner call: stat names follow the WAR/OPS+
-convention — descriptive, no backronyms; an earlier cute name collided with
-Tahko, an actual Superpesis club). Methodologically this is a DARKO
-transplant, and the core question is DARKO's: how much of a hot or cold
-stretch is a real talent change, and how much is noise?
+Naming: descriptive initialism in the WAR/OPS+ tradition (owner call; never
+person/club names — an earlier name collided with Tahko, an actual Superpesis
+club). Methodologically this is a DARKO transplant, and the core question is
+DARKO's: how much of a hot or cold stretch is a real talent change, and how
+much is noise?
 
 The v0 model is deliberately the simplest thing that is honest:
 

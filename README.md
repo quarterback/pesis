@@ -6,10 +6,12 @@ There is no sabermetrics/analytics site anywhere for pesäpallo — this project
 is an attempt to be the first, borrowing what works from the basketball and
 baseball analytics canon:
 
-- **[DARKO](https://www.darko.app/)** → daily-updating Bayesian **player
-  projections** of every player's true talent per stat (exponential decay
-  over the full game log + regression to league mean). Stat names here are
-  deliberately literal, in the WAR/OPS+ tradition — no branded acronyms.
+- **[DARKO](https://www.darko.app/)** → **PARE** (*Painotettu ja Regressoitu
+  Ennuste*): daily-updating Bayesian projections of every player's true
+  talent per stat (exponential decay over the full game log + regression to
+  league mean). Naming convention: descriptive initialisms in the
+  WAR/OPS+/xBA tradition — PARE, eTEHO+/eKL% (*ennustettu*), kTEHO+
+  (*kenttäkorjattu*) — never player/club names (Tahko is a Superpesis club).
 - **[Baseball Savant](https://baseballsavant.mlb.com/)** → player pages with
   percentile sliders across the skill profile.
 - **FanGraphs / Baseball-Reference** → honest rate stats with real
@@ -78,7 +80,7 @@ attendance, kärkilyönnit by base, the lot):
 | `pesis/v1import.py` | keyless real-data import via v1.pesistulokset.fi |
 | `pesis/demo.py` | seeded synthetic league (also the test harness) |
 | `pesis/metrics.py` | rate stats, league baselines, TEHO+, percentiles |
-| `pesis/projection.py` | player projections: decay + empirical-Bayes + aging |
+| `pesis/projection.py` | PARE projections: decay + empirical-Bayes + aging |
 | `pesis/context.py` | park factors (kenttäkertoimet) + weather effects |
 | `pesis/similarity.py` | B-Ref-style similarity scores / player comps |
 | `pesis/simulate.py` | standings + Monte Carlo playoff odds |

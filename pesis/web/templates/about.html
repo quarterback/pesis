@@ -12,17 +12,21 @@ history and a results service that records every plate turn, has never had an an
 Kärki is an attempt to build one, on top of the official
 <a href="https://www.pesistulokset.fi/">pesistulokset.fi</a> data service.</p>
 
-<p><strong>The projections</strong> (methodologically a
-<a href="https://www.darko.app/">DARKO</a> transplant) are a daily-updating estimate of every
+<p><strong>PARE</strong> (<em>Painotettu ja Regressoitu Ennuste</em> — "weighted and
+regressed projection"; methodologically a <a href="https://www.darko.app/">DARKO</a>
+transplant) is a daily-updating estimate of every
 player's true talent in every rate stat. Every game a player has ever played counts, weighted by
 an exponential decay fitted per stat — no arbitrary "last 10 games" windows — and blended with
 the league average in proportion to how much evidence exists. Hot streak in a small sample? The
-model stays skeptical. Sustained improvement? It follows. (Stat names here are deliberately
-literal, in the WAR/OPS+ tradition — no branded acronyms.)</p>
+model stays skeptical. Sustained improvement? It follows. Projected stats carry an
+<strong>e-</strong> prefix (eTEHO+, eKL% — <em>ennustettu</em>), park-adjusted ones a
+<strong>k-</strong> prefix (kTEHO+ — <em>kenttäkorjattu</em>): descriptive initialisms in the
+WAR/OPS+/xBA tradition.</p>
 
-<p><strong>TEHO+</strong> is league-indexed production per plate turn (100 = league average,
-150 = MVP season) in the spirit of baseball's OPS+/wRC+ — so seasons and eras can be compared
-honestly.</p>
+<p><strong>TEHO+</strong> is league-indexed production per plate turn (100 = league average)
+in the spirit of baseball's OPS+/wRC+ — so seasons and eras can be compared honestly. Because
+pesäpallo production concentrates at the top of the batting order, the league's best hitters
+run 250–350.</p>
 
 <p><strong>Percentile profiles</strong> (the red-to-blue sliders) show where a player ranks among
 qualified peers in each skill, Baseball Savant style. <strong>Kenttäkertoimet</strong> are the

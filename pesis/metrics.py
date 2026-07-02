@@ -12,7 +12,8 @@ Key definitions
     palo-%       palot / turns at bat (negative — like strikeout rate)
     TEHO+        100 × (player tehot per turn) / (league tehot per turn):
                  era/league-adjusted production index in the spirit of OPS+ —
-                 100 is league average, 150 is an MVP season.
+                 100 is league average; the league's best run 250–350 (real
+                 data: production concentrates at the top of the order).
     TEHO+adj     TEHO+ with each game's production deflated/inflated by the
                  run environment it happened in (the stadium's kenttäkerroin).
                  A short season is rich in recorded context — park, weather,

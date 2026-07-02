@@ -11,7 +11,7 @@
   <div class="tile"><div class="label">Tehot (K+L+T)</div><div class="value">{{ line.tehot }}</div></div>
   <div class="tile"><div class="label">TEHO+</div><div class="value">{{ line.teho_plus or "—" }}</div></div>
   {% if proj.teho_plus_proj %}
-  <div class="tile"><div class="label">TEHO+ (ennuste)</div><div class="value">{{ proj.teho_plus_proj }}</div></div>
+  <div class="tile"><div class="label">eTEHO+ (PARE)</div><div class="value">{{ proj.teho_plus_proj }}</div></div>
   {% endif %}
 </div>
 
@@ -52,7 +52,7 @@
   <thead>
     <tr><th>Kausi</th><th>Ikä</th><th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
         <th>Tehot</th><th>KL%</th><th>Saatto%</th><th>Etenemis%</th><th>Palo%</th>
-        <th>TEHO+</th><th title="kenttäkerroinkorjattu">TEHO+adj</th></tr>
+        <th>TEHO+</th><th title="kenttäkorjattu">kTEHO+</th></tr>
   </thead>
   <tbody>
     {% for s in career %}
@@ -88,7 +88,7 @@
 </div>
 {% endif %}
 
-<h2>Ennuste ({{ proj.as_of }})</h2>
+<h2>PARE-ennuste ({{ proj.as_of }})</h2>
 <div class="card">
 <table>
   <thead><tr><th class="name">Tilasto</th><th>Ennuste</th><th>Havaittu (painotettu)</th><th>Efektiivinen otos</th></tr></thead>

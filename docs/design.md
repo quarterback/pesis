@@ -64,9 +64,11 @@ PBP (see roadmap). `projection._tuotu_proxy` is the placeholder and says so.
 
 ## The projection model
 
-*(Naming note, owner call 2026-07: stat and system names are literal, in the
-WAR/OPS+ tradition — no cute backronyms. The engine's original name "TAHKO"
-also collided with Tahko, an actual Superpesis club.)*
+*(Naming convention, owner call 2026-07: descriptive initialisms in the
+WAR/OPS+/xBA tradition — the system is **PARE** (Painotettu ja Regressoitu
+Ennuste), projected stats take an e- prefix (eTEHO+, eKL%), park-adjusted a
+k- prefix (kTEHO+). Never named after people or clubs — the original name
+"TAHKO" collided with Tahko, an actual Superpesis club.)*
 
 DARKO's core question, transplanted: *how much of a hot streak is real?*
 
