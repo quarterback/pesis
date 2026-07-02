@@ -82,7 +82,23 @@ from *known latent talent*, and `tests/test_tahko.py` asserts the projections
 recover it (truth–projection correlation), that small samples shrink harder,
 and that recent evidence outweighs old.
 
+### Product principle: contextualize, don't just shrink
+
+A 28–33 game season could be framed as "too noisy to trust" — that is the
+wrong frame (owner decision, 2026-07). The same short season is unusually
+*rich in recorded context*: every match row carries park, weather,
+temperature, attendance and opponent, and the PBP carries base states. So
+observed stats stay the headline, **adjusted for the context they happened
+in** (TEHO+adj is the first: park-adjusted; weather- and opponent-adjusted
+come next). TAHKO remains the forward-looking companion, not a replacement
+for what actually happened.
+
 ### Shipped since v0 (Tier A — per-game rows + match context)
+
+- **TEHO+adj** (`metrics._add_park_adjusted`): per-game production deflated
+  by the venue's kenttäkerroin, re-indexed to league-average 100 — the first
+  context-adjusted headline stat. Next adjustments: wind/temperature, then
+  opponent strength.
 
 - **Park factors & weather effects** (`context.py`): first published
   kenttäkertoimet for the sport; per-stadium run environment (shrunken,
@@ -115,9 +131,16 @@ and that recent evidence outweighs old.
   (best record / finals favorite / lottery odds), Standard↔Detailed toggle,
   a distribution sidebar next to leaderboards, CSV download on every table.
   Our `/league` and leaderboard pages should grow toward that shape.
-- **Schedule-length honesty**: Superpesis plays ~30 regular-season games
-  (one MLB month). Any cross-sport pace/counting display must carry the
-  extrapolation factor; rate stats and percentiles are the primary framing.
+- **Schedule-length honesty**: Superpesis plays 28–33 regular-season games
+  (33 in 2025) — one MLB month. Any cross-sport pace/counting display must
+  carry the extrapolation factor; rate stats and percentiles are the primary
+  framing.
+- **The short season is a translation asset, not just a caveat** (owner
+  observation, 2026-07): baseball fans already have trained intuition for
+  month-sized samples (Player of the Month, April paces, hot streaks), so
+  "a Superpesis season ≈ one MLB month" makes the whole translation land
+  *better* than a same-length-season sport would. Lean into that framing on
+  shareable pages.
 
 ### Roadmap, in dependency order
 

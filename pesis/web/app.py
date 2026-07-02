@@ -23,8 +23,9 @@ PCT_STATS = [
     ("tehot_per_turn", "Tehot / vuoro"),
 ]
 
-LEADERBOARD_STATS = ["teho_plus", "tehot", "kl_pct", "saatto_pct", "eten_pct",
-                     "kunnarit", "lyodyt", "tuodut", "palo_rate"]
+LEADERBOARD_STATS = ["teho_plus", "teho_plus_adj", "tehot", "kl_pct",
+                     "saatto_pct", "eten_pct", "kunnarit", "lyodyt", "tuodut",
+                     "palo_rate"]
 
 
 def pct_bucket(pct: int | None) -> int | None:

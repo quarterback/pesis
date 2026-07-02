@@ -5,14 +5,14 @@ differences, and — unlike almost any baseball source — the results service
 records temperature, wind and rain on every match. Nobody has ever published
 park factors or weather effects for the sport.
 
-v0 method, deliberately simple:
-    PF(stadium) = (total runs per match at the stadium)
-                  / (league total runs per match)
-computed over all matches in the given seasons, shrunk toward 1.0 by sample
-size (an empirical-Bayes half-strength of ``PF_PRIOR_GAMES`` matches). With a
-balanced schedule this is unbiased; the classic team-based home/road method
-(which also cancels team quality) is the upgrade once real multi-season data
-is in — flagged in docs/design.md.
+Method: the classic team home/road ratio —
+    PF(stadium) = (runs per match in the home team's HOME games)
+                  / (runs per match in that same team's ROAD games)
+shrunk toward 1.0 by sample size (``PF_PRIOR_GAMES`` pseudo-matches). Because
+the same team contributes to both totals, team quality cancels to first
+order; a naive "runs at stadium ÷ league" version was tried first and was
+visibly confounded by good-hitting home teams. Assumes one home stadium per
+team (true in Superpesis; revisit for shared/tournament venues).
 """
 
 from __future__ import annotations
@@ -30,22 +30,23 @@ def park_factors(conn: sqlite3.Connection,
                  season_ids: list[int] | None = None) -> list[dict]:
     """Shrunken run-environment index per stadium; 100 = neutral."""
     where, params = _season_filter(season_ids)
-    rows = conn.execute(
-        f"""SELECT stadium, COUNT(*) AS games,
-                   AVG(home_runs + away_runs) AS rpg
+    home = {r["team"]: r for r in conn.execute(
+        f"""SELECT home_team AS team, MAX(stadium) AS stadium,
+                   COUNT(*) AS games, AVG(home_runs + away_runs) AS rpg
             FROM matches WHERE stadium IS NOT NULL {where}
-            GROUP BY stadium""", params).fetchall()
-    league = conn.execute(
-        f"SELECT AVG(home_runs + away_runs) FROM matches WHERE 1=1 {where}",
-        params).fetchone()[0]
-    if not league:
-        return []
+            GROUP BY home_team""", params)}
+    road = {r["team"]: r["rpg"] for r in conn.execute(
+        f"""SELECT away_team AS team, AVG(home_runs + away_runs) AS rpg
+            FROM matches WHERE 1=1 {where} GROUP BY away_team""", params)}
     out = []
-    for r in rows:
-        raw = r["rpg"] / league
-        shrunk = (r["games"] * raw + PF_PRIOR_GAMES * 1.0) / (r["games"] + PF_PRIOR_GAMES)
-        out.append({"stadium": r["stadium"], "games": r["games"],
-                    "runs_per_game": round(r["rpg"], 2),
+    for team, h in home.items():
+        road_rpg = road.get(team)
+        if not road_rpg:
+            continue
+        raw = h["rpg"] / road_rpg
+        shrunk = (h["games"] * raw + PF_PRIOR_GAMES * 1.0) / (h["games"] + PF_PRIOR_GAMES)
+        out.append({"stadium": h["stadium"], "team": team, "games": h["games"],
+                    "runs_per_game": round(h["rpg"], 2),
                     "pf": round(100 * shrunk)})
     out.sort(key=lambda d: d["pf"], reverse=True)
     return out

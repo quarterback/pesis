@@ -26,6 +26,23 @@ def test_wind_lifts_kunnari_rate():
     assert windy["kunnari_rate"] > calm["kunnari_rate"]
 
 
+def test_park_adjusted_teho_corrects_run_environment():
+    from pesis import metrics
+    conn = _conn()
+    sid = conn.execute("SELECT id FROM seasons ORDER BY year DESC LIMIT 1").fetchone()[0]
+    lines = [l for l in metrics.season_lines(conn, sid)
+             if l["turns_at_bat"] >= metrics.QUALIFY_TURNS]
+
+    def team_shift(team):
+        diffs = [l["teho_plus_adj"] - l["teho_plus"]
+                 for l in lines if l["team"] == team]
+        return sum(diffs) / len(diffs)
+
+    # Vimpeli (PF 1.12) hitters get deflated; Joensuu (0.90) hitters inflated
+    assert team_shift("Vimpeli") < team_shift("Joensuu")
+    assert team_shift("Vimpeli") < 0 < team_shift("Joensuu")
+
+
 def test_empty_store_returns_no_factors():
     conn = db.connect(":memory:")
     assert context.park_factors(conn) == []

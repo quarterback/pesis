@@ -51,7 +51,8 @@
 <table>
   <thead>
     <tr><th>Kausi</th><th>Ikä</th><th>O</th><th>Vuorot</th><th>K</th><th>L</th><th>T</th>
-        <th>Tehot</th><th>KL%</th><th>Saatto%</th><th>Etenemis%</th><th>Palo%</th><th>TEHO+</th></tr>
+        <th>Tehot</th><th>KL%</th><th>Saatto%</th><th>Etenemis%</th><th>Palo%</th>
+        <th>TEHO+</th><th title="kenttäkerroinkorjattu">TEHO+adj</th></tr>
   </thead>
   <tbody>
     {% for s in career %}
@@ -62,7 +63,7 @@
       <td>{{ s.tehot }}</td>
       <td>{{ s.kl_pct | rate }}</td><td>{{ s.saatto_pct | rate }}</td>
       <td>{{ s.eten_pct | rate }}</td><td>{{ s.palo_rate | rate }}</td>
-      <td>{{ s.teho_plus }}</td>
+      <td>{{ s.teho_plus }}</td><td>{{ s.teho_plus_adj or "—" }}</td>
     </tr>
     {% endfor %}
   </tbody>

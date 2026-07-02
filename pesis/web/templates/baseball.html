@@ -15,10 +15,12 @@
       {{ t.games }} games · {{ t.pace.HR }}/{{ t.pace.RBI }}/{{ t.pace.R }}
       HR/RBI/R at 162-game pace</div></div>
 </div>
-<p class="sub">A Superpesis regular season runs 28–33 games (33 in 2025) — roughly one month
-of MLB baseball. So the pace above is a ×{{ t.pace.extrapolation }} extrapolation: read it like
-an April "on pace for 60 homers" headline, not a projection. The rate translations below don't
-have this problem — percentiles don't care how long the schedule is.</p>
+<p class="sub">A Superpesis regular season runs 28–33 games (33 in 2025) — almost exactly one
+month of MLB baseball. That's part of why baseball's statistical language fits this sport so
+well: you already reason about month-sized samples every May (Player of the Month, hot streaks,
+"on pace for" headlines). Read the pace above exactly that way — it's a ×{{ t.pace.extrapolation }}
+extrapolation, an April headline rather than a projection. The rate translations below don't
+even need the caveat: percentiles don't care how long the schedule is.</p>
 
 {% if t.rows %}
 <h2>Skill-by-skill translation <span style="font-weight:400;color:var(--ink-3)">(same percentile, MLB scale)</span></h2>
@@ -69,7 +71,8 @@ the bases like an inside-the-park homer, every time.</p>
 play a super-inning (extra innings), then a one-on-one homer derby (kotiutuslyöntikilpailu) —
 yes, the sport settles ties with a shootout.</p>
 <p><strong>The season is a sprint.</strong> 28–33 regular-season games, roughly one MLB month —
-so every series matters, slumps can't be waited out, and small-sample skepticism (the whole
-reason TAHKO exists) is the default state of watching this sport.</p>
+so every series matters, and context matters more than in a 162-game grind: who you played,
+in which park, in what wind. The results service records all of it, which is why these numbers
+can be park- and weather-adjusted instead of taken raw.</p>
 </div>
 {% endblock %}
