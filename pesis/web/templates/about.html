@@ -1,46 +1,31 @@
 {% extends "base.html" %}
-{% block title %}What is Mallo?{% endblock %}
+{% block title %}About{% endblock %}
 {% block content %}
-<h1>What is Mallo?</h1>
-<p class="sub">The first analytics site for pesäpallo (Finnish baseball). English, because
-the ideas came from the baseball and basketball analytics world — Finnish UI everywhere else.</p>
+<h1>About</h1>
 
 <div class="card" style="font-size:14px; color:var(--ink-2)">
-<p>Public analytics transformed how baseball (Baseball Savant, FanGraphs, Baseball-Reference)
-and basketball (DARKO, LEBRON) are understood — but pesäpallo, a sport with a century of
-history and a results service that records every plate turn, has never had an analytics layer.
-Mallo is an attempt to build one, on top of the official
-<a href="https://www.pesistulokset.fi/">pesistulokset.fi</a> data service.</p>
+<p>Like my entire Finnish baseball fandom, this site came together mostly as an accident.
+I've been wondering for a very long time what advanced metrics in pesäpallo, released to the
+actual public, would look like. The sport is inherently noisy for a bat &amp; ball sport (only
+around 30ish games per year) but the best players rise to the occasion and you can make sense
+of it all very quickly.</p>
 
-<p><strong>PARE</strong> (<em>Painotettu ja Regressoitu Ennuste</em> — "weighted and
-regressed projection"; methodologically a <a href="https://www.darko.app/">DARKO</a>
-transplant) is a daily-updating estimate of every
-player's true talent in every rate stat. Every game a player has ever played counts, weighted by
-an exponential decay fitted per stat — no arbitrary "last 10 games" windows — and blended with
-the league average in proportion to how much evidence exists. Hot streak in a small sample? The
-model stays skeptical. Sustained improvement? It follows. Projected stats carry an
-<strong>e-</strong> prefix (eTEHO+, eKL% — <em>ennustettu</em>), park-adjusted ones a
-<strong>k-</strong> prefix (kTEHO+ — <em>kenttäkorjattu</em>): descriptive initialisms in the
-WAR/OPS+/xBA tradition.</p>
+<p>So I've decided to use the pesistulokset data service metrics and come up with the
+first-ever analytics site for pesis. Does anyone need this? Probably not. But I know lots of
+pesis fans also watch baseball, NFL and other sports, they might bet on games, they might be
+fans of fantasy sports. I know for a fact this is true — I've played in two different fantasy
+leagues with Finns for NFL and MLB.</p>
 
-<p><strong>TEHO+</strong> is league-indexed production per plate turn (100 = league average)
-in the spirit of baseball's OPS+/wRC+ — so seasons and eras can be compared honestly. Because
-pesäpallo production concentrates at the top of the batting order, the league's best hitters
-run 250–350.</p>
+<p>So maybe for us it's overdue. If you're new to pesis, this is a chance for you to start to
+contextualize it. As an avid watcher, my translation layer between baseball and pesis is my
+favorite thing to do, because both sports help you appreciate the other because they are truly
+cousins in a way that nothing else is. Not quite as close as American football is to Canadian
+football, but certainly the only thing closer to baseball than softball is Finnish baseball.
+Alas, you'll watch and learn.</p>
 
-<p><strong>Percentile profiles</strong> (the red-to-blue sliders) show where a player ranks among
-qualified peers in each skill, Baseball Savant style. <strong>Kenttäkertoimet</strong> are the
-sport's first published park factors — the results service records weather on every match, so
-wind and temperature effects are measured, not folklore. <strong>Playoff odds</strong> come from
-Monte Carlo simulation of the remaining schedule. And the
-<strong>baseball translation</strong> pages map any player's league percentiles onto MLB
-distributions, for explaining pesäpallo performances to baseball fans.</p>
-
-<p>Data: the official pesistulokset.fi API (free keys from tulospalvelu@pesis.fi), with
-per-player per-match statistics back to 1990. This instance may be running the built-in
-synthetic demo league; real-data ingest is a one-command backfill once a key is configured.</p>
-
-<p>Open source, work in progress. The roadmap — run expectancy from play-by-play, lukkari
-metrics, manager decision analysis, win probability — lives in <code>docs/design.md</code>.</p>
+<p>
+<a href="https://blog.ronbronson.com/my-pesapallo-story">My pesäpallo story</a> ·
+<a href="https://www.superpesis.fi/ajankohtaista/superpesis-yhdysvaltalainen-ron-bronson-toteutti-unelmansa-ja-matkusti-suomeen-katsomaan-pesapalloa">Superpesis: Ron Bronson toteutti unelmansa</a>
+</p>
 </div>
 {% endblock %}
