@@ -124,10 +124,10 @@ header nav{ display:flex; gap:20px; }
 header nav a{ color:var(--nav-ink); font-size:13px; }
 header nav a.active,
 header nav a[aria-current="page"]{ color:var(--nav-on); font-weight:700; }
-.theme-toggle{ display:inline-flex; align-items:center; gap:7px; cursor:pointer;
-               font:600 12px var(--font-body); padding:6px 12px 6px 11px; border-radius:999px;
+.theme-toggle{ display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+               width:36px; height:36px; border-radius:50%; flex-shrink:0;
                background:var(--tog-bg); color:var(--ink2); border:var(--tog-border); }
-.theme-toggle svg{ display:block; }
+.theme-toggle svg{ display:block; width:16px; height:16px; }
 
 /* ----------------------------------------------------------------------------
    LAYOUT + HEADINGS
@@ -232,7 +232,8 @@ tr.leader .rank{ background:var(--rank-top-bg); color:var(--rank-top-ink);
 
 /* stats table sits on its own surface panel, lifted off the page background */
 .tbl-card{ background:var(--surface); border:1px solid var(--surface-line); border-radius:13px;
-           box-shadow:var(--card-shadow); overflow:hidden; margin-bottom:4px; }
+           box-shadow:var(--card-shadow); overflow-x:auto; overflow-y:hidden; margin-bottom:4px;
+           -webkit-overflow-scrolling:touch; }
 /* accent-tinted dividers between rows, on every stat table (leaderboards + card tables) */
 .tbl-card thead th, .card table thead th{ background:var(--thbg); }
 .tbl-card tbody td, .card table tbody td{ border-bottom:1px solid color-mix(in srgb, var(--accent) 20%, var(--surface)); }
@@ -313,11 +314,10 @@ th.sorted{ color:var(--accent); }
 .callrow{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin:16px 0 8px; }
 
 /* baseball ⟷ Finnish-stats toggle on the player / translation cards */
-.bb-toggle{ display:inline-flex; align-items:center; gap:7px; font:600 13px var(--font-body);
-            padding:8px 15px; border-radius:999px; border:1px solid var(--surface-line);
-            background:var(--surface); color:var(--ink-strong); box-shadow:var(--card-shadow);
-            margin:4px 0 16px; }
-.bb-toggle:hover{ border-color:var(--accent); color:var(--accent); text-decoration:none; }
+.bb-toggle{ display:inline-flex; align-items:center; justify-content:center; font-size:18px; line-height:1;
+            width:40px; height:40px; border-radius:50%; border:1px solid var(--surface-line);
+            background:var(--surface); box-shadow:var(--card-shadow); margin:4px 0 16px; cursor:pointer; }
+.bb-toggle:hover{ border-color:var(--accent); text-decoration:none; }
 
 /* STANDINGS extras — playoff-odds inline bar + signed run differential */
 .odds{ display:inline-flex; align-items:center; gap:8px; justify-content:flex-end; }
@@ -339,5 +339,20 @@ footer{ color:var(--ink3); font-size:12px; text-align:center; margin:32px 0; }
 @media (max-width:720px){
   .tiles{ grid-template-columns:repeat(2,1fr); }
   .split{ grid-template-columns:1fr; }
-  main{ overflow-x:auto; }
+}
+
+/* wide stat tables scroll inside their own card rather than blowing out the page */
+.card[style*="overflow"]{ overflow-x:auto !important; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+
+@media (max-width:640px){
+  header{ padding:11px 14px; flex-wrap:wrap; gap:8px 12px; }
+  header .brand{ font-size:21px; }
+  header .navwrap{ gap:10px 14px; width:100%; justify-content:flex-start; flex-wrap:wrap; }
+  header nav{ gap:12px; flex-wrap:wrap; }
+  header nav a{ font-size:12.5px; }
+  .theme-toggle{ margin-left:auto; }
+  .controls, .filters{ padding-left:14px; padding-right:14px; }
+  .page{ padding-left:14px; padding-right:14px; }
+  h1{ font-size:21px; }
+  .callrow{ grid-template-columns:1fr; }
 }

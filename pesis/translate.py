@@ -37,8 +37,11 @@ _PHI = NormalDist()
 # distribution, direction (+1 higher percentile = higher MLB value),
 # and the story of the analogy, written for a baseball audience.
 MAPPINGS = (
+    # AVG is intentionally stretched wider than the real MLB spread (sd ~.026):
+    # the elite of Superpesis (KL% ~.800) should read as a historic .400 season,
+    # not a compressed ~.310. Anchored so the ~99th percentile ≈ .400.
     {"stat": "kl_pct", "pesis": "Kärkilyönti-% (advance the lead runner)",
-     "mlb": "AVG", "mean": 0.252, "sd": 0.026, "dir": +1, "fmt": ".3f",
+     "mlb": "AVG", "mean": 0.250, "sd": 0.064, "dir": +1, "fmt": ".3f",
      "blurb": "The core bat-to-ball skill. A kärkilyönti advances the lead "
               "runner — think situational hitting as the PRIMARY batting stat."},
     {"stat": "kl_per_turn", "pesis": "Kärkilyönnit per turn (base hits)",
@@ -85,6 +88,28 @@ def wrc_tier(wrc: int) -> str:
         if wrc < ceiling:
             return label
     return "peak-Bonds territory"
+
+
+# ── Lukkari (pitcher) → MLB run-prevention translation ────────────────────
+# A lukkari's run-prevention percentile among qualified lukkarit is read onto
+# an MLB ERA distribution (lower = better). LRA- is already an ERA-minus-style
+# league index (100 = average, lower better), so it maps to ERA- directly.
+ERA_MEAN, ERA_SD = 4.00, 0.90
+ERA_TIERS = ((2.90, "ace"), (3.70, "mid-rotation starter"),
+             (4.40, "back-end starter"), (5.30, "swingman"))
+
+
+def era_tier(era: float) -> str:
+    for ceiling, label in ERA_TIERS:
+        if era < ceiling:
+            return label
+    return "replacement level"
+
+
+def era_equivalent(goodness_pct: int) -> float:
+    """MLB ERA for a lukkari at the given run-prevention percentile (0–100,
+    higher = better; a top preventer maps to a low ERA)."""
+    return _quantile_value(goodness_pct, ERA_MEAN, ERA_SD, -1)
 
 
 def translate_player(conn: sqlite3.Connection, player_id: int,
