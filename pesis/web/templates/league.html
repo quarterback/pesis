@@ -9,11 +9,13 @@
 
 <div class="controls" style="margin-top:16px">
   <span class="ctl-lab">Sarja</span>
-  <div class="seg">
-    {% for s in seasons %}
-    <a href="?sid={{ s.id }}{% if as_of %}&as_of={{ as_of }}{% endif %}"
-       class="{{ 'on' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
-    {% endfor %}
+  <div class="sel-wrap">
+    <select class="season-sel" onchange="location=this.value">
+      {% for s in seasons %}
+      <option value="?sid={{ s.id }}{% if as_of %}&as_of={{ as_of }}{% endif %}"
+        {{ 'selected' if s.id == season.id }}>{{ s.series }} {{ s.year }}</option>
+      {% endfor %}
+    </select>
   </div>
 </div>
 
