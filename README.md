@@ -1,10 +1,11 @@
 # Mallo — pesäpallo analytics
 
-An analytics engine and site for Finnish baseball (pesäpallo), built on data
-from the official results service [pesistulokset.fi](https://www.pesistulokset.fi/).
+I'd long wondered what a pesäpallo site would look like. Working on a different project, I explored the viability of a tool like this 
+and then enlisted an agent to built it. An analytics engine and site for Finnish baseball (pesäpallo), built on data
+from the official results stite [pesistulokset.fi](https://www.pesistulokset.fi/).
 There is no sabermetrics/analytics site anywhere for pesäpallo — this project
 is an attempt to be the first, borrowing what works from the basketball and
-baseball analytics canon:
+baseball analytics canon and my own long-running sims both from text-sim games and real-life experiments from baseball to college football rankings and others.
 
 - **[DARKO](https://www.darko.app/)** → **PARE** (*Painotettu ja Regressoitu
   Ennuste*): daily-updating Bayesian projections of every player's true
@@ -17,6 +18,8 @@ baseball analytics canon:
 - **FanGraphs / Baseball-Reference** → honest rate stats with real
   denominators, league-indexed **TEHO+** (100 = league average), sortable
   leaderboards, season-by-season career tables.
+
+  My other projects are on [ronbronson.dev](ronbronson.dev)
 
 ## Quickstart — real data, no API key needed
 
@@ -66,35 +69,3 @@ needed to stay current.
 
 Any Docker host (Railway, Render, a VPS) works the same way:
 `docker build -t mallo . && docker run -p 8080:8080 -v mallo-data:/data -e PESIS_DB_PATH=/data/pesis.db mallo`.
-
-## Data sources
-
-Two paths to the same per-player per-match rows (~82 fields: weather,
-attendance, kärkilyönnit by base, the lot):
-
-1. **Keyless (`ingest-v1`)** — the legacy site v1.pesistulokset.fi serves the
-   stats-tool data same-origin without an api key; one polite GET per
-   series-season. This is what the Dockerfile bakes at build time.
-2. **Official API key** — `https://api.pesistulokset.fi/api/v1` (docs at
-   [ttk.pesistulokset.fi/api-docs](https://ttk.pesistulokset.fi/api-docs));
-   free keys from **tulospalvelu@pesis.fi**. Unlocks historical backfill
-   (1990→) and play-by-play. `export PESISTULOKSET_API_KEY=...` then
-   `python -m pesis ingest --year ... --series-id ...`; confirm
-   `ingest.FIELD_MAP` against `/public/stats-definitions` first.
-
-## Layout
-
-| Path | What |
-| --- | --- |
-| `pesis/api.py` | pesistulokset.fi API client (cached, throttled) |
-| `pesis/db.py` / `ingest.py` | SQLite store + payload normalization |
-| `pesis/v1import.py` | keyless real-data import via v1.pesistulokset.fi |
-| `pesis/demo.py` | seeded synthetic league (also the test harness) |
-| `pesis/metrics.py` | rate stats, league baselines, TEHO+, percentiles |
-| `pesis/projection.py` | PARE projections: decay + empirical-Bayes + aging |
-| `pesis/context.py` | park factors (kenttäkertoimet) + weather effects |
-| `pesis/similarity.py` | B-Ref-style similarity scores / player comps |
-| `pesis/simulate.py` | standings + Monte Carlo playoff odds |
-| `pesis/translate.py` | pesis → baseball quantile translation (shareable EN pages) |
-| `pesis/web/` | Flask UI: leaderboards, player pages, projections, league, about |
-| `docs/design.md` | the full design doc: data source, metrics, model, roadmap |
