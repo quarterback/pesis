@@ -347,7 +347,7 @@ async function showLeaderboard(sid, stat, posFilter) {
   const posPresent = POS_ORDER.filter(p => sorted.some(l => posLabel(l.pos) === p));
   if (posFilter) sorted = sorted.filter(l => posLabel(l.pos) === posFilter);
   const posQ = posFilter ? `&pos=${posFilter}` : '';
-  const posOpts = [`<option value="">Kaikki paikat</option>`].concat(
+  const posOpts = [`<option value="">Kaikki</option>`].concat(
     posPresent.map(p => `<option value="${p}"${p===posFilter?' selected':''}>${p}</option>`)).join('');
   const posSel = `<span class="lab">Paikka</span>
     <select class="sel" onchange="location.hash='/?sid=${sid}&stat=${stat}'+(this.value?'&pos='+this.value:'')">${posOpts}</select>`;
@@ -698,8 +698,8 @@ async function showPlayer(pid) {
         <a href="#/team/${encodeURIComponent(line.team)}?sid=${line.season_id}">${line.team}</a>
         ${line.age ? `· ${line.age} v` : ''}
         · kausi ${line.year}
-        ${translation ? `· <a href="#/baseball/${pid}">⚾ Baseball →</a>` : ''}
       </p>
+      ${translation ? `<a class="bb-toggle" href="#/baseball/${pid}">⚾ Käännä baseball-termeille</a>` : ''}
       <div class="tiles">
         <div class="tile"><div class="label">Ottelut</div><div class="value">${line.games}</div></div>
         <div class="tile hero"><div class="label">VYK</div><div class="value">${line.vyk??'—'}</div></div>
@@ -849,11 +849,11 @@ async function showBaseball(pid) {
   main().innerHTML = `
     <div class="page">
       <h1>${player.name} <span class="muted">· baseball</span></h1>
-      <p class="sub"><a href="#/player/${pid}">← ${line.team} · ${line.year}</a></p>
+      <p class="sub">${line.team} · ${line.year}</p>
+      <a class="bb-toggle" href="#/player/${pid}">📊 Takaisin tilastoihin</a>
       <div class="callrow">
         ${callout('wRC+ equivalent', t.wrc_plus ?? '—', 'accent')}
         ${callout('Reads like', t.tier ?? '—')}
-        ${callout('162-game pace', `${t.pace.HR} HR · ${t.pace.RBI} RBI · ${t.pace.R} R`)}
       </div>
       <h2>Skill → MLB <span class="muted">(same percentile, MLB scale)</span></h2>
       <div class="card" style="padding:0;overflow:hidden">

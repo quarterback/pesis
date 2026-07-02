@@ -116,7 +116,8 @@ a:hover{ text-decoration:underline; }
 header{ background:var(--bar); border-bottom:1px solid var(--line-hd);
         padding:16px 26px; display:flex; align-items:center; justify-content:space-between; }
 header .brand{ font-family:var(--font-display); font-weight:900; font-style:italic; font-size:25px;
-               letter-spacing:-.03em; color:var(--ink-strong); line-height:1; }
+               letter-spacing:-.03em; color:var(--ink-strong); line-height:1; text-decoration:none; }
+header .brand:hover{ text-decoration:none; }
 header .brand .dot{ color:var(--brand-dot); font-style:italic; }   /* the "." after Mallo */
 header .navwrap{ display:flex; align-items:center; gap:22px; }
 header nav{ display:flex; gap:20px; }
@@ -180,9 +181,10 @@ select.sel{ font:600 12.5px var(--font-body); padding:7px 30px 7px 13px; border-
    (TEHO+, KL%, Saatto%, …) — never the raw snake_case stat key. */
 .filters{ display:flex; gap:6px; flex-wrap:wrap; padding:8px 26px 4px; }
 .filters .lab{ width:100%; font:600 9.5px var(--font-mono); letter-spacing:.13em; text-transform:uppercase; color:var(--label); margin-bottom:2px; }
-.filters a{ font:600 12.5px var(--font-body); padding:6px 13px; border-radius:8px; white-space:nowrap;
+.filters a{ font:600 12.5px var(--font-body); padding:7px 14px; border-radius:8px; white-space:nowrap;
             font-variant-numeric:tabular-nums; text-decoration:none; transition:background .14s, color .14s, border-color .14s;
-            background:transparent; color:var(--ink2); border:1px solid var(--sel-line); }
+            background:var(--surface); color:var(--ink2); border:1px solid var(--surface-line);
+            box-shadow:var(--card-shadow); }
 .filters a:hover{ color:var(--ink-strong); border-color:var(--accent-soft); }
 .filters a.active{ background:var(--tog-on-bg); color:var(--tog-on-ink); border-color:var(--tog-on-bg); box-shadow:var(--tog-on-shadow); }
 
@@ -308,8 +310,14 @@ th.sorted{ color:var(--accent); }
 .callout .k{ font:600 9px var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--label); }
 .callout .v{ font-family:var(--font-display); font-weight:800; font-size:26px; letter-spacing:-.02em; color:var(--ink-strong); margin-top:5px; }
 .callout .v.accent{ color:var(--accent); }
-.callrow{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0 8px; }
-@media(max-width:640px){ .callrow{ grid-template-columns:1fr; } }
+.callrow{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin:16px 0 8px; }
+
+/* baseball ⟷ Finnish-stats toggle on the player / translation cards */
+.bb-toggle{ display:inline-flex; align-items:center; gap:7px; font:600 13px var(--font-body);
+            padding:8px 15px; border-radius:999px; border:1px solid var(--surface-line);
+            background:var(--surface); color:var(--ink-strong); box-shadow:var(--card-shadow);
+            margin:4px 0 16px; }
+.bb-toggle:hover{ border-color:var(--accent); color:var(--accent); text-decoration:none; }
 
 /* STANDINGS extras — playoff-odds inline bar + signed run differential */
 .odds{ display:inline-flex; align-items:center; gap:8px; justify-content:flex-end; }

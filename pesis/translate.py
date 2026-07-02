@@ -41,10 +41,14 @@ MAPPINGS = (
      "mlb": "AVG", "mean": 0.252, "sd": 0.026, "dir": +1, "fmt": ".3f",
      "blurb": "The core bat-to-ball skill. A kärkilyönti advances the lead "
               "runner — think situational hitting as the PRIMARY batting stat."},
-    {"stat": "kunnari_rate", "pesis": "Kunnarit per turn (home runs)",
-     "mlb": "HR / 600 PA", "mean": 20.0, "sd": 11.0, "dir": +1, "fmt": ".0f",
-     "blurb": "A kunnari clears the bases and scores the batter — every one "
-              "is an inside-the-park homer; nothing leaves the field."},
+    {"stat": "kl_per_turn", "pesis": "Kärkilyönnit per turn (base hits)",
+     "mlb": "H / 600 PA", "mean": 150.0, "sd": 22.0, "dir": +1, "fmt": ".0f",
+     "blurb": "Kärkilyönnit are the successful bat-to-ball advances — the "
+              "closest thing pesäpallo has to a base-hit count."},
+    # Kunnarit are deliberately NOT mapped to HR: home runs are structurally
+    # rare in pesäpallo (a season leader hits ~5; the career record ~120, only
+    # three players past 100), so kunnari-rate → HR/600 badly overstates them.
+    # Run production is carried by lyödyt/tuodut (RBI/R) and the wRC+ equivalent.
     {"stat": "lyoty_rate", "pesis": "Lyödyt per turn (runs batted home)",
      "mlb": "RBI / 600 PA", "mean": 72.0, "sd": 20.0, "dir": +1, "fmt": ".0f",
      "blurb": "Lyödyt credit the batter whose hit brings a runner home — "
