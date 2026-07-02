@@ -768,26 +768,11 @@ function showAbout() {
     <div class="page">
       <h1>Tietoa</h1>
       <div class="prose">
-        <p class="lead">Koko suomalaisen pesäpallofanitukseni tavoin tämäkin sivusto syntyi enimmäkseen
-        vahingossa. Olen pitkään miettinyt, miltä pesäpallon edistyneet mittarit näyttäisivät, jos ne
-        julkaistaisiin kaikkien nähtäville. Laji on maila-pallopeliksi luonnostaan hälyistä (vain noin
-        30 ottelua kaudessa), mutta parhaat pelaajat nousevat esiin ja kokonaisuudesta saa nopeasti
-        tolkun.</p>
-        <p>Niinpä päätin käyttää pesistulokset-palvelun tilastoja ja rakentaa ensimmäisen pesäpallon
-        analytiikkasivuston. Tarvitseeko tätä kukaan? Luultavasti ei. Mutta tiedän, että moni pesisfani
-        seuraa myös baseballia, NFL:ää ja muita lajeja — he saattavat lyödä vetoa otteluista tai pelata
-        fantasialiigoja. Tiedän tämän varmasti: olen itse pelannut kahdessa eri fantasialiigassa
-        suomalaisten kanssa, NFL:ssä ja MLB:ssä.</p>
-        <p>Ehkä tämä on siis meille myöhässä. Jos pesäpallo on sinulle uutta, tässä on tilaisuus alkaa
-        hahmottaa sitä. Innokkaana katsojana lempipuuhaani on baseballin ja pesäpallon välinen
-        käännöskerros, sillä molemmat lajit auttavat arvostamaan toista — ne ovat serkuksia tavalla,
-        jollaista ei löydy mistään muualta. Eivät aivan yhtä lähellä kuin amerikkalainen ja kanadalainen
-        jalkapallo, mutta pehmopalloa lukuun ottamatta mikään ei ole baseballia lähempänä kuin
-        pesäpallo. No, katsomalla oppii.</p>
-        <p>
-          <a href="https://blog.ronbronson.com/my-pesapallo-story">Pesäpallotarinani</a> ·
-          <a href="https://www.superpesis.fi/ajankohtaista/superpesis-yhdysvaltalainen-ron-bronson-toteutti-unelmansa-ja-matkusti-suomeen-katsomaan-pesapalloa">Superpesis: Ron Bronson toteutti unelmansa</a>
-        </p>
+        <p class="lead">Tämä on fanisivusto, joka ottaa mallia baseballin edistyneiden tilastojen
+        sivustoista. Se on yhä vahvasti työn alla ja nojaa pesistulokset-palvelun dataan.</p>
+        <p>Ennen kaikkea kyseessä on fanikokeilu — tapani tuoda rakkaus baseball-tilastoihin
+        pesäpalloon. Ajan myötä varmasti muokkaamme mittareita ja poistamme osan, mutta tämä on
+        ensimmäinen versio, jonka kokoamisesta olin innoissani.</p>
       </div>
     </div>`;
 }
