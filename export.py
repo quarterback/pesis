@@ -217,6 +217,40 @@ def main():
                                  if (card := translation_card(l))}
         return _trans_cache[sid]
 
+    _lukkari_trans_cache: dict = {}
+
+    def lukkari_trans_for(sid):
+        """Per-player lukkari (pitcher) → MLB run-prevention card for a season."""
+        if sid not in _lukkari_trans_cache:
+            lk = metrics.lukkari_lines(conn, sid)
+            lras = [l["lra"] for l in lk if l["lra"] is not None]
+            n = len(lras)
+            m: dict = {}
+            for l in lk:
+                if l["lra"] is None:
+                    continue
+                worse = sum(1 for x in lras if x > l["lra"])   # higher LRA = worse
+                equal = sum(1 for x in lras if x == l["lra"])
+                pct = round(100 * (worse + 0.5 * equal) / n) if n else 50
+                era = translate.era_equivalent(pct)
+                m[l["player_id"]] = {
+                    "era": format(era, ".2f"), "tier": translate.era_tier(era),
+                    "games": l["lukkari_games"],
+                    "rows": [
+                        {"pesis": "Päästetyt juoksut / ottelu (LRA)",
+                         "arvo": format(l["lra"], ".2f"), "pctile": pct,
+                         "mlb": "ERA", "kaannos": format(era, ".2f")},
+                        {"pesis": "LRA- (sarjaindeksi, 100 = ka.)",
+                         "arvo": str(l["lra_minus"]), "pctile": None,
+                         "mlb": "ERA-", "kaannos": str(l["lra_minus"])},
+                        {"pesis": "Estetyt juoksut (kausi)",
+                         "arvo": str(l["lukkari_rp"]), "pctile": None,
+                         "mlb": "Runs saved", "kaannos": str(l["lukkari_rp"])},
+                    ],
+                }
+            _lukkari_trans_cache[sid] = m
+        return _lukkari_trans_cache[sid]
+
     # Players ordered by most recent season first — 2026 gets written before older history
     player_ids = [r[0] for r in conn.execute(
         """SELECT DISTINCT p.id FROM players p
@@ -260,9 +294,11 @@ def main():
         if base_kl and all(base_kl.get(f"kl_base{k}_tries", 0) == 0 for k in range(4)):
             base_kl = None
 
-        # Baseball translation — current-season qualified players only
+        # Baseball translation — current-season players only (batting + lukkari)
         translation = (translations_for(sid).get(pid)
                        if current["year"] == max_year else None)
+        pitching = (lukkari_trans_for(sid).get(pid)
+                    if current["year"] == max_year else None)
 
         dump(out_path, {
             "player": dict(row),
@@ -270,6 +306,7 @@ def main():
             "line": line,
             "proj": proj,
             "translation": translation,
+            "pitching": pitching,
             "career_json": career_json,
             "pct_stats": PCT_STATS,
             "base_kl": base_kl,

@@ -397,7 +397,7 @@ async function showLeaderboard(sid, stat, posFilter) {
   main().innerHTML = `
     ${leaderboardControls(sid, '')}
     <div class="page" style="padding-bottom:6px">
-      <h1>${parseSeries(season.series).tier} ${season.year}</h1>
+      <h1>${season.series} ${season.year}</h1>
       <p class="sub">${subText}</p>
     </div>
     <div class="filters">
@@ -453,7 +453,7 @@ async function showLukkarit(sid) {
   main().innerHTML = `
     ${leaderboardControls(sid, 'lukkari')}
     <div class="page" style="padding-bottom:6px">
-      <h1>${parseSeries(season.series).tier} ${season.year} <span class="muted">· Lukkarit</span></h1>
+      <h1>${season.series} ${season.year} <span class="muted">· Lukkarit</span></h1>
       <p class="sub">Lukkarin juoksujenesto: RP = juoksut estetty yli sarjan keskiarvon (kertyvä, suurempi parempi). LRA = päästetyt juoksut/ottelu, LRA- indeksinä (100 = keskiarvo, pienempi parempi). Vähintään 3 lukkariottelua. ERA-tyylinen silta kunnes syöttödata on saatavilla.</p>
     </div>
     ${lk.length ? `<div id="lk-table"></div>` : `<div class="page"><p class="sub">Ei lukkaridataa tälle kaudelle.</p></div>`}`;
@@ -612,7 +612,7 @@ const BASE_KL_KEYS = ['kl_base0','kl_base1','kl_base2','kl_base3'];
 
 async function showPlayer(pid) {
   const data = await fetchJSON(`data/players/${pid}.json`);
-  const {player, career, line, proj, translation, career_json, base_kl, base_keys, comps} = data;
+  const {player, career, line, proj, translation, pitching, career_json, base_kl, base_keys, comps} = data;
 
   const projTile = proj?.teho_plus_proj
     ? `<div class="tile"><div class="label">PARE enn.</div><div class="value">${proj.teho_plus_proj}</div></div>` : '';
@@ -699,7 +699,7 @@ async function showPlayer(pid) {
         ${line.age ? `· ${line.age} v` : ''}
         · kausi ${line.year}
       </p>
-      ${translation ? `<a class="bb-toggle" href="#/baseball/${pid}">⚾ Käännä baseball-termeille</a>` : ''}
+      ${(translation || pitching) ? `<a class="bb-toggle" href="#/baseball/${pid}" title="Käännä baseball-termeille" aria-label="Baseball">⚾</a>` : ''}
       <div class="tiles">
         <div class="tile"><div class="label">Ottelut</div><div class="value">${line.games}</div></div>
         <div class="tile hero"><div class="label">VYK</div><div class="value">${line.vyk??'—'}</div></div>
@@ -831,42 +831,51 @@ async function showTeam(teamRaw, sid) {
 ══════════════════════════════════════════════════════════════════════════ */
 async function showBaseball(pid) {
   const data = await fetchJSON(`data/players/${pid}.json`);
-  const {player, line, translation: t} = data;
-  if (!t) {
+  const {player, line, translation: t, pitching: pit} = data;
+  if (!t && !pit) {
     main().innerHTML = `<div class="page"><h1>${player.name}</h1>
-      <p class="sub"><a href="#/player/${pid}">← takaisin</a> · ei baseball-käännöstä (liian vähän lyöntivuoroja).</p></div>`;
+      <p class="sub"><a href="#/player/${pid}">← takaisin</a> · ei baseball-käännöstä (liian vähän pelattu tältä kaudelta).</p></div>`;
     return;
   }
   const callout = (k, v, cls) => `<div class="callout"><div class="k">${k}</div><div class="v ${cls||''}">${v}</div></div>`;
-  const rows = t.rows.map(r => `<tr>
-    <td class="name">${r.pesis_label}</td>
-    <td class="num">${rate(r.pesis_value)}</td>
-    <td class="num">${r.percentile}</td>
-    <td class="num">${r.mlb_stat}</td>
-    <td class="num extra">${r.mlb_value}</td>
-  </tr>`).join('');
+  const tbl = (head, body) => `<div class="card" style="padding:0;overflow:hidden"><table>
+    <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+
+  const batting = !t ? '' : `
+    <h2>Lyönti → MLB <span class="muted">(same percentile, MLB scale)</span></h2>
+    <div class="callrow">
+      ${callout('wRC+ equivalent', t.wrc_plus ?? '—', 'accent')}
+      ${callout('Reads like', t.tier ?? '—')}
+    </div>
+    ${tbl(`<th class="name">Pesäpallo</th><th>Arvo</th><th>Pctile</th><th>MLB</th><th class="extra">Käännös</th>`,
+      t.rows.map(r => `<tr>
+        <td class="name">${r.pesis_label}</td><td class="num">${rate(r.pesis_value)}</td>
+        <td class="num">${r.percentile}</td><td class="num">${r.mlb_stat}</td>
+        <td class="num extra">${r.mlb_value}</td>
+      </tr>`).join(''))}`;
+
+  const pitchingHtml = !pit ? '' : `
+    <h2>Lukkari → MLB <span class="muted">(juoksujenesto · run prevention)</span></h2>
+    <div class="callrow">
+      ${callout('ERA equivalent', pit.era ?? '—', 'accent')}
+      ${callout('Reads like', pit.tier ?? '—')}
+    </div>
+    ${tbl(`<th class="name">Lukkari</th><th>Arvo</th><th>Pctile</th><th>MLB</th><th class="extra">Käännös</th>`,
+      pit.rows.map(r => `<tr>
+        <td class="name">${r.pesis}</td><td class="num">${r.arvo}</td>
+        <td class="num">${r.pctile ?? '—'}</td><td class="num">${r.mlb}</td>
+        <td class="num extra">${r.kaannos}</td>
+      </tr>`).join(''))}`;
 
   main().innerHTML = `
     <div class="page">
       <h1>${player.name} <span class="muted">· baseball</span></h1>
       <p class="sub">${line.team} · ${line.year}</p>
-      <a class="bb-toggle" href="#/player/${pid}">📊 Takaisin tilastoihin</a>
-      <div class="callrow">
-        ${callout('wRC+ equivalent', t.wrc_plus ?? '—', 'accent')}
-        ${callout('Reads like', t.tier ?? '—')}
-      </div>
-      <h2>Skill → MLB <span class="muted">(same percentile, MLB scale)</span></h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr>
-            <th class="name">Pesäpallo</th><th>Arvo</th><th>Pctile</th>
-            <th>MLB</th><th class="extra">Käännös</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
+      <a class="bb-toggle" href="#/player/${pid}" title="Takaisin tilastoihin" aria-label="Takaisin tilastoihin">📊</a>
+      ${batting}
+      ${pitchingHtml}
       <p class="legend">Rank-preserving quantile map — a player's percentile among qualified
-      Superpesis hitters read off at the same percentile of the MLB distribution. A translation
+      Superpesis players read off at the same percentile of the MLB distribution. A translation
       baseball fans can read, not a claim the skills transfer.</p>
     </div>`;
 }
