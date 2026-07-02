@@ -53,8 +53,11 @@ S: dict[str, dict[str, str]] = {
     "lb.csv": {"fi": "Lataa CSV ↓", "en": "Download CSV ↓"},
 
 
-    "lb.analytics_sub": {"fi": "Mallo-mittarit eivät ole tulospalvelun kopioita: ne indeksoivat etenemisen, palojen välttämisen ja kotiin vievät kärkilyönnit sarjaan (100 = keskiarvo).",
-                         "en": "Mallo metrics are not copied box-score columns: they index advancement, out avoidance and lead-runner-to-home attempts to the league (100 = average)."},
+    "lb.analytics_sub": {"fi": "Mallo-mittarit eivät ole tulospalvelun kopioita: VYK/JYK arvioivat kertyvää arvoa korvaajaan nähden; indeksit mittaavat etenemistä, palojen välttämistä ja kotiutuksia (100 = keskiarvo).",
+                         "en": "Mallo metrics are not copied box-score columns: VYK/JYK estimate accumulated value above replacement; the indices measure advancement, out avoidance and scoring attempts against the league (100 = average)."},
+    "stat.vyk": {"fi": "VYK", "en": "VYK"},
+    "stat.jyk": {"fi": "JYK", "en": "JYK"},
+    "stat.raa": {"fi": "JKA", "en": "RAA"},
     "stat.spark_index": {"fi": "SPARK", "en": "SPARK"},
     "stat.adv_plus": {"fi": "ADV+", "en": "ADV+"},
     "stat.runner_plus": {"fi": "RUN+", "en": "RUN+"},

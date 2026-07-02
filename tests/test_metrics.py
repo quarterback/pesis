@@ -79,3 +79,12 @@ def test_official_1_2_3_k_advancement_splits_from_raw_rows():
     assert lines["B"]["adv_home_pct"] == 0.5
     assert lines["B"]["adv1_plus"] > lines["A"]["adv1_plus"]
     assert lines["B"]["adv_home_plus"] > lines["A"]["adv_home_plus"]
+
+
+def test_value_stats_accumulate_above_replacement():
+    conn, sid = _build()
+    lines = {l["name"]: l for l in metrics.season_lines(conn, sid)}
+    assert lines["B"]["jyk"] > lines["A"]["jyk"]
+    assert lines["B"]["vyk"] > lines["A"]["vyk"]
+    assert lines["B"]["raa"] > lines["A"]["raa"]
+    assert lines["B"]["jyk"] != lines["B"]["teho_plus"]

@@ -24,7 +24,7 @@ PCT_STATS = ["kl_pct", "saatto_pct", "eten_pct", "kunnari_rate",
 
 BASE_KL_KEYS = ["kl_base0", "kl_base1", "kl_base2", "kl_base3"]
 
-LEADERBOARD_STATS = ["spark_index", "adv_plus", "adv1_pct", "adv2_pct",
+LEADERBOARD_STATS = ["vyk", "jyk", "raa", "spark_index", "adv_plus", "adv1_pct", "adv2_pct",
                      "adv3_pct", "adv_home_pct", "adv1_plus", "adv2_plus",
                      "adv3_plus", "adv_home_plus", "runner_plus",
                      "out_avoid_plus", "money_kl_plus", "teho_plus",
@@ -155,7 +155,7 @@ def create_app(db_path: str | None = None) -> Flask:
         all_seasons = seasons()
         if not all_seasons:
             return render_template("empty.html")
-        stat = request.args.get("stat", "teho_plus")
+        stat = request.args.get("stat", "vyk")
         if stat not in LEADERBOARD_STATS:
             abort(400)
         season = pick_season(all_seasons)
@@ -196,13 +196,13 @@ def create_app(db_path: str | None = None) -> Flask:
         if not all_seasons:
             abort(404)
         season = pick_season(all_seasons)
-        stat = request.args.get("stat", "teho_plus")
+        stat = request.args.get("stat", "vyk")
         if stat not in LEADERBOARD_STATS:
             abort(400)
         lines = metrics.leaderboard(conn(), season["id"], stat, limit=1000)
         cols = ["name", "team", "games", "turns_at_bat", "kunnarit", "lyodyt",
                 "tuodut", "tehot", "kl_pct", "saatto_pct", "eten_pct",
-                "palo_rate", "adv_plus", "adv1_pct", "adv2_pct", "adv3_pct",
+                "palo_rate", "vyk", "jyk", "raa", "adv_plus", "adv1_pct", "adv2_pct", "adv3_pct",
                 "adv_home_pct", "adv1_plus", "adv2_plus", "adv3_plus",
                 "adv_home_plus", "runner_plus", "out_avoid_plus",
                 "spark_index", "money_kl_pct", "money_kl_plus",

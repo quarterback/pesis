@@ -284,3 +284,25 @@ Owner context clarified the baseball-facing labels:
 - **Hutunkeiton voitot = opening faceoffs won.** This is a useful translation,
   but the current normalized schema does not ingest huttu/choice-win fields yet;
   add it only after confirming which upstream match or raw field stores it.
+
+
+## Follow-up: first WAR-style value scaffold
+
+The site now has a first additive value layer to answer the owner's WAR question.
+Rate/index stats such as TEHO+, ADV+, OUT+, RUN+, and SPARK describe efficiency
+per opportunity; they do not answer how much value a player accumulated. The new
+value scaffold adds:
+
+- **JYK** (*Juoksut Yli Korvaajan*) — runs above replacement. It multiplies each
+  player's existing aggregate events by empirical season run weights, then
+  subtracts a replacement-level per-turn baseline.
+- **VYK** (*Voitot Yli Korvaajan*) — the WAR analog. It converts JYK to wins
+  using the season's run environment.
+- **JKA / RAA** — runs above average, useful for auditing before the replacement
+  baseline is applied.
+
+This is intentionally a bridge model. The proper future version should use the
+roadmapped play-by-play run-expectancy model from `runnersAtBases`/RE24-style
+state changes. Until that endpoint is ingested, the aggregate model is still a
+real value stat because it is additive, playing-time sensitive, replacement-based,
+and calibrated to pesäpallo's own run environment rather than MLB constants.

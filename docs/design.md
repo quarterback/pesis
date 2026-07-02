@@ -169,6 +169,16 @@ baseball page quantile-maps its wRC+ equivalent instead of copying TEHO+.
   *better* than a same-length-season sport would. Lean into that framing on
   shareable pages.
 
+### Shipped follow-up: first value stats (VYK/JYK)
+
+The first WAR-style scaffold is now live from aggregate rows:
+
+- **JYK** (*Juoksut Yli Korvaajan*) = runs above replacement. It estimates season-specific event weights from team run environments when possible, applies them to each player's aggregate events, and subtracts a replacement-level per-turn baseline.
+- **VYK** (*Voitot Yli Korvaajan*) = wins above replacement, the WAR analog, using the season run-to-win scale.
+- **JKA/RAA** = runs above average, kept for auditing the replacement step.
+
+This is not the final RE24/PBP version. It is intentionally the bridge value stat: additive, playing-time sensitive, replacement-based, and calibrated to pesäpallo rather than MLB constants.
+
 ### Roadmap, in dependency order
 
 1. **Real backfill** (needs key): confirm `ingest.FIELD_MAP` against
