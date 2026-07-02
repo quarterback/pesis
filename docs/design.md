@@ -1,4 +1,6 @@
-# Kärki design doc — a sabermetrics layer for pesäpallo
+# Mallo design doc — a sabermetrics layer for pesäpallo
+
+*(Site name: **Mallo** — owner call 2026-07; earlier working name "Kärki" retired.)*
 
 *2026-07-01. Status: v0 shipped (this repo); real-data backfill pending an API key.*
 
@@ -33,7 +35,7 @@ Nobody has built an analytics layer on any of this. The niche is empty.
 
 ## What we borrow, from whom
 
-| Source | Borrowed idea | Kärki incarnation |
+| Source | Borrowed idea | Mallo incarnation |
 | --- | --- | --- |
 | DARKO | daily-updating Bayesian projections; per-stat exponential decay with *fitted* decay constants; no arbitrary "last N games" windows; aging curves per stat; shrinking to a prior with confidence-dependent learning rate | the projection engine (`pesis/projection.py`) |
 | Baseball Savant | percentile sliders as the player's skill fingerprint; diverging red↔blue = bad↔good; spray/hit charts | player page percentile bars (shipped); hit-map page (roadmap — API has the endpoint) |

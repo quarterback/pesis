@@ -41,7 +41,7 @@ from . import ingest
 V1_BASE = "https://v1.pesistulokset.fi"
 # gzip matters: payloads are multi-MB and long chunked transfers are the
 # main failure mode — compressed they are ~10x smaller
-_HEADERS = {"User-Agent": "karki-analytics/0.1 (kärki pesäpallo analytics)",
+_HEADERS = {"User-Agent": "mallo-analytics/0.1 (mallo pesäpallo analytics)",
             "Accept": "application/json",
             "Accept-Encoding": "gzip"}
 

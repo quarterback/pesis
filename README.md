@@ -1,4 +1,4 @@
-# Kärki — pesäpallo analytics
+# Mallo — pesäpallo analytics
 
 An analytics engine and site for Finnish baseball (pesäpallo), built on data
 from the official results service [pesistulokset.fi](https://www.pesistulokset.fi/).
@@ -54,7 +54,7 @@ fly deploy
 
 The image fetches the REAL current Superpesis season at build time (demo
 fallback if offline) — re-deploying refreshes the data snapshot. Any Docker host (Railway, Render, a VPS) works the same
-way: `docker build -t karki . && docker run -p 8080:8080 karki`.
+way: `docker build -t mallo . && docker run -p 8080:8080 mallo`.
 
 ## Data sources
 

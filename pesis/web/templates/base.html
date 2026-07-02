@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Kärki{% endblock %} · Kärki pesäpalloanalytiikka</title>
+<title>{% block title %}Mallo{% endblock %} · Mallo pesäpalloanalytiikka</title>
 <style>
 :root {
   --surface-1: #fcfcfb; --page: #f9f9f7;
@@ -99,7 +99,7 @@ footer { color: var(--ink-3); font-size: 12px; text-align: center; margin: 32px 
 </head>
 <body>
 <header>
-  <span class="brand">Kärki</span>
+  <span class="brand">Mallo</span>
   <nav>
     {% for s in nav_seasons %}
     <a href="/?sid={{ s.id }}">{{ s.series }}</a>
@@ -112,6 +112,6 @@ footer { color: var(--ink-3); font-size: 12px; text-align: center; margin: 32px 
   </nav>
 </header>
 <main>{% block content %}{% endblock %}</main>
-<footer>Kärki — pesäpalloanalytiikka · data: <a href="https://www.pesistulokset.fi/">pesistulokset.fi</a></footer>
+<footer>Mallo — pesäpalloanalytiikka · data: <a href="https://www.pesistulokset.fi/">pesistulokset.fi</a></footer>
 </body>
 </html>

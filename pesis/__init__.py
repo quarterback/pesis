@@ -1,4 +1,4 @@
-"""Kärki — a pesäpallo analytics engine built on pesistulokset.fi data.
+"""Mallo — a pesäpallo analytics engine built on pesistulokset.fi data.
 
 Layers:
     api      — client for the official pesistulokset.fi JSON API
