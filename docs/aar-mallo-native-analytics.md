@@ -227,3 +227,18 @@ the source-of-record data in a new table.
   revisited after run-expectancy data exists.
 - HOME-AH+/KOTI-KL+ is only as complete as the raw base-split fields. Missing
   splits should remain blank until confirmed, not backfilled with assumptions.
+
+## Follow-up: baseball equivalence correction
+
+The baseball translation had a flawed product assumption: it centered a
+162-game MLB pace even though a Superpesis regular season is roughly 28–33
+games and the playoffs are short series (three best-of-five rounds for the
+championship path; the third-place path ends with a best-of-three bronze
+series). The corrected framing is:
+
+- lead with a **33-game MLB-month equivalent** for HR/RBI/R counting context;
+- keep 162-game pace only as a clearly labeled secondary extrapolation;
+- keep percentile-to-MLB-scale rate translations as the main bridge because
+  percentiles are schedule-length independent;
+- provide a `/baseball` comparison table so translated stats can be browsed
+  across a whole season, not only one player page at a time.

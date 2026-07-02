@@ -66,6 +66,7 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
     lines = []
     for r in rows:
         line = dict(r)
+        line["season_id"] = season_id
         line["tehot"] = line["kunnarit"] + line["lyodyt"] + line["tuodut"]
         if line["born_year"]:
             line["age"] = line["year"] - line["born_year"]
@@ -293,6 +294,7 @@ def game_log(conn: sqlite3.Connection, player_id: int,
     out = []
     for r in rows:
         line = dict(r)
+        line["season_id"] = season_id
         line["tehot"] = r["kunnarit"] + r["lyodyt"] + r["tuodut"]
         line["kl_pct"] = (r["karkilyonnit"] / r["karki_yritykset"]
                           if r["karki_yritykset"] else None)

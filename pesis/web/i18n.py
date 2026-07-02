@@ -16,6 +16,7 @@ S: dict[str, dict[str, str]] = {
     "site.tagline": {"fi": "pesäpalloanalytiikka", "en": "pesäpallo analytics"},
     "nav.projections": {"fi": "PARE-ennusteet", "en": "PARE projections"},
     "nav.standings": {"fi": "Sarjataulukko", "en": "Standings"},
+    "nav.baseball": {"fi": "Baseball-käännös", "en": "Baseball translation"},
     "nav.search": {"fi": "Haku", "en": "Search"},
     "nav.glossary": {"fi": "Sanasto", "en": "Glossary"},
     "nav.stats": {"fi": "Tilastot", "en": "Stats"},

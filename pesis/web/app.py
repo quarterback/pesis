@@ -278,7 +278,21 @@ def create_app(db_path: str | None = None) -> Flask:
                                        year=request.args.get("year", type=int))
         if not t:
             abort(404)
-        return render_template("baseball.html", t=t)
+        return render_template("baseball.html", tr=t)
+
+    @app.route("/baseball")
+    def baseball_table():
+        all_seasons = seasons()
+        if not all_seasons:
+            return render_template("empty.html")
+        season = pick_season(all_seasons)
+        sort = request.args.get("sort", "wrc_plus")
+        rows = translate.translate_season(conn(), season["id"], sort=sort, limit=100)
+        sort_options = ["wrc_plus", "avg_equiv", "hr600_equiv",
+                        "rbi600_equiv", "r600_equiv", "k_pct_equiv", "teho_plus"]
+        return render_template("baseball_leaderboard.html", rows=rows,
+                               season=season, seasons=all_seasons, sort=sort,
+                               sort_options=sort_options)
 
     @app.route("/league")
     def league():

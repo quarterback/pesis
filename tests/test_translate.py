@@ -40,11 +40,13 @@ def test_out_prone_player_gets_high_k_rate():
     assert whiff_k > 22.2 > elite_k  # worse than MLB mean; elite better
 
 
-def test_pace_scales_to_162_games():
+def test_counting_stats_lead_with_mlb_month_normalization():
     conn = _fixture()
     t = translate.translate_player(conn, 2)
     assert t["games"] == 10
-    assert t["pace"]["HR"] == round(10 * 162 / 10)  # 1 kunnari/game
+    assert t["context"]["regular_games"] == 10
+    assert t["counting"]["mlb_month"]["HR"] == 33  # 1 kunnari/game over MLB-month window
+    assert t["counting"]["mlb_full_pace"]["HR"] == 162  # secondary pace only
     assert t["tier"] is not None
 
 
@@ -54,6 +56,14 @@ def test_translate_runs_on_demo_league():
     t = translate.translate_player(conn, 1)
     assert t and t["qualified"]
     assert len(t["rows"]) == 5
+
+
+def test_translate_season_supports_comparison_table():
+    conn = _fixture()
+    sid = conn.execute("SELECT id FROM seasons WHERE year = 2026").fetchone()[0]
+    rows = translate.translate_season(conn, sid, sort="wrc_plus")
+    assert [r["name"] for r in rows][:2] == ["Elite Eero", "Avg Antti"]
+    assert rows[0]["avg_equiv"] is not None
 
 
 def test_missing_player_returns_none():

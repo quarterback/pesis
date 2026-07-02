@@ -1,28 +1,25 @@
 {% extends "base.html" %}
-{% block title %}{{ t.name }} — baseball translation{% endblock %}
+{% block title %}{{ tr.name }} — baseball translation{% endblock %}
 {% block content %}
-<h1>{{ t.name }}, translated for baseball fans</h1>
-<p class="sub">{{ t.team }} · Superpesis {{ t.year }}{% if t.age %} · age {{ t.age }}{% endif %}
+<h1>{{ tr.name }}, translated for baseball fans</h1>
+<p class="sub">{{ tr.team }} · Superpesis {{ tr.year }}{% if tr.age %} · age {{ tr.age }}{% endif %}
 · This page is in English on purpose — share it with people who know baseball but not pesäpallo.</p>
 
 <div class="tiles">
-  <div class="tile"><div class="label">wRC+ equivalent (TEHO+ {{ t.teho_plus }})</div>
-    <div class="value">{{ t.wrc_plus or "—" }}</div></div>
+  <div class="tile"><div class="label">wRC+ equivalent (TEHO+ {{ tr.teho_plus }})</div>
+    <div class="value">{{ tr.wrc_plus or "—" }}</div></div>
   <div class="tile"><div class="label">Reads like</div>
-    <div class="value" style="font-size:18px; line-height:2">{{ t.tier or "—" }}</div></div>
-  <div class="tile"><div class="label">One MLB month, volume-wise</div>
+    <div class="value" style="font-size:18px; line-height:2">{{ tr.tier or "—" }}</div></div>
+  <div class="tile"><div class="label">MLB-month equivalent</div>
     <div class="value" style="font-size:18px; line-height:2">
-      {{ t.games }} games · {{ t.pace.HR }}/{{ t.pace.RBI }}/{{ t.pace.R }}
-      HR/RBI/R at 162-game pace</div></div>
+      {{ tr.counting.mlb_month.games }}g · {{ tr.counting.mlb_month.HR }}/{{ tr.counting.mlb_month.RBI }}/{{ tr.counting.mlb_month.R }}
+      HR/RBI/R</div></div>
 </div>
-<p class="sub">A Superpesis regular season runs 28–33 games (33 in 2025) — almost exactly one
-month of MLB baseball. That's part of why baseball's statistical language fits this sport so
-well: you already reason about month-sized samples every May (Player of the Month, hot streaks,
-"on pace for" headlines). Read the pace above exactly that way — it's a ×{{ t.pace.extrapolation }}
-extrapolation, an April headline rather than a projection. The rate translations below don't
-even need the caveat: percentiles don't care how long the schedule is.</p>
+<p class="sub">A Superpesis regular season is {{ tr.context.regular_games }} games in this data (the modern league is roughly 28–33). MLB plays 162, so treating pesäpallo totals as direct MLB full-season totals is misleading. The card therefore leads with a {{ tr.context.mlb_month_games }}-game MLB-month equivalent. A 162-game pace still exists as context ({{ tr.counting.mlb_full_pace.HR }}/{{ tr.counting.mlb_full_pace.RBI }}/{{ tr.counting.mlb_full_pace.R }} HR/RBI/R, ×{{ tr.counting.mlb_full_pace.extrapolation }} from this player's games), but it is pace trivia, not an equivalency. Playoff context: the championship path can add up to 15 games (three best-of-five rounds), while the bronze path can add up to 13 (two best-of-five rounds plus a best-of-three third-place series).</p>
 
-{% if t.rows %}
+<p class="sub"><a href="/baseball?sid={{ tr.season_id }}">See the full baseball-translation comparison table →</a></p>
+
+{% if tr.rows %}
 <h2>Skill-by-skill translation <span style="font-weight:400;color:var(--ink-3)">(same percentile, MLB scale)</span></h2>
 <div class="card">
 <table>
@@ -31,7 +28,7 @@ even need the caveat: percentiles don't care how long the schedule is.</p>
         <th>MLB analog</th><th>Translated</th></tr>
   </thead>
   <tbody>
-    {% for r in t.rows %}
+    {% for r in tr.rows %}
     <tr>
       <td class="name">{{ r.pesis_label }}</td>
       <td>{{ r.pesis_value | rate }}</td>

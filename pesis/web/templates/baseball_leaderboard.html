@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Baseball translation {{ season.year }}{% endblock %}
+{% block content %}
+<h1>Baseball translation leaderboard</h1>
+<p class="sub">{{ season.series }} {{ season.year }} · Rank-preserving MLB-scale equivalents. Counting stats are normalized to an MLB-month window first; 162-game paces are shown only as secondary context.</p>
+
+<div class="filters">
+  <span class="lab">Sort</span>
+  {% for option in sort_options %}
+  <a href="?sort={{ option }}&amp;sid={{ season.id }}" class="{{ 'active' if option == sort }}">{{ option }}</a>
+  {% endfor %}
+</div>
+<div class="filters">
+  <span class="lab">Season</span>
+  {% for s in seasons %}
+  <a href="?sort={{ sort }}&amp;sid={{ s.id }}" class="{{ 'active' if s.id == season.id }}">{{ s.series }} {{ s.year }}</a>
+  {% endfor %}
+</div>
+
+<div class="card">
+<p class="sub" style="margin-bottom:10px">A Superpesis regular season is about {{ rows[0].context.regular_games if rows else 33 }} games; MLB has 162. The HR/RBI/R columns below are scaled to {{ rows[0].context.mlb_month_games if rows else 33 }} games — a baseball month-sized comparison — not sold as full-season equivalents.</p>
+<table>
+  <thead>
+    <tr><th>#</th><th class="name">Player</th><th class="name">Team</th><th>G</th><th>wRC+ eq</th><th>AVG eq</th><th>HR/600</th><th>RBI/600</th><th>R/600</th><th>K% eq</th><th>33g HR/RBI/R</th><th>162 pace</th></tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td class="name"><a href="/player/{{ r.player_id }}/baseball">{{ r.name }}</a></td>
+      <td class="name">{{ r.team }}</td>
+      <td>{{ r.games }}</td>
+      <td><strong>{{ r.wrc_plus or "—" }}</strong></td>
+      <td>{{ r.avg_equiv or "—" }}</td>
+      <td>{{ r.hr600_equiv or "—" }}</td>
+      <td>{{ r.rbi600_equiv or "—" }}</td>
+      <td>{{ r.r600_equiv or "—" }}</td>
+      <td>{{ r.k_pct_equiv or "—" }}</td>
+      <td>{{ r.counting.mlb_month.HR }}/{{ r.counting.mlb_month.RBI }}/{{ r.counting.mlb_month.R }}</td>
+      <td>{{ r.counting.mlb_full_pace.HR }}/{{ r.counting.mlb_full_pace.RBI }}/{{ r.counting.mlb_full_pace.R }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

@@ -1,27 +1,9 @@
 """Pesis → baseball translation — "what would this guy be in MLB terms?"
 
-Nobody has ever published a pesäpallo-to-baseball statistical bridge. This is
-NOT a claim that the skills transfer (they're different sports; the pitch is
-vertical and the manager calls the plays). It is a **rank-preserving quantile
-map**: a player's percentile among qualified Superpesis hitters is read off at
-the same percentile of the MLB qualified-hitter distribution. "He's a 92nd-
-percentile kärkilyönti hitter" becomes "his hit tool ranks like a .290 MLB
-bat" — a statement about *rank in his league*, translated into a scale
-baseball fans have intuition for.
-
-One translation is direct rather than quantile-mapped:
-  * 162-game pace — counting stats rescaled from the pesäpallo schedule to a
-    162-game season (a pace, not an equivalency, and labeled as such).
-
-The wRC+ equivalent is ALSO quantile-mapped (percentile of tehot-per-turn
-onto a wRC+ distribution of mean 100, sd 25). It is deliberately NOT a copy
-of TEHO+: real Superpesis production concentrates in the top of the order
-far more than MLB's (defensive specialists bat with near-zero tehot), so raw
-TEHO+ runs to 300+ and would label half the league MVP candidates.
-
-MLB reference distributions are approximations for qualified hitters in the
-2023–25 era (means/SDs eyeballed from FanGraphs leaderboards); they're
-translation furniture, not research claims — refine freely.
+This is a rank-preserving translation, not a claim of skill transfer. Counting
+stats are now normalized to baseball schedule windows: a Superpesis regular
+season is roughly MLB-month sized, so the page leads with 33-game equivalents
+and treats 162-game lines as secondary pace context only.
 """
 
 from __future__ import annotations
@@ -33,9 +15,6 @@ from .metrics import add_percentiles, player_seasons, season_lines
 
 _PHI = NormalDist()
 
-# pesis stat -> MLB analog: (mean, sd) of the MLB qualified-hitter
-# distribution, direction (+1 higher percentile = higher MLB value),
-# and the story of the analogy, written for a baseball audience.
 MAPPINGS = (
     {"stat": "kl_pct", "pesis": "Kärkilyönti-% (advance the lead runner)",
      "mlb": "AVG", "mean": 0.252, "sd": 0.026, "dir": +1, "fmt": ".3f",
@@ -63,12 +42,10 @@ WRC_TIERS = ((75, "replacement level"), (90, "bench bat"),
              (110, "league-average regular"), (125, "solid starter"),
              (140, "All-Star"), (160, "MVP candidate"))
 MLB_SEASON_GAMES = 162
-# A Superpesis regular season runs 28–33 games (33 in 2025, high-20s/30ish in
-# earlier years) — roughly one month of MLB baseball. The 162-game pace is
-# therefore a ~5× extrapolation and is presented as pace trivia, not a
-# projection; the quantile-mapped rate stats above it are the real
-# translation (they're schedule-length-free).
-SUPERPESIS_SEASON_GAMES = 30  # nominal; the page uses actual games played
+MLB_MONTH_GAMES = 33
+SUPERPESIS_REGULAR_SEASON_GAMES = 33
+SUPERPESIS_MAX_CHAMPIONSHIP_POSTSEASON_GAMES = 15  # 3 best-of-5 rounds
+SUPERPESIS_MAX_BRONZE_POSTSEASON_GAMES = 13  # 2 best-of-5 + best-of-3 bronze
 
 
 def _quantile_value(pct: int, mean: float, sd: float, direction: int) -> float:
@@ -83,50 +60,135 @@ def wrc_tier(wrc: int) -> str:
     return "peak-Bonds territory"
 
 
-def translate_player(conn: sqlite3.Connection, player_id: int,
-                     year: int | None = None) -> dict | None:
-    """Baseball card for one player-season. None if he has no season line.
+def season_game_context(conn: sqlite3.Connection, season_id: int) -> dict:
+    """Return schedule context for baseball translations.
 
-    Percentiles come from the same qualified pool the player pages use; the
-    `dir` flag handles stats where better = lower (palot → K%). Percentile
-    flipping in metrics is undone first so the map sees raw rank-of-value.
+    Prefer actual team games from matches; fall back to the max player-games in
+    sparse fixtures. The regular-season count is the normalization denominator
+    for MLB-month equivalents, avoiding the old mistake of presenting only a
+    162-game extrapolation for a 28–33 game sport.
     """
-    career = player_seasons(conn, player_id)
-    if not career:
-        return None
-    target = next((s for s in career if s["year"] == year), career[-1])
-    lines = season_lines(conn, target["season_id"])
-    add_percentiles(lines, stats=tuple(m["stat"] for m in MAPPINGS)
-                    + ("tehot_per_turn",))
-    line = next(l for l in lines if l["player_id"] == player_id)
+    rows = conn.execute(
+        """SELECT team, COUNT(*) AS games FROM (
+               SELECT home_team AS team FROM matches WHERE season_id = ?
+               UNION ALL
+               SELECT away_team AS team FROM matches WHERE season_id = ?
+           ) GROUP BY team""", (season_id, season_id)).fetchall()
+    actual = max((r["games"] for r in rows), default=0)
+    if not actual:
+        rows = conn.execute(
+            """SELECT player_id, COUNT(*) AS games FROM player_games
+               WHERE season_id = ? GROUP BY player_id""", (season_id,)).fetchall()
+        actual = max((r["games"] for r in rows), default=SUPERPESIS_REGULAR_SEASON_GAMES)
+    regular = actual or SUPERPESIS_REGULAR_SEASON_GAMES
+    return {
+        "regular_games": regular,
+        "mlb_month_games": MLB_MONTH_GAMES,
+        "mlb_full_games": MLB_SEASON_GAMES,
+        "championship_max_games": regular + SUPERPESIS_MAX_CHAMPIONSHIP_POSTSEASON_GAMES,
+        "bronze_max_games": regular + SUPERPESIS_MAX_BRONZE_POSTSEASON_GAMES,
+        "full_extrapolation": round(MLB_SEASON_GAMES / max(regular, 1), 1),
+    }
 
+
+def _counting_equivalents(line: dict, context: dict) -> dict:
+    games = max(line["games"] or 1, 1)
+
+    def scaled(stat: str, target_games: int) -> int:
+        return round(line[stat] * target_games / games)
+
+    return {
+        "actual": {"HR": line["kunnarit"], "RBI": line["lyodyt"], "R": line["tuodut"]},
+        "mlb_month": {"games": context["mlb_month_games"],
+                      "HR": scaled("kunnarit", context["mlb_month_games"]),
+                      "RBI": scaled("lyodyt", context["mlb_month_games"]),
+                      "R": scaled("tuodut", context["mlb_month_games"])},
+        "regular_normalized": {"games": context["regular_games"],
+                               "HR": scaled("kunnarit", context["regular_games"]),
+                               "RBI": scaled("lyodyt", context["regular_games"]),
+                               "R": scaled("tuodut", context["regular_games"])},
+        "mlb_full_pace": {"games": context["mlb_full_games"],
+                          "HR": scaled("kunnarit", context["mlb_full_games"]),
+                          "RBI": scaled("lyodyt", context["mlb_full_games"]),
+                          "R": scaled("tuodut", context["mlb_full_games"]),
+                          "extrapolation": round(context["mlb_full_games"] / games, 1)},
+    }
+
+
+def _translated_rows(line: dict) -> list[dict]:
     rows = []
     for m in MAPPINGS:
         pct = line.get(f"pct_{m['stat']}")
         value = line.get(m["stat"])
         if pct is None or value is None:
             continue
-        # add_percentiles flips negative stats so high pct = good; `dir`
-        # decides whether "good" means a bigger or smaller MLB number.
         mlb = _quantile_value(pct, m["mean"], m["sd"], m["dir"])
         rows.append({"pesis_label": m["pesis"], "pesis_value": value,
                      "percentile": pct, "mlb_stat": m["mlb"],
-                     "mlb_value": format(mlb, m["fmt"]),
+                     "mlb_value": format(mlb, m["fmt"]), "mlb_raw": mlb,
                      "blurb": m["blurb"]})
+    return rows
 
-    games = line["games"] or 1
-    pace = {
-        "HR": round(line["kunnarit"] * MLB_SEASON_GAMES / games),
-        "RBI": round(line["lyodyt"] * MLB_SEASON_GAMES / games),
-        "R": round(line["tuodut"] * MLB_SEASON_GAMES / games),
-        "extrapolation": round(MLB_SEASON_GAMES / max(games, 1), 1),
-    }
+
+def translate_line(line: dict, context: dict) -> dict:
+    rows = _translated_rows(line)
     pct_prod = line.get("pct_tehot_per_turn")
     wrc = (round(_quantile_value(pct_prod, 100.0, 25.0, +1))
            if pct_prod is not None else None)
-    return {"player_id": player_id, "name": line["name"], "team": line["team"],
-            "year": line["year"], "age": line.get("age"),
-            "games": line["games"], "qualified": bool(rows),
-            "rows": rows, "wrc_plus": wrc, "teho_plus": line["teho_plus"],
+    rowmap = {r["mlb_stat"]: r for r in rows}
+    return {"player_id": line["player_id"], "name": line["name"],
+            "team": line["team"], "year": line["year"],
+            "season_id": line.get("season_id"), "age": line.get("age"),
+            "games": line["games"], "qualified": bool(rows), "rows": rows,
+            "wrc_plus": wrc, "teho_plus": line["teho_plus"],
             "tier": wrc_tier(wrc) if wrc is not None else None,
-            "pace": pace}
+            "counting": _counting_equivalents(line, context),
+            "pace": _counting_equivalents(line, context)["mlb_full_pace"],
+            "context": context,
+            "avg_equiv": rowmap.get("AVG", {}).get("mlb_value"),
+            "hr600_equiv": rowmap.get("HR / 600 PA", {}).get("mlb_value"),
+            "rbi600_equiv": rowmap.get("RBI / 600 PA", {}).get("mlb_value"),
+            "r600_equiv": rowmap.get("R / 600 PA", {}).get("mlb_value"),
+            "k_pct_equiv": rowmap.get("K%", {}).get("mlb_value")}
+
+
+def translated_season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
+    lines = season_lines(conn, season_id)
+    add_percentiles(lines, stats=tuple(m["stat"] for m in MAPPINGS) + ("tehot_per_turn",))
+    context = season_game_context(conn, season_id)
+    return [translate_line(line, context) for line in lines]
+
+
+def translate_player(conn: sqlite3.Connection, player_id: int,
+                     year: int | None = None) -> dict | None:
+    career = player_seasons(conn, player_id)
+    if not career:
+        return None
+    target = next((s for s in career if s["year"] == year), career[-1])
+    for translated in translated_season_lines(conn, target["season_id"]):
+        if translated["player_id"] == player_id:
+            return translated
+    return None
+
+
+def translate_season(conn: sqlite3.Connection, season_id: int,
+                     sort: str = "wrc_plus", limit: int = 100) -> list[dict]:
+    allowed = {"wrc_plus", "avg_equiv", "hr600_equiv", "rbi600_equiv",
+               "r600_equiv", "k_pct_equiv", "teho_plus"}
+    if sort not in allowed:
+        sort = "wrc_plus"
+    rows = [r for r in translated_season_lines(conn, season_id) if r["qualified"]]
+
+    def key(row: dict):
+        value = row.get(sort)
+        if value is None:
+            return -9999
+        if sort == "k_pct_equiv":
+            return -float(str(value).rstrip("%"))
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return value
+
+    rows.sort(key=key, reverse=True)
+    return rows[:limit]
