@@ -71,6 +71,17 @@ def create_app(db_path: str | None = None) -> Flask:
             g.db = db.connect(app.config["DB_PATH"])
         return g.db
 
+    # season aggregates are immutable between ingests (which restart the
+    # app), so cache them process-wide; with 35 years of history a career
+    # page would otherwise recompute ~100 full-season aggregations
+    _lines_cache: dict[int, list[dict]] = {}
+
+    def cached_lines(season_id: int) -> list[dict]:
+        if season_id not in _lines_cache:
+            _lines_cache[season_id] = metrics.season_lines(conn(), season_id)
+        # copies: callers (add_percentiles) mutate lines in place
+        return [dict(l) for l in _lines_cache[season_id]]
+
     @app.teardown_appcontext
     def close(_exc):
         if "db" in g:
@@ -124,7 +135,7 @@ def create_app(db_path: str | None = None) -> Flask:
         if not all_seasons:
             return render_template("empty.html")
         season = pick_season(all_seasons)
-        league = metrics.league_rates(metrics.season_lines(c, season["id"]))
+        league = metrics.league_rates(cached_lines(season["id"]))
         ids = [r[0] for r in c.execute(
             "SELECT DISTINCT player_id FROM player_games WHERE season_id = ?",
             (season["id"],)).fetchall()]
@@ -255,11 +266,11 @@ def create_app(db_path: str | None = None) -> Flask:
         row = c.execute("SELECT * FROM players WHERE id = ?", (player_id,)).fetchone()
         if not row:
             abort(404)
-        career = metrics.player_seasons(c, player_id)
+        career = metrics.player_seasons(c, player_id, lines_fn=cached_lines)
         if not career:
             abort(404)
         current = career[-1]
-        season_lines = metrics.season_lines(c, current["season_id"])
+        season_lines = cached_lines(current["season_id"])
         metrics.add_percentiles(season_lines)
         line = next(l for l in season_lines if l["player_id"] == player_id)
         proj = projection.project_player(c, player_id)
@@ -277,6 +288,7 @@ def create_app(db_path: str | None = None) -> Flask:
                                base_labels=metrics.BASE_KL_LABELS,
                                log=metrics.game_log(c, player_id,
                                                     current["season_id"]),
-                               comps=similarity.comps(c, player_id))
+                               comps=similarity.comps(c, player_id,
+                                                      lines_fn=cached_lines))
 
     return app

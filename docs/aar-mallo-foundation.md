@@ -74,6 +74,13 @@ Superpesis data. Branch `claude/darko-projection-system-xhwe7r`, PR #1 et seq.*
   season/seasonSeries ids come from a JSON catalog embedded in its HTML
   (82 seasons, 1945→). **Granular per-game rows verified back to 1991**
   (~4,300 rows/season/league) incl. per-base kärkilyönti splits.
+- **Full backfill executed** (`ingest-v1 --from-year 1991 --to-year 2026`,
+  both leagues, ~1s spacing): 266,746 player-game rows, 11,175 matches,
+  2,812 players, 72 league-seasons. Longest careers found: Toni Kohonen 29
+  seasons (1993–2022), Henri Puputti 27 (2000–2026, still active). Old
+  payloads sometimes carry numbers as strings (coerced in `_match_runs`).
+  Career pages over 35 years needed a process-level season-lines cache
+  (first hit ~2.4s warms it, then ~0.2s/page).
 - `windy`/`rainy` are 0/1 flags; temperature and attendance are per match;
   stadiums are real names with geo.
 - Superpesis regular season is 28–33 games (33 in 2025) ≈ one MLB month —

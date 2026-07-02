@@ -21,10 +21,11 @@ FEATURES = ("kl_pct", "saatto_pct", "eten_pct", "kunnari_rate",
 AGE_WEIGHT = 0.5  # age counts, but half as much as a skill z-score
 
 
-def _pool(conn: sqlite3.Connection) -> list[dict]:
+def _pool(conn: sqlite3.Connection, lines_fn=None) -> list[dict]:
+    lines_fn = lines_fn or (lambda sid: season_lines(conn, sid))
     lines = []
     for sid, in conn.execute("SELECT id FROM seasons").fetchall():
-        for line in season_lines(conn, sid):
+        for line in lines_fn(sid):
             if line["turns_at_bat"] >= QUALIFY_TURNS:
                 line["season_id"] = sid
                 lines.append(line)
@@ -58,13 +59,13 @@ def _distance(a: dict, b: dict, scale: dict) -> float | None:
 
 
 def comps(conn: sqlite3.Connection, player_id: int, year: int | None = None,
-          limit: int = 5) -> list[dict]:
+          limit: int = 5, lines_fn=None) -> list[dict]:
     """Closest qualified season lines to the player's (latest or given) season.
 
     Other seasons by the same player are excluded — "you at 24" is trivia,
     not a comp.
     """
-    pool = _pool(conn)
+    pool = _pool(conn, lines_fn)
     mine = [l for l in pool if l["player_id"] == player_id
             and (year is None or l["year"] == year)]
     if not mine:

@@ -118,15 +118,23 @@ def _normalize(row: dict) -> dict:
     }
 
 
+def _int(v) -> int:
+    """Historical payloads sometimes carry numbers as strings."""
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _match_runs(result: dict) -> tuple[int | None, int | None]:
     """Total runs per side: periods + super inning (scoring contest excluded —
     it's a shootout, not run environment)."""
     if not result:
         return None, None
     d = result.get("details") or result
-    home = sum(d.get(k) or 0 for k in
+    home = sum(_int(d.get(k)) for k in
                ("runs_home_first_period", "runs_home_second_period", "runs_home_super_inning"))
-    away = sum(d.get(k) or 0 for k in
+    away = sum(_int(d.get(k)) for k in
                ("runs_away_first_period", "runs_away_second_period", "runs_away_super_inning"))
     return home, away
 
@@ -142,7 +150,9 @@ def _match_periods(result: dict) -> tuple[int | None, int | None, int | None]:
     tiebreak = int(any(d.get(k) is not None for k in (
         "runs_home_super_inning", "runs_away_super_inning",
         "runs_home_scoring_contest", "runs_away_scoring_contest")))
-    return d.get("periods_home"), d.get("periods_away"), tiebreak
+    ph, pa = d.get("periods_home"), d.get("periods_away")
+    return (None if ph is None else _int(ph),
+            None if pa is None else _int(pa), tiebreak)
 
 
 def import_payload(conn: sqlite3.Connection, payload: dict, year: int,

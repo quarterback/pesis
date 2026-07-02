@@ -229,14 +229,20 @@ def game_log(conn: sqlite3.Connection, player_id: int,
     return out
 
 
-def player_seasons(conn: sqlite3.Connection, player_id: int) -> list[dict]:
-    """Season-by-season lines for one player (career page / trajectories)."""
+def player_seasons(conn: sqlite3.Connection, player_id: int,
+                   lines_fn=None) -> list[dict]:
+    """Season-by-season lines for one player (career page / trajectories).
+
+    ``lines_fn(season_id)`` overrides season_lines — the web app passes a
+    cached provider (with 35 years of history a career page would otherwise
+    recompute dozens of full-season aggregations)."""
+    lines_fn = lines_fn or (lambda sid: season_lines(conn, sid))
     season_ids = [r[0] for r in conn.execute(
         "SELECT DISTINCT season_id FROM player_games WHERE player_id = ?",
         (player_id,)).fetchall()]
     out = []
     for sid in season_ids:
-        for line in season_lines(conn, sid):
+        for line in lines_fn(sid):
             if line["player_id"] == player_id:
                 line["season_id"] = sid
                 out.append(line)
