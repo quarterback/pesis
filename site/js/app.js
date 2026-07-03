@@ -54,6 +54,20 @@ function contactAddr() {
   return ['ron', ['ronbronson', 'com'].join('.')].join(String.fromCharCode(64));
 }
 
+// Show "data last refreshed" in the footer from meta.generated (stamped by
+// export.py on each daily run). Kept quiet if the timestamp is missing/bad.
+function renderUpdated(iso) {
+  const el = document.getElementById('updated');
+  if (!el) return;
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d)) { el.textContent = ''; return; }
+  const date = d.toLocaleDateString('fi-FI',
+    { day: 'numeric', month: 'numeric', year: 'numeric' });
+  const time = d.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' });
+  el.textContent = ` · päivitetty ${date} klo ${time}`;
+  el.title = `Data ajettu ${d.toISOString()}`;
+}
+
 async function fetchJSON(url) {
   if (_cache[url]) return _cache[url];
   const r = await fetch(url);
@@ -1028,6 +1042,7 @@ async function route() {
   try {
     if (!META) META = await fetchJSON('data/meta.json');
     renderNav();
+    renderUpdated(META.generated);
 
     const defaultSid = META.nav_seasons[0]?.id;
 

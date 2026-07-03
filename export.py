@@ -8,6 +8,7 @@ The site/ directory can then be deployed to Netlify, Vercel, or any static host.
 """
 from __future__ import annotations
 import json, re, unicodedata
+from datetime import datetime, timezone
 from pathlib import Path
 from pesis import context, db, metrics, projection, simulate, translate
 
@@ -95,8 +96,16 @@ def main():
            WHERE year = (SELECT MAX(year) FROM seasons WHERE series = s.series)
            ORDER BY series"""
     ).fetchall())
-    dump(OUT / "meta.json", {"seasons": all_seasons, "nav_seasons": nav_seasons})
-    print(f"  meta.json  ({len(all_seasons)} seasons)")
+    # Stamp when this export ran so the site can show a "data last refreshed"
+    # line in the footer. The daily workflow runs export.py right after each
+    # ingest, so this doubles as the "data has been run" timestamp.
+    generated = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    dump(OUT / "meta.json", {
+        "generated": generated,
+        "seasons": all_seasons,
+        "nav_seasons": nav_seasons,
+    })
+    print(f"  meta.json  ({len(all_seasons)} seasons, generated {generated})")
 
     # ── Season-lines cache ─────────────────────────────────────────────
     _cache: dict = {}
