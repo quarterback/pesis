@@ -334,6 +334,7 @@ td.pos{ color:var(--accent); } td.neg{ color:var(--ink3); }   /* run diff: + is 
    FOOTER
    ---------------------------------------------------------------------------- */
 footer{ color:var(--ink3); font-size:12px; text-align:center; margin:32px 0; }
+footer .updated{ white-space:nowrap; opacity:.85; }
 
 /* narrow screens */
 @media (max-width:720px){
