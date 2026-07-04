@@ -650,8 +650,12 @@ async function showPlayer(pid) {
 
   let careerRows = '';
   for (const s of career) {
+    const teamCell = s.team
+      ? `<a href="#/team/${encodeURIComponent(s.team)}?sid=${s.season_id}">${s.team}</a>`
+      : '—';
     careerRows += `<tr>
       <td class="name">${s.year}</td>
+      <td class="name">${teamCell}</td>
       <td class="num">${s.games}</td><td class="num">${s.turns_at_bat}</td>
       <td class="num strong">${s.vyk??'—'}</td>
       <td class="num">${s.spark_index??'—'}</td>
@@ -738,7 +742,7 @@ async function showPlayer(pid) {
           <div class="card" style="padding:0;overflow:hidden">
             <table>
               <thead><tr>
-                <th class="name">Kausi</th><th>O</th><th>Vuorot</th>
+                <th class="name">Kausi</th><th class="name">Joukkue</th><th>O</th><th>Vuorot</th>
                 <th>VYK</th><th>SPARK</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th>KOTI-KL+</th>
                 <th class="extra">TEHO+</th><th title="kenttäkorjattu">kTEHO+</th>
               </tr></thead>
