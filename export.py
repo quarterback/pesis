@@ -45,9 +45,9 @@ def rows_to_dicts(rows) -> list[dict]:
 # Only the fields each view actually reads — keeps the historical export small.
 ROSTER_FIELDS = ["player_id", "name", "games", "turns_at_bat", "pos",
                  "spark_index", "adv_plus", "runner_plus", "out_avoid_plus", "teho_plus"]
-CAREER_FIELDS = ["year", "age", "games", "turns_at_bat", "vyk", "spark_index",
-                 "adv_plus", "runner_plus", "out_avoid_plus", "money_kl_plus",
-                 "teho_plus", "teho_plus_adj"]
+CAREER_FIELDS = ["year", "season_id", "team", "age", "games", "turns_at_bat",
+                 "vyk", "spark_index", "adv_plus", "runner_plus", "out_avoid_plus",
+                 "money_kl_plus", "teho_plus", "teho_plus_adj"]
 LEADERBOARD_PLAYER_FIELDS = (["player_id", "name", "team", "games", "turns_at_bat",
                               "pos", "raa"] + LEADERBOARD_STATS)
 
