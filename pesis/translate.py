@@ -9,7 +9,14 @@ percentile kärkilyönti hitter" becomes "his hit tool ranks like a .290 MLB
 bat" — a statement about *rank in his league*, translated into a scale
 baseball fans have intuition for.
 
-One translation is direct rather than quantile-mapped:
+Two translations are NOT rank→normal quantile-mapped:
+  * Kärkilyönti-% → AVG — KL% (kärkilyönnit / yritykset) is itself a batting
+    average, so it is put on the MLB AVG scale by a straight LINEAR recenter
+    (slope 1): shift the league-average KL% (~.53) onto the MLB league-average
+    AVG (~.25) and keep every hitter's actual KL% spacing. The old quantile map
+    read only a player's *rank* and sanded real gaps toward the mean, so a
+    genuinely better KL% hitter barely moved the AVG. Linear keeps it honest and
+    still lands on a batting-average scale.
   * 162-game pace — counting stats rescaled from the pesäpallo schedule to a
     162-game season (a pace, not an equivalency, and labeled as such).
 
@@ -37,11 +44,12 @@ _PHI = NormalDist()
 # distribution, direction (+1 higher percentile = higher MLB value),
 # and the story of the analogy, written for a baseball audience.
 MAPPINGS = (
-    # AVG is intentionally stretched wider than the real MLB spread (sd ~.026):
-    # the elite of Superpesis (KL% ~.800) should read as a historic .400 season,
-    # not a compressed ~.310. Anchored so the ~99th percentile ≈ .400.
+    # KL% IS a batting average (kärkilyönnit / yritykset). Map it LINEARLY onto
+    # the AVG scale (slope 1) instead of through the rank→normal quantile map,
+    # which sanded real KL% gaps toward the mean. `linear` shifts the league KL%
+    # mean (KL_PESIS_MEAN) onto the MLB AVG mean (KL_MLB_MEAN); spacing is kept.
     {"stat": "kl_pct", "pesis": "Kärkilyönti-% (advance the lead runner)",
-     "mlb": "AVG", "mean": 0.250, "sd": 0.064, "dir": +1, "fmt": ".3f",
+     "mlb": "AVG", "linear": True, "dir": +1, "fmt": ".3f",
      "blurb": "The core bat-to-ball skill. A kärkilyönti advances the lead "
               "runner — think situational hitting as the PRIMARY batting stat."},
     {"stat": "kl_per_turn", "pesis": "Kärkilyönnit per turn (base hits)",
@@ -81,6 +89,25 @@ SUPERPESIS_SEASON_GAMES = 30  # nominal; the page uses actual games played
 def _quantile_value(pct: int, mean: float, sd: float, direction: int) -> float:
     z = _PHI.inv_cdf(min(99, max(1, pct)) / 100)
     return mean + direction * sd * z
+
+
+# KL% → AVG linear anchor. The qualified-hitter KL% league mean (~.53, stable
+# across seasons) is shifted onto the MLB qualified-hitter AVG mean (~.25). Slope
+# is 1 — the map recenters without compressing, so real KL% gaps survive. A few
+# of the very worst qualified hitters land below zero and are clamped to .000.
+KL_PESIS_MEAN = 0.533
+KL_MLB_MEAN = 0.250
+
+
+def mlb_value_for(mapping: dict, pct: int, value: float) -> float:
+    """MLB-scale value for one MAPPINGS entry. `linear` stats are a straight
+    slope-1 recenter of their own rate onto the MLB scale (KL% is a batting
+    average, so its real spacing is kept rather than rank-sanded); everything
+    else is rank-preserving quantile-mapped from the player's percentile. Both
+    the Flask app and the static-site export go through here so they can't drift."""
+    if mapping.get("linear"):
+        return max(0.0, KL_MLB_MEAN + (value - KL_PESIS_MEAN))
+    return _quantile_value(pct, mapping["mean"], mapping["sd"], mapping["dir"])
 
 
 def wrc_tier(wrc: int) -> str:
@@ -137,7 +164,7 @@ def translate_player(conn: sqlite3.Connection, player_id: int,
             continue
         # add_percentiles flips negative stats so high pct = good; `dir`
         # decides whether "good" means a bigger or smaller MLB number.
-        mlb = _quantile_value(pct, m["mean"], m["sd"], m["dir"])
+        mlb = mlb_value_for(m, pct, value)
         rows.append({"pesis_label": m["pesis"], "pesis_value": value,
                      "percentile": pct, "mlb_stat": m["mlb"],
                      "mlb_value": format(mlb, m["fmt"]),

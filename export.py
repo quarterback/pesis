@@ -65,7 +65,7 @@ def translation_card(line: dict) -> dict | None:
         value = line.get(m["stat"])
         if pct is None or value is None:
             continue
-        mlb = translate._quantile_value(pct, m["mean"], m["sd"], m["dir"])
+        mlb = translate.mlb_value_for(m, pct, value)
         rows.append({"pesis_label": m["pesis"], "pesis_value": value,
                      "percentile": pct, "mlb_stat": m["mlb"],
                      "mlb_value": format(mlb, m["fmt"])})
