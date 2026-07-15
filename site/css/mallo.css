@@ -345,10 +345,22 @@ footer .updated{ white-space:nowrap; opacity:.85; }
 /* wide stat tables scroll inside their own card rather than blowing out the page */
 .card[style*="overflow"]{ overflow-x:auto !important; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
 
-/* glossary (Kaava) tables: fixed 3-col layout with a floor width so the middle
-   formula column can't collapse on narrow screens — the card scrolls instead of
-   crushing/overlapping cell text. */
-.card table.gloss{ table-layout:fixed; width:100%; min-width:540px; }
+/* glossary (Kaava) tables: 3-col reference layout. The formula column would
+   otherwise inherit the global `tbody td{white-space:nowrap}` and overflow its
+   fixed cell, printing on top of the Huomio column on narrow screens. Force
+   wrapping (including long monospace tokens) and switch to percentage columns
+   on phones so the whole table fits the viewport with no overlap or side-scroll. */
+.card table.gloss{ table-layout:fixed; width:100%; }
+.card table.gloss th, .card table.gloss td{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; vertical-align:top; }
+.card table.gloss td code{ white-space:normal; overflow-wrap:anywhere; }
+.card table.gloss col.c-stat{ width:150px; }
+.card table.gloss col.c-note{ width:210px; }   /* c-form takes the remainder */
+@media (max-width:640px){
+  .card table.gloss col.c-stat{ width:26%; }
+  .card table.gloss col.c-form{ width:42%; }
+  .card table.gloss col.c-note{ width:32%; }
+  .card table.gloss th, .card table.gloss td{ padding-left:9px; padding-right:9px; font-size:12px; }
+}
 
 @media (max-width:640px){
   header{ padding:11px 14px; flex-wrap:wrap; gap:8px 12px; }

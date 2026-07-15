@@ -923,9 +923,9 @@ function showGlossary() {
   const gtable = (rows) => `
     <table class="gloss">
       <colgroup>
-        <col style="width:160px">
-        <col>
-        <col style="width:220px">
+        <col class="c-stat">
+        <col class="c-form">
+        <col class="c-note">
       </colgroup>
       <thead><tr>
         <th class="name">Tilasto</th>
