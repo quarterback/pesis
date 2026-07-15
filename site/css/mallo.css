@@ -345,6 +345,11 @@ footer .updated{ white-space:nowrap; opacity:.85; }
 /* wide stat tables scroll inside their own card rather than blowing out the page */
 .card[style*="overflow"]{ overflow-x:auto !important; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
 
+/* glossary (Kaava) tables: fixed 3-col layout with a floor width so the middle
+   formula column can't collapse on narrow screens — the card scrolls instead of
+   crushing/overlapping cell text. */
+.card table.gloss{ table-layout:fixed; width:100%; min-width:540px; }
+
 @media (max-width:640px){
   header{ padding:11px 14px; flex-wrap:wrap; gap:8px 12px; }
   header .brand{ font-size:21px; }

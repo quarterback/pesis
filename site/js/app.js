@@ -921,7 +921,7 @@ function showAbout() {
 function showGlossary() {
   // glossary tables have long text — allow wrapping in the Huomio column
   const gtable = (rows) => `
-    <table style="table-layout:fixed;width:100%">
+    <table class="gloss">
       <colgroup>
         <col style="width:160px">
         <col>
