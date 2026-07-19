@@ -36,7 +36,89 @@ const STAT_LABEL = {
   teho_plus:'TEHO+', teho_plus_adj:'kTEHO+',
   vyk:'VYK', jyk:'JYK', raa:'RAA',
   tehot:'Tehot', kunnarit:'Kunnarit', lyodyt:'Lyödyt', tuodut:'Tuodut',
+  turns_at_bat:'Vuorot', lra:'LRA', lra_minus:'LRA-', lukkari_rp:'RP',
+  ekl:'eKL%', esaatto:'eSaatto%', eeten:'eEtenemis%', epalo:'ePalo%', eteho:'eTEHO+',
 };
+
+/* ── Stat helpers — ⓘ popovers ──────────────────────────────────────────────
+   One-tap explainer for every stat: what it measures and why it exists.
+   infoBtn(key) renders the button anywhere; a capture-phase click handler
+   opens the popover (and keeps table-header sorting untouched). */
+const STAT_INFO = {
+  vyk: { fi: 'Voitot Yli Korvaajan. Pelaajan koko arvo voittoina verrattuna vapaasti saatavilla olevaan pelaajaan.', en: 'Wins above replacement, a player’s total value in wins. It is the same idea as WAR in baseball.' },
+  jyk: { fi: 'Juoksut Yli Korvaajan. Sama arvo kuin VYK, mitattuna juoksuina.', en: 'Runs above replacement. VYK measured in runs.' },
+  raa: { fi: 'Juoksut yli sarjan keskitason.', en: 'Runs above league average.' },
+  spark_index: { fi: 'Kärjenrakentajan indeksi, joka yhdistää etenemisen lyöjänä, etenijänä ja palojen välttämisen. 100 on sarjan keskitaso.', en: 'A table-setter index combining advancement, baserunning and out avoidance. 100 is league average.' },
+  adv_plus: { fi: 'Kärkilyönnit ja saatot jaettuna yrityksillä, sarjaan indeksoituna.', en: 'Lead-runner hits and escorts per attempt, indexed to the league.' },
+  runner_plus: { fi: 'Onnistuneet etenemiset per yritys suhteessa sarjaan, kun pelaaja juoksee itse.', en: 'Successful advances per attempt relative to the league, as a runner.' },
+  out_avoid_plus: { fi: 'Palojen välttäminen. Yli 100 = palaa keskivertoa harvemmin.', en: 'Out avoidance. Over 100 means fewer burns than average.' },
+  money_kl_plus: { fi: 'Kotiuttavat kärkilyönnit suhteessa sarjaan.', en: 'Scoring advances relative to the league.' },
+  teho_plus: { fi: 'Tuotanto lyöntivuoroa kohden, 100 on sarjan keskitaso. Vastaa baseballin wRC+:aa.', en: 'Production per turn at bat, where 100 is league average. It is comparable to wRC+ in baseball.' },
+  teho_plus_adj: { fi: 'TEHO+ kenttäkorjattuna: kotikentän juoksuympäristön vaikutus poistettu.', en: 'TEHO+ adjusted for ballpark run environments.' },
+  kl_pct: { fi: 'Kärkilyönnit jaettuna yrityksillä eli lajin lyöntikeskiarvo. Sarjan keskitaso on noin .530.', en: 'Lead-runner hits divided by attempts, the sport’s batting average. The league average is around .530.' },
+  saatto_pct: { fi: 'Saatot per yritys: takaetenijän vieminen lyönnillä.', en: 'Escorts per attempt: moving the trailing runner with a hit.' },
+  eten_pct: { fi: 'Onnistuneet etenemiset per yritys pelaajan juostessa itse.', en: 'Successful advances per attempt as a runner.' },
+  kunnari_rate: { fi: 'Kunnarit per lyöntivuoro.', en: 'Home runs per turn.' },
+  lyoty_rate: { fi: 'Kotiin lyödyt juoksut lyöntivuoroa kohden. Vastaa baseballin RBI:tä.', en: 'Runs batted home per turn, comparable to RBI.' },
+  palo_rate: { fi: 'Palot per vuoro. Pienempi on parempi.', en: 'Burns per turn. Lower is better.' },
+  tehot_per_turn: { fi: 'Tehot (K + L + T) per lyöntivuoro.', en: 'Tehot (K + L + T) per turn.' },
+  adv1_pct: { fi: 'Kärjen eteneminen ykköseltä kakkoselle per yritys. Virallinen split.', en: 'Lead-runner advances from first to second, per attempt.' },
+  adv2_pct: { fi: 'Kärjen eteneminen kakkoselta kolmoselle per yritys.', en: 'Lead-runner advances from second to third, per attempt.' },
+  adv3_pct: { fi: 'Kärjen eteneminen kolmoselta kotiin per yritys.', en: 'Lead-runner advances from third to home, per attempt.' },
+  adv_home_pct: { fi: 'Kotiutusprosentti: kärki kotiin per yritys.', en: 'Scoring rate: lead runner home, per attempt.' },
+  adv1_plus: { fi: '1 % sarjaindeksinä. 100 = keskitaso.', en: 'The 1→2 split as a league index. 100 = average.' },
+  adv2_plus: { fi: '2 % sarjaindeksinä. 100 = keskitaso.', en: 'The 2→3 split as a league index. 100 = average.' },
+  adv3_plus: { fi: '3 % sarjaindeksinä. 100 = keskitaso.', en: 'The 3→home split as a league index. 100 = average.' },
+  adv_home_plus: { fi: 'Kotiutus sarjaindeksinä. 100 = keskitaso.', en: 'The scoring split as a league index. 100 = average.' },
+  kl_base0: { fi: 'Kärjen eteneminen ykköseltä kakkoselle per yritys.', en: 'Lead-runner advances from first to second, per attempt.' },
+  kl_base1: { fi: 'Kärjen eteneminen kakkoselta kolmoselle per yritys.', en: 'Lead-runner advances from second to third, per attempt.' },
+  kl_base2: { fi: 'Kärjen eteneminen kolmoselta kotiin per yritys.', en: 'Lead-runner advances from third to home, per attempt.' },
+  kl_base3: { fi: 'Kotiutusprosentti: kärki kotiin per yritys.', en: 'Scoring rate: lead runner home, per attempt.' },
+  turns_at_bat: { fi: 'Lyöntivuorot. Vastaa baseballin PA-lukua.', en: 'Turns at bat, the same idea as plate appearances.' },
+  lra: { fi: 'Päästetyt juoksut lukkariottelua kohden. Vastaa baseballin ERA-lukua.', en: 'Runs allowed per game as lukkari, comparable to ERA.' },
+  lra_minus: { fi: 'LRA sarjaindeksinä: 100 = keskitaso, pienempi parempi.', en: 'LRA as a league index: 100 = average, lower is better.' },
+  lukkari_rp: { fi: 'Estetyt juoksut yli sarjan keskitason. Peliaika kasvattaa lukua.', en: 'Runs prevented above the league average. Playing time adds to it.' },
+  ekl: { fi: 'PARE-ennuste KL%:lle. Koko ura painotettuna niin, että tuoreet ottelut painavat eniten.', en: 'The PARE projection for KL%, weighting the whole career with recent games counting most.' },
+  esaatto: { fi: 'PARE-ennuste saattoprosentille.', en: 'PARE projection for escort rate.' },
+  eeten: { fi: 'PARE-ennuste etenemisprosentille.', en: 'PARE projection for advancement rate.' },
+  epalo: { fi: 'PARE-ennuste paloprosentille. Pienempi on parempi.', en: 'PARE projection for burn rate. Lower is better.' },
+  eteho: { fi: 'PARE-ennuste TEHO+:lle eli arvio pelaajan tämänhetkisestä tasosta.', en: 'The PARE projection for TEHO+, an estimate of the player’s current level.' },
+};
+
+function infoBtn(key) {
+  return STAT_INFO[key]
+    ? `<button class="ib" type="button" data-info="${key}" aria-label="Selitys">i</button>` : '';
+}
+
+function closeStatPop() {
+  const p = document.getElementById('statpop');
+  if (p) p.remove();
+}
+
+function showStatPop(btn, key) {
+  closeStatPop();
+  const info = STAT_INFO[key];
+  if (!info) return;
+  const pop = document.createElement('div');
+  pop.className = 'statpop';
+  pop.id = 'statpop';
+  pop.innerHTML = `<div class="t">${STAT_LABEL[key] || key}</div>
+    <p>${info.fi}</p><p class="en">${info.en}</p>
+    <a href="#/primer">Opas →</a>`;
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect();
+  const w = Math.min(300, window.innerWidth - 24);
+  pop.style.width = w + 'px';
+  const left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), window.innerWidth - w - 12);
+  pop.style.left = left + 'px';
+  pop.style.top = (r.bottom + 8 + window.scrollY) + 'px';
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-info]');
+  if (b) { e.preventDefault(); e.stopPropagation(); showStatPop(b, b.dataset.info); return; }
+  if (!e.target.closest('#statpop')) closeStatPop();
+}, true);
 
 // Finnish fielding code → baseball position (shown next to every player).
 // null = jokeri (no fielding position) → DH.
@@ -91,6 +173,7 @@ function main() { return document.getElementById('main'); }
 
 function loading() {
   if (typeof closeSarja === 'function') closeSarja();
+  closeStatPop();
   main().innerHTML = '<div class="empty"><div class="big">Ladataan…</div></div>';
 }
 
@@ -220,6 +303,7 @@ function renderNav() {
   html += `<a href="#/?sid=${statsSid}"${onStats?' class="active"':''}>Tilastot</a>`;
   html += `<a href="#/projections?sid=${defaultSid}"${page==='#/projections'?' class="active"':''}>PARE-ennusteet</a>`;
   html += `<a href="#/league?sid=${defaultSid}"${page==='#/league'?' class="active"':''}>Sarjataulukko</a>`;
+  html += `<a href="#/primer"${page==='#/primer'?' class="active"':''}>Opas</a>`;
   html += `<a href="#/glossary"${page==='#/glossary'?' class="active"':''}>Kaava</a>`;
   html += `<a href="#/about"${page==='#/about'?' class="active"':''}>About</a>`;
   nav.innerHTML = html;
@@ -293,7 +377,7 @@ function makeTable(mount, cfg) {
       const arrow = on ? (sortDir < 0 ? ' ↓' : ' ↑') : '';
       const cls = [c.sortable === false ? '' : 'sortable', c.thClass || '', on ? 'sorted' : '']
         .filter(Boolean).join(' ');
-      return `<th class="${cls}" data-k="${c.key}">${c.label}${arrow}</th>`;
+      return `<th class="${cls}" data-k="${c.key}">${c.label}${arrow}${infoBtn(c.key)}</th>`;
     }).join('');
     const body = pageRows.map((r, i) => {
       const gi = start + i;
@@ -407,12 +491,13 @@ async function showLeaderboard(sid, stat, posFilter) {
        'adv1_plus','adv2_plus','adv3_plus','adv_home_plus'].includes(stat)
     ? 'Mallo-mittarit: 100 = sarjan keskiarvo, yli 100 parempi. Vähintään 40 lyöntivuoroa.'
     : 'Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).';
+  const primerHint = ' <a href="#/primer">Uusi täällä? Lue opas / New here? Read the primer →</a>';
 
   main().innerHTML = `
     ${leaderboardControls(sid, '')}
     <div class="page" style="padding-bottom:6px">
       <h1>${season.series} ${season.year}</h1>
-      <p class="sub">${subText}</p>
+      <p class="sub">${subText}${primerHint}</p>
     </div>
     <div class="filters">
       <span class="lab">Järjestä</span>
@@ -635,7 +720,7 @@ async function showPlayer(pid) {
   for (const stat of PCT_STATS) {
     const pct = line[`pct_${stat}`];
     const v = line[stat];
-    pctBars += pctBar(pct, STAT_LABEL[stat]||stat, rate(v));
+    pctBars += pctBar(pct, (STAT_LABEL[stat]||stat) + infoBtn(stat), rate(v));
   }
 
   let baseKlBars = '';
@@ -643,7 +728,7 @@ async function showPlayer(pid) {
     for (const key of (base_keys||BASE_KL_KEYS)) {
       const pct = base_kl[`pct_${key}`];
       const tries = base_kl[`${key}_tries`];
-      const lbl = `${STAT_LABEL[key]||key} <span style="color:var(--ink3);font-size:11px">(${tries} yrit.)</span>`;
+      const lbl = `${STAT_LABEL[key]||key}${infoBtn(key)} <span style="color:var(--ink3);font-size:11px">(${tries} yrit.)</span>`;
       baseKlBars += pctBar(pct, lbl, rate(base_kl[key]));
     }
   }
@@ -720,9 +805,9 @@ async function showPlayer(pid) {
       ${(translation || pitching) ? `<a class="bb-toggle" href="#/baseball/${pid}" title="Käännä baseball-termeille" aria-label="Baseball">⚾</a>` : ''}
       <div class="tiles">
         <div class="tile"><div class="label">Ottelut</div><div class="value">${line.games}</div></div>
-        <div class="tile hero"><div class="label">VYK</div><div class="value">${line.vyk??'—'}</div></div>
-        <div class="tile"><div class="label">SPARK</div><div class="value">${line.spark_index??'—'}</div></div>
-        <div class="tile"><div class="label">TEHO+</div><div class="value">${line.teho_plus||'—'}</div></div>
+        <div class="tile hero"><div class="label">VYK${infoBtn('vyk')}</div><div class="value">${line.vyk??'—'}</div></div>
+        <div class="tile"><div class="label">SPARK${infoBtn('spark_index')}</div><div class="value">${line.spark_index??'—'}</div></div>
+        <div class="tile"><div class="label">TEHO+${infoBtn('teho_plus')}</div><div class="value">${line.teho_plus||'—'}</div></div>
         ${projTile}
       </div>
       <h2>Mallo-indeksit ${line.year} <span class="muted">(100 = sarjan keskiarvo)</span></h2>
@@ -1083,6 +1168,9 @@ async function route() {
 
     } else if (page === 'about') {
       showAbout();
+
+    } else if (page === 'primer') {
+      showPrimer(params.for, params.lang);
 
     } else if (page === 'glossary') {
       showGlossary();
