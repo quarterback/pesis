@@ -294,6 +294,24 @@ th.sorted{ color:var(--accent); }
 .split{ display:grid; grid-template-columns:1.15fr 1fr; gap:20px; align-items:start; }
 
 /* ----------------------------------------------------------------------------
+   STAT HELPERS — ⓘ button + popover (see STAT_INFO in app.js)
+   ---------------------------------------------------------------------------- */
+.ib{ display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px;
+  margin-left:5px; padding:0; border-radius:50%; border:1px solid var(--ink3);
+  background:transparent; color:var(--ink3); font:600 10px/1 var(--font-mono);
+  cursor:pointer; vertical-align:1px; }
+.ib:hover{ color:var(--accent); border-color:var(--accent); }
+th .ib{ vertical-align:0; }
+.statpop{ position:absolute; z-index:60; background:var(--surface);
+  border:1px solid var(--surface-line); border-radius:12px;
+  box-shadow:0 10px 32px rgba(20,5,12,.22); padding:12px 14px; }
+.statpop .t{ font:700 11px var(--font-mono); letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink); margin-bottom:6px; }
+.statpop p{ margin:0 0 7px; font:400 13px/1.5 var(--font-body); color:var(--ink2); }
+.statpop p.en{ color:var(--ink3); }
+.statpop a{ font:600 12px var(--font-body); color:var(--accent); text-decoration:none; }
+
+/* ----------------------------------------------------------------------------
    PROSE  (About + any text-type page — wrap body copy in <div class="prose">)
    ---------------------------------------------------------------------------- */
 .prose{ max-width:68ch; color:var(--ink2); font-size:15px; line-height:1.65; }
