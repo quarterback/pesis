@@ -220,6 +220,7 @@ function renderNav() {
   html += `<a href="#/?sid=${statsSid}"${onStats?' class="active"':''}>Tilastot</a>`;
   html += `<a href="#/projections?sid=${defaultSid}"${page==='#/projections'?' class="active"':''}>PARE-ennusteet</a>`;
   html += `<a href="#/league?sid=${defaultSid}"${page==='#/league'?' class="active"':''}>Sarjataulukko</a>`;
+  html += `<a href="#/primer"${page==='#/primer'?' class="active"':''}>Opas</a>`;
   html += `<a href="#/glossary"${page==='#/glossary'?' class="active"':''}>Kaava</a>`;
   html += `<a href="#/about"${page==='#/about'?' class="active"':''}>About</a>`;
   nav.innerHTML = html;
@@ -407,12 +408,13 @@ async function showLeaderboard(sid, stat, posFilter) {
        'adv1_plus','adv2_plus','adv3_plus','adv_home_plus'].includes(stat)
     ? 'Mallo-mittarit: 100 = sarjan keskiarvo, yli 100 parempi. Vähintään 40 lyöntivuoroa.'
     : 'Vähintään 40 lyöntivuoroa. TEHO+ = tehot/vuoro suhteessa sarjan keskiarvoon (100 = keskiverto).';
+  const primerHint = ' <a href="#/primer">Uusi täällä? Lue opas / New here? Read the primer →</a>';
 
   main().innerHTML = `
     ${leaderboardControls(sid, '')}
     <div class="page" style="padding-bottom:6px">
       <h1>${season.series} ${season.year}</h1>
-      <p class="sub">${subText}</p>
+      <p class="sub">${subText}${primerHint}</p>
     </div>
     <div class="filters">
       <span class="lab">Järjestä</span>
@@ -1083,6 +1085,9 @@ async function route() {
 
     } else if (page === 'about') {
       showAbout();
+
+    } else if (page === 'primer') {
+      showPrimer(params.for, params.lang);
 
     } else if (page === 'glossary') {
       showGlossary();
