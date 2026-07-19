@@ -312,6 +312,21 @@ th .ib{ vertical-align:0; }
 .statpop a{ font:600 12px var(--font-body); color:var(--accent); text-decoration:none; }
 
 /* ----------------------------------------------------------------------------
+   PRIMER (Opas) — stacked definition list; readable at any width, no
+   column squeeze or side-scroll on phones
+   ---------------------------------------------------------------------------- */
+.plist{ padding:4px 0; }
+.prow{ padding:12px 16px; border-top:1px solid var(--line); }
+.prow:first-child{ border-top:0; }
+.prow .pt{ font:700 14px var(--font-body); color:var(--ink); }
+.prow .pe{ font:600 11px var(--font-mono); color:var(--ink3); margin-left:8px; letter-spacing:.05em; }
+.prow .pn{ font:400 14px/1.55 var(--font-body); color:var(--ink2); margin-top:3px; max-width:62ch; }
+@media (max-width:640px){
+  .ib{ width:18px; height:18px; font-size:11px; }
+  .prow{ padding:12px 14px; }
+}
+
+/* ----------------------------------------------------------------------------
    PROSE  (About + any text-type page — wrap body copy in <div class="prose">)
    ---------------------------------------------------------------------------- */
 .prose{ max-width:68ch; color:var(--ink2); font-size:15px; line-height:1.65; }
