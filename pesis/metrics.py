@@ -240,29 +240,69 @@ def _solve_linear_system(a: list[list[float]], b: list[float]) -> list[float] | 
     return [aug[i][-1] for i in range(n)]
 
 
-def _empirical_value_weights(conn: sqlite3.Connection, season_id: int) -> dict[str, float]:
-    """Estimate aggregate pesäpallo run weights from team totals.
+# Events that carry value credit in JYK/VYK. Deliberately excludes lyödyt and
+# tuodut: those are run *outcomes*, not batter/runner events, and crediting
+# them makes the value stats an RBI counter — a batter's lyödyt depend on how
+# often teammates are on base ahead of him, and tuodut on teammates batting
+# him home. The skill behind an RBI is already counted through kärkilyönnit
+# (and kunnarit); the opportunity should not be.
+VALUE_EVENTS = ("kunnarit", "karkilyonnit", "saatot", "etenemiset",
+                "haavat", "palot")
 
-    This is a first WAR-style scaffold from existing box-score rows, not the
-    final RE24 model. It regresses team runs on team event totals with a small
-    ridge penalty and then constrains signs so good events add value and outs
-    remove value. If a season is too small or singular, fall back to conservative
-    pesäpallo-shaped priors.
+# Share of each non-kunnari run credited to the advancing hit vs the
+# baserunning that set it up. Bridge assumptions until RE24 exists.
+_KL_RUN_SHARE = 0.60
+_SAATTO_RUN_SHARE = 0.15
+_ETEN_RUN_SHARE = 0.25
+
+
+def _calibrated_priors(rows: list[dict]) -> dict[str, float]:
+    """Event run values implied by the season's own run accounting.
+
+    Every pesäpallo run is either a kunnari or batted in by an advancing hit,
+    so league totals pin the average run yield of the events: non-kunnari runs
+    are split between the advancing hit (60%), etenemiset (25%) and saatot
+    (15%), and out costs scale with the runs-per-turn environment. These
+    priors move with the run environment of each series and season instead of
+    being hard-coded constants.
     """
-    fallback = {
+    runs = sum(r["tuodut"] or 0 for r in rows)
+    kunnarit = sum(r["kunnarit"] or 0 for r in rows)
+    kl = sum(r["karkilyonnit"] or 0 for r in rows)
+    saatot = sum(r["saatot"] or 0 for r in rows)
+    eten = sum(r["etenemiset"] or 0 for r in rows)
+    turns = sum(r["turns_at_bat"] or 0 for r in rows)
+    nk_runs = max(runs - kunnarit, 0)
+    rpt = runs / turns if turns else 0.08
+    return {
         "kunnarit": 1.40,
-        "lyodyt": 0.90,
-        "tuodut": 0.70,
-        "karkilyonnit": 0.28,
-        "saatot": 0.20,
-        "etenemiset": 0.22,
-        "haavat": -0.20,
-        "palot": -0.35,
+        "karkilyonnit": _KL_RUN_SHARE * nk_runs / kl if kl else 0.30,
+        "saatot": _SAATTO_RUN_SHARE * nk_runs / saatot if saatot else 0.10,
+        "etenemiset": _ETEN_RUN_SHARE * nk_runs / eten if eten else 0.12,
+        "haavat": -0.5 * rpt,
+        "palot": -1.0 * rpt,
     }
+
+
+def _empirical_value_weights(conn: sqlite3.Connection, season_id: int) -> dict[str, float]:
+    """Estimate pesäpallo event run values from team totals.
+
+    This is a WAR-style scaffold from existing box-score rows, not the final
+    RE24 model. Weights start from priors calibrated to the season's own run
+    accounting (_calibrated_priors) and, when enough teams exist, a small
+    ridge regression of team runs on team event totals shrinks *toward those
+    priors* rather than toward zero — a dozen team rows cannot estimate six
+    collinear weights on their own. Sign constraints keep good events positive
+    and outs negative.
+    """
     rows = _team_event_rows(conn, season_id)
-    features = list(fallback)
+    if not rows:
+        return {"kunnarit": 1.40, "karkilyonnit": 0.30, "saatot": 0.10,
+                "etenemiset": 0.12, "haavat": -0.04, "palot": -0.08}
+    priors = _calibrated_priors(rows)
+    features = list(priors)
     if len(rows) < 6:
-        return fallback
+        return priors
 
     # Standardize counts so ridge is stable across event scales.
     means = {f: sum(r[f] or 0 for r in rows) / len(rows) for f in features}
@@ -270,9 +310,13 @@ def _empirical_value_weights(conn: sqlite3.Connection, season_id: int) -> dict[s
     for f in features:
         var = sum(((r[f] or 0) - means[f]) ** 2 for r in rows) / len(rows)
         scales[f] = var ** 0.5 or 1.0
-    y_mean = sum(r["tuodut"] or 0 for r in rows) / len(rows)
+    # Regress the residual left after the priors, so zero-shrinkage on the
+    # correction returns the priors, not an empty model.
+    resid = [(r["tuodut"] or 0)
+             - sum(priors[f] * (r[f] or 0) for f in features) for r in rows]
+    y_mean = sum(resid) / len(resid)
     x_rows = [[((r[f] or 0) - means[f]) / scales[f] for f in features] for r in rows]
-    y = [(r["tuodut"] or 0) - y_mean for r in rows]
+    y = [ry - y_mean for ry in resid]
     lam = 2.0
     xtx = [[sum(x[i] * x[j] for x in x_rows) + (lam if i == j else 0.0)
             for j in range(len(features))]
@@ -280,12 +324,12 @@ def _empirical_value_weights(conn: sqlite3.Connection, season_id: int) -> dict[s
     xty = [sum(x[i] * yy for x, yy in zip(x_rows, y)) for i in range(len(features))]
     beta = _solve_linear_system(xtx, xty)
     if beta is None:
-        return fallback
-    weights = {f: beta[i] / scales[f] for i, f in enumerate(features)}
-    for f in ("kunnarit", "lyodyt", "tuodut", "karkilyonnit", "saatot", "etenemiset"):
-        weights[f] = max(0.02, min(2.5, weights.get(f, fallback[f])))
+        return priors
+    weights = {f: priors[f] + beta[i] / scales[f] for i, f in enumerate(features)}
+    for f in ("kunnarit", "karkilyonnit", "saatot", "etenemiset"):
+        weights[f] = max(0.02, min(2.5, weights[f]))
     for f in ("haavat", "palot"):
-        weights[f] = min(-0.02, max(-1.5, weights.get(f, fallback[f])))
+        weights[f] = min(-0.02, max(-1.5, weights[f]))
     return weights
 
 
@@ -295,6 +339,8 @@ def _add_value_stats(conn: sqlite3.Connection, season_id: int, lines: list[dict]
     JYK (Juoksut Yli Korvaajan) is runs above replacement. VYK (Voitot Yli
     Korvaajan) is the WAR analog: JYK divided by the season run-to-win scale.
     This is intentionally additive/counting value; TEHO+/SPARK remain rates.
+    Value comes only from skill events (VALUE_EVENTS) — realized lyödyt and
+    tuodut are excluded so opportunity does not masquerade as value.
     """
     if not lines:
         return
