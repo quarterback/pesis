@@ -44,6 +44,18 @@ jobs:
             python -m pesis ingest-v1 --from-year 1990 --to-year "$(date +%Y)" --series all
           fi
 
+      - name: Backfill Suomensarja history if the cached DB predates it
+        # Suomensarja joined --series all in July 2026. A DB cached before
+        # that has no Suomensarja seasons, so fetch its 2001→ history once;
+        # after that (and after full rebuilds, which include it) this is a
+        # no-op. Data exists from 2001, with gaps handled by per-year skips.
+        run: |
+          if ! python -c "import sqlite3, sys; c = sqlite3.connect('data/pesis.db'); sys.exit(0 if c.execute(\"SELECT 1 FROM seasons WHERE series = 'Miesten Suomensarja' OR series = 'Naisten Suomensarja' LIMIT 1\").fetchone() else 1)"; then
+            echo "No Suomensarja in the cached DB — backfilling 2001→."
+            python -m pesis ingest-v1 --from-year 2001 --to-year "$(date +%Y)" --series suomensarja-miehet
+            python -m pesis ingest-v1 --from-year 2001 --to-year "$(date +%Y)" --series suomensarja-naiset
+          fi
+
       - name: Ingest the current season
         run: python -m pesis ingest-v1 --year "$(date +%Y)" --series all
 

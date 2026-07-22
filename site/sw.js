@@ -1,6 +1,6 @@
 /* Mallo service worker — app-shell cache + offline, with fresh-data preference.
    Bump CACHE to invalidate on shell changes. */
-const CACHE = 'mallo-v2';
+const CACHE = 'mallo-v3';
 const SHELL = [
   '/', '/index.html',
   '/css/mallo.css', '/css/charts.css',

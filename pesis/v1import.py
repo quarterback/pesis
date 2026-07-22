@@ -49,6 +49,13 @@ SERIES_ALIASES = {
     "miehet": "Miesten Superpesis", "naiset": "Naisten Superpesis",
     "ykkonen-miehet": "Miesten Ykköspesis",
     "ykkonen-naiset": "Naisten Ykköspesis",
+    "suomensarja-miehet": "Miesten Suomensarja",
+    "suomensarja-naiset": "Naisten Suomensarja",
+    # The catalog spells Suomensarja with a lowercase s from 2020 on
+    # ('Miesten suomensarja'); lookups are keyed on the lowercased input, so
+    # these entries fold both catalog spellings into one canonical DB label.
+    "miesten suomensarja": "Miesten Suomensarja",
+    "naisten suomensarja": "Naisten Suomensarja",
 }
 
 
@@ -81,16 +88,21 @@ def fetch_catalog() -> dict:
 
 
 def resolve_series(catalog: dict, year: int, series_name: str) -> tuple[int, int]:
-    """(season id, seasonSeries id) for e.g. (2026, 'Miesten Superpesis')."""
-    wanted = SERIES_ALIASES.get(series_name.lower(), series_name)
+    """(season id, seasonSeries id) for e.g. (2026, 'Miesten Superpesis').
+
+    Matching is case-insensitive: the catalog's capitalization drifts across
+    eras (Suomensarja is 'Miesten Suomensarja' through 2019, 'Miesten
+    suomensarja' from 2020), and the DB label must not fork on that.
+    """
+    wanted = SERIES_ALIASES.get(series_name.lower(), series_name).lower()
     for s in catalog["seasons"]["seasons"]:
         if s["season"]["season"] != year:
             continue
         for ss in s["seasonSerieses"]:
             row = ss["seasonSeries"]
-            if row["name"] == wanted:
+            if row["name"].lower() == wanted:
                 return s["season"]["id"], row["id"]
-        raise LookupError(f"series {wanted!r} not found in {year}")
+        raise LookupError(f"series {series_name!r} not found in {year}")
     raise LookupError(f"season {year} not in catalog")
 
 

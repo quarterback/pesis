@@ -172,7 +172,6 @@ function qs(params) {
 function main() { return document.getElementById('main'); }
 
 function loading() {
-  if (typeof closeSarja === 'function') closeSarja();
   closeStatPop();
   main().innerHTML = '<div class="empty"><div class="big">Ladataan…</div></div>';
 }
@@ -203,8 +202,17 @@ function seasonSelHtml(allSeasons, curSid, baseHash, extraParam) {
 }
 
 /* ── Leaderboard controls: Sarja (division) + sex + Kausi ─────────────────── */
-// We only import Superpesis and Ykköspesis — no lower tiers.
-const TIERS = ['Superpesis', 'Ykköspesis'];
+// The three imported tiers, top division first.
+const TIERS = ['Superpesis', 'Ykköspesis', 'Suomensarja'];
+
+// Default league for landing/nav links: men's Superpesis. nav_seasons order
+// alone can't be trusted here — alphabetically "Suomensarja" sorts ahead of
+// "Superpesis", and older cached meta.json files predate the export-side
+// tier ordering.
+function defaultSeasonId() {
+  const ns = (META && META.nav_seasons) || [];
+  return (ns.find(s => s.series === 'Miesten Superpesis') || ns[0] || {}).id || '';
+}
 
 function parseSeries(series) {
   if (series.startsWith('Miesten ')) return { sex: 'M', tier: series.slice(8) };
@@ -218,26 +226,25 @@ function leaderboardControls(sid, view) {
   const { sex: curSex, tier: curTier } = parseSeries(cur.series);
   const curYear = cur.year;
   const vq = view === 'lukkari' ? '&view=lukkari' : '';  // preserve view across series/season switches
-  const find = (sex, tier, year) => seasons.find(s => {
-    const p = parseSeries(s.series);
-    return p.sex === sex && p.tier === tier && s.year === year;
-  });
-
-  // Sarja popover: Miehet / Naiset columns × available tiers
-  const col = (sex, label) => {
-    const items = TIERS.map(tier => {
-      const m = find(sex, tier, curYear);
-      if (!m) return '';   // tier not imported for this sex/year — omit entirely
-      const on = sex === curSex && tier === curTier ? ' class="on"' : '';
-      return `<button${on} onclick="location.hash='/?sid=${m.id}${vq}'">${tier}</button>`;
-    }).join('');
-    return `<div class="col"><div class="colh">${label}</div>${items}</div>`;
+  // Latest season of a league, preferring the year currently shown. META
+  // seasons arrive newest-first, so [0] is the league's most recent season.
+  const find = (sex, tier) => {
+    const inLeague = seasons.filter(s => {
+      const p = parseSeries(s.series);
+      return p.sex === sex && p.tier === tier;
+    });
+    return inLeague.find(s => s.year === curYear) || inLeague[0];
   };
+
+  // Sarja — a plain dropdown listing every imported tier for the current sex,
+  // so the lower leagues are visible without opening a hidden menu first.
+  const tierOpts = TIERS.map(tier => {
+    const m = find(curSex, tier);
+    if (!m) return '';   // tier never imported for this sex — omit
+    return `<option value="#/?sid=${m.id}${vq}"${tier===curTier?' selected':''}>${tier}</option>`;
+  }).join('');
   const sarja = `<span class="lab">Sarja</span>
-    <div class="dropwrap">
-      <button class="seldrop" type="button" onclick="toggleSarja(event)">${curTier}<span class="caret"></span></button>
-      <div class="menu" id="sarjaMenu" style="display:none">${col('M','Miehet')}${col('N','Naiset')}</div>
-    </div>`;
+    <select class="sel" onchange="location.hash=this.value.slice(1)">${tierOpts}</select>`;
 
   // Lyöjät / Lukkarit — batting vs pitching leaderboard
   const modeSeg = `<div class="seg">
@@ -247,7 +254,7 @@ function leaderboardControls(sid, view) {
 
   // Miehet / Naiset segmented — same tier, other sex
   const seg = ['M', 'N'].map(sex => {
-    const m = find(sex, curTier, curYear);
+    const m = find(sex, curTier);
     const label = sex === 'M' ? 'Miehet' : 'Naiset';
     if (!m) return `<a class="disabled" aria-disabled="true" style="opacity:.4;pointer-events:none">${label}</a>`;
     return `<a href="#/?sid=${m.id}${vq}"${sex===curSex?' class="on"':''}>${label}</a>`;
@@ -270,24 +277,6 @@ function leaderboardControls(sid, view) {
   </div>`;
 }
 
-function closeSarja() {
-  const m = document.getElementById('sarjaMenu');
-  if (m) m.style.display = 'none';
-  const b = document.getElementById('menuback');
-  if (b) b.remove();
-}
-
-window.toggleSarja = function (e) {
-  e.stopPropagation();
-  const m = document.getElementById('sarjaMenu');
-  if (!m) return;
-  if (m.style.display !== 'none') { closeSarja(); return; }
-  m.style.display = 'flex';
-  const b = document.createElement('div');
-  b.className = 'menuback'; b.id = 'menuback'; b.onclick = closeSarja;
-  document.body.appendChild(b);
-};
-
 /* ── Nav ─────────────────────────────────────────────────────────────────── */
 function renderNav() {
   const nav = document.getElementById('nav');
@@ -296,7 +285,7 @@ function renderNav() {
   const page = hash.split('?')[0];
   const curSid = parseInt(qs('sid') || '0', 10);
 
-  const defaultSid = META.nav_seasons[0]?.id || '';
+  const defaultSid = defaultSeasonId();
   const statsSid = curSid || defaultSid;
   const onStats = page === '#/' || page === '#/leaderboard' || page === '#/player' || page === '#/team';
   let html = '';
@@ -1133,7 +1122,7 @@ async function route() {
     renderNav();
     renderUpdated(META.generated);
 
-    const defaultSid = META.nav_seasons[0]?.id;
+    const defaultSid = defaultSeasonId();
 
     if (page === '' || page === 'leaderboard') {
       const sid = parseInt(params.sid || defaultSid, 10);
