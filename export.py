@@ -87,15 +87,26 @@ def main():
     print("Exporting…")
 
     # ── Seasons & nav ──────────────────────────────────────────────────
+    # Series are ordered men before women and top tier down, not
+    # alphabetically — "Suomensarja" would otherwise sort ahead of
+    # "Superpesis" and the frontend takes the first nav season as its
+    # default league.
+    def series_key(series: str) -> tuple[int, int]:
+        sex = 0 if series.startswith("Miesten") else 1
+        tiers = ("Superpesis", "Ykköspesis", "Suomensarja")
+        tier = next((i for i, t in enumerate(tiers) if series.endswith(t)), len(tiers))
+        return (sex, tier)
+
     all_seasons = rows_to_dicts(conn.execute(
-        "SELECT id, year, series FROM seasons ORDER BY year DESC, series"
+        "SELECT id, year, series FROM seasons"
     ).fetchall())
+    all_seasons.sort(key=lambda s: (-s["year"], series_key(s["series"])))
     max_year = max((s["year"] for s in all_seasons), default=0)
     nav_seasons = rows_to_dicts(conn.execute(
         """SELECT id, year, series FROM seasons s
-           WHERE year = (SELECT MAX(year) FROM seasons WHERE series = s.series)
-           ORDER BY series"""
+           WHERE year = (SELECT MAX(year) FROM seasons WHERE series = s.series)"""
     ).fetchall())
+    nav_seasons.sort(key=lambda s: series_key(s["series"]))
     # Stamp when this export ran so the site can show a "data last refreshed"
     # line in the footer. The daily workflow runs export.py right after each
     # ingest, so this doubles as the "data has been run" timestamp.

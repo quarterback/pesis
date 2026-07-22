@@ -203,8 +203,17 @@ function seasonSelHtml(allSeasons, curSid, baseHash, extraParam) {
 }
 
 /* ── Leaderboard controls: Sarja (division) + sex + Kausi ─────────────────── */
-// We only import Superpesis and Ykköspesis — no lower tiers.
-const TIERS = ['Superpesis', 'Ykköspesis'];
+// The three imported tiers, top division first.
+const TIERS = ['Superpesis', 'Ykköspesis', 'Suomensarja'];
+
+// Default league for landing/nav links: men's Superpesis. nav_seasons order
+// alone can't be trusted here — alphabetically "Suomensarja" sorts ahead of
+// "Superpesis", and older cached meta.json files predate the export-side
+// tier ordering.
+function defaultSeasonId() {
+  const ns = (META && META.nav_seasons) || [];
+  return (ns.find(s => s.series === 'Miesten Superpesis') || ns[0] || {}).id || '';
+}
 
 function parseSeries(series) {
   if (series.startsWith('Miesten ')) return { sex: 'M', tier: series.slice(8) };
@@ -296,7 +305,7 @@ function renderNav() {
   const page = hash.split('?')[0];
   const curSid = parseInt(qs('sid') || '0', 10);
 
-  const defaultSid = META.nav_seasons[0]?.id || '';
+  const defaultSid = defaultSeasonId();
   const statsSid = curSid || defaultSid;
   const onStats = page === '#/' || page === '#/leaderboard' || page === '#/player' || page === '#/team';
   let html = '';
@@ -1133,7 +1142,7 @@ async function route() {
     renderNav();
     renderUpdated(META.generated);
 
-    const defaultSid = META.nav_seasons[0]?.id;
+    const defaultSid = defaultSeasonId();
 
     if (page === '' || page === 'leaderboard') {
       const sid = parseInt(params.sid || defaultSid, 10);

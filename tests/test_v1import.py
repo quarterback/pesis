@@ -55,6 +55,41 @@ def test_import_payload_normalizes_v1_fields():
     assert name == "Testi Pelaaja"
 
 
+CATALOG = {"seasons": {"seasons": [
+    {"season": {"id": 10, "season": 2015},
+     "seasonSerieses": [
+         {"seasonSeries": {"id": 100, "name": "Miesten Superpesis"}},
+         {"seasonSeries": {"id": 101, "name": "Miesten Suomensarja"}},
+     ]},
+    {"season": {"id": 20, "season": 2026},
+     "seasonSerieses": [
+         {"seasonSeries": {"id": 200, "name": "Miesten Superpesis"}},
+         {"seasonSeries": {"id": 201, "name": "Miesten suomensarja"}},
+     ]},
+]}}
+
+
+def test_resolve_series_matches_both_suomensarja_spellings():
+    # The catalog capitalizes 'Suomensarja' through 2019 and lowercases it
+    # from 2020 — one alias must resolve in both eras.
+    assert v1import.resolve_series(CATALOG, 2015, "suomensarja-miehet") == (10, 101)
+    assert v1import.resolve_series(CATALOG, 2026, "suomensarja-miehet") == (20, 201)
+
+
+def test_exact_catalog_names_still_resolve():
+    assert v1import.resolve_series(CATALOG, 2015, "Miesten Superpesis") == (10, 100)
+    assert v1import.resolve_series(CATALOG, 2026, "Miesten suomensarja") == (20, 201)
+
+
+def test_suomensarja_label_is_canonical_for_both_spellings():
+    # Both catalog spellings and the CLI alias must land on one DB label so
+    # a series' history never forks on upstream capitalization drift.
+    for key in ("suomensarja-miehet", "miesten suomensarja", "Miesten suomensarja"):
+        assert v1import.SERIES_ALIASES.get(key.lower()) == "Miesten Suomensarja"
+    for key in ("suomensarja-naiset", "naisten suomensarja"):
+        assert v1import.SERIES_ALIASES.get(key.lower()) == "Naisten Suomensarja"
+
+
 def test_flag_wind_buckets_used_for_v1_data():
     from pesis import context
     conn = db.connect(":memory:")
