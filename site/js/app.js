@@ -31,12 +31,12 @@ const STAT_LABEL = {
   kl_pct:'KL%', saatto_pct:'Saatto%', eten_pct:'Etenemis%',
   kunnari_rate:'Kunnarit/vuoro', lyoty_rate:'Lyödyt/vuoro',
   palo_rate:'Palo%', tehot_per_turn:'Tehot/vuoro',
-  kl_base0:'1 % (1→2)', kl_base1:'2 % (2→3)',
-  kl_base2:'3 % (3→koti)', kl_base3:'K % (kotiutus)',
+  kl_base0:'1 % (koti→1)', kl_base1:'2 % (1→2)',
+  kl_base2:'3 % (2→3)', kl_base3:'K % (kotiutus)',
   teho_plus:'TEHO+', teho_plus_adj:'kTEHO+',
   vyk:'VYK', jyk:'JYK', raa:'RAA',
   tehot:'Tehot', kunnarit:'Kunnarit', lyodyt:'Lyödyt', tuodut:'Tuodut',
-  turns_at_bat:'Vuorot', lra:'LRA', lra_minus:'LRA-', lukkari_rp:'RP',
+  turns_at_bat:'Lyöntivuorot', lra:'LRA', lra_minus:'LRA-', lukkari_rp:'RP',
   ekl:'eKL%', esaatto:'eSaatto%', eeten:'eEtenemis%', epalo:'ePalo%', eteho:'eTEHO+',
 };
 
@@ -45,35 +45,35 @@ const STAT_LABEL = {
    infoBtn(key) renders the button anywhere; a capture-phase click handler
    opens the popover (and keeps table-header sorting untouched). */
 const STAT_INFO = {
-  vyk: { fi: 'Voitot Yli Korvaajan. Pelaajan koko arvo voittoina verrattuna vapaasti saatavilla olevaan pelaajaan.', en: 'Wins above replacement, a player’s total value in wins. It is the same idea as WAR in baseball.' },
-  jyk: { fi: 'Juoksut Yli Korvaajan. Sama arvo kuin VYK, mitattuna juoksuina.', en: 'Runs above replacement. VYK measured in runs.' },
+  vyk: { fi: 'Voitot Yli Korvaajan. Pelaajan kokonaisarvo voittoina verrattuna korvaajatason pelaajaan. Korvaajatason pelaaja tarkoittaa pelaajaa, jonka joukkue saisi helposti tilalle esimerkiksi Ykköspesiksestä tai oman joukkueen penkiltä. Taso lasketaan tämän sarjan tuloksista.', en: 'Wins above replacement, a player’s total value in wins compared with a replacement-level player: one a team could easily bring in from the lower league or its own bench. It is the same idea as WAR in baseball.' },
+  jyk: { fi: 'Juoksut Yli Korvaajan. Sama vertailu kuin VYK, mitattuna juoksuina: kuinka monta juoksua enemmän pelaaja tuotti kuin korvaajatason pelaaja olisi tuottanut samoilla lyöntivuoroilla.', en: 'Runs above replacement: how many more runs the player produced than a replacement-level player would have in the same turns at bat. VYK measured in runs.' },
   raa: { fi: 'Juoksut yli sarjan keskitason.', en: 'Runs above league average.' },
-  spark_index: { fi: 'Kärjenrakentajan indeksi, joka yhdistää etenemisen lyöjänä, etenijänä ja palojen välttämisen. 100 on sarjan keskitaso.', en: 'A table-setter index combining advancement, baserunning and out avoidance. 100 is league average.' },
+  spark_index: { fi: 'Tilanteenrakentajan indeksi, joka yhdistää etenemisen lyöjänä, etenijänä ja palojen välttämisen. 100 on sarjan keskitaso.', en: 'A table-setter index combining advancement, baserunning and out avoidance. 100 is league average.' },
   adv_plus: { fi: 'Kärkilyönnit ja saatot jaettuna yrityksillä, sarjaan indeksoituna.', en: 'Lead-runner hits and escorts per attempt, indexed to the league.' },
-  runner_plus: { fi: 'Onnistuneet etenemiset per yritys suhteessa sarjaan, kun pelaaja juoksee itse.', en: 'Successful advances per attempt relative to the league, as a runner.' },
-  out_avoid_plus: { fi: 'Palojen välttäminen. Yli 100 = palaa keskivertoa harvemmin.', en: 'Out avoidance. Over 100 means fewer burns than average.' },
+  runner_plus: { fi: 'Onnistuneet etenemiset per yritys suhteessa sarjaan, kun pelaaja juoksee itse. Kärkietenemiset painavat 80 prosenttia ja takaetenemiset 20 prosenttia.', en: 'Successful advances per attempt relative to the league, as a runner. Advances as the lead runner count for 80 percent and advances as a trailing runner for 20 percent.' },
+  out_avoid_plus: { fi: 'Palojen välttäminen: pelaajan omat palot etenijänä suhteessa sarjaan. Yli 100 = palaa keskivertoa harvemmin.', en: 'Out avoidance, based on the player’s own burns as a runner. Over 100 means fewer burns than average.' },
   money_kl_plus: { fi: 'Kotiuttavat kärkilyönnit suhteessa sarjaan.', en: 'Scoring advances relative to the league.' },
   teho_plus: { fi: 'Tuotanto lyöntivuoroa kohden, 100 on sarjan keskitaso. Vastaa baseballin wRC+:aa.', en: 'Production per turn at bat, where 100 is league average. It is comparable to wRC+ in baseball.' },
   teho_plus_adj: { fi: 'TEHO+ kenttäkorjattuna: kotikentän juoksuympäristön vaikutus poistettu.', en: 'TEHO+ adjusted for ballpark run environments.' },
   kl_pct: { fi: 'Kärkilyönnit jaettuna yrityksillä eli lajin lyöntikeskiarvo. Sarjan keskitaso on noin .530.', en: 'Lead-runner hits divided by attempts, the sport’s batting average. The league average is around .530.' },
   saatto_pct: { fi: 'Saatot per yritys: takaetenijän vieminen lyönnillä.', en: 'Escorts per attempt: moving the trailing runner with a hit.' },
-  eten_pct: { fi: 'Onnistuneet etenemiset per yritys pelaajan juostessa itse.', en: 'Successful advances per attempt as a runner.' },
+  eten_pct: { fi: 'Onnistuneet etenemiset per yritys pelaajan juostessa itse, kärki- ja takaetenemiset yhteenlaskettuina.', en: 'Successful advances per attempt as a runner, lead and trailing advances combined.' },
   kunnari_rate: { fi: 'Kunnarit per lyöntivuoro.', en: 'Home runs per turn.' },
   lyoty_rate: { fi: 'Kotiin lyödyt juoksut lyöntivuoroa kohden. Vastaa baseballin RBI:tä.', en: 'Runs batted home per turn, comparable to RBI.' },
-  palo_rate: { fi: 'Palot per vuoro. Pienempi on parempi.', en: 'Burns per turn. Lower is better.' },
+  palo_rate: { fi: 'Pelaajan omat palot etenijänä per lyöntivuoro. Muiden etenijöiden palot vuoron aikana eivät sisälly lukuun. Pienempi on parempi.', en: 'The player’s own burns as a runner per turn at bat. Outs by other runners during the turn are not included. Lower is better.' },
   tehot_per_turn: { fi: 'Tehot (K + L + T) per lyöntivuoro.', en: 'Tehot (K + L + T) per turn.' },
-  adv1_pct: { fi: 'Kärjen eteneminen ykköseltä kakkoselle per yritys. Virallinen split.', en: 'Lead-runner advances from first to second, per attempt.' },
-  adv2_pct: { fi: 'Kärjen eteneminen kakkoselta kolmoselle per yritys.', en: 'Lead-runner advances from second to third, per attempt.' },
-  adv3_pct: { fi: 'Kärjen eteneminen kolmoselta kotiin per yritys.', en: 'Lead-runner advances from third to home, per attempt.' },
-  adv_home_pct: { fi: 'Kotiutusprosentti: kärki kotiin per yritys.', en: 'Scoring rate: lead runner home, per attempt.' },
-  adv1_plus: { fi: '1 % sarjaindeksinä. 100 = keskitaso.', en: 'The 1→2 split as a league index. 100 = average.' },
-  adv2_plus: { fi: '2 % sarjaindeksinä. 100 = keskitaso.', en: 'The 2→3 split as a league index. 100 = average.' },
-  adv3_plus: { fi: '3 % sarjaindeksinä. 100 = keskitaso.', en: 'The 3→home split as a league index. 100 = average.' },
+  adv1_pct: { fi: 'Kärjen eteneminen kotipesästä ykköselle per yritys. Virallinen split.', en: 'Lead-runner advances from home to first, per attempt.' },
+  adv2_pct: { fi: 'Kärjen eteneminen ykköseltä kakkoselle per yritys.', en: 'Lead-runner advances from first to second, per attempt.' },
+  adv3_pct: { fi: 'Kärjen eteneminen kakkoselta kolmoselle per yritys.', en: 'Lead-runner advances from second to third, per attempt.' },
+  adv_home_pct: { fi: 'Kotiutusprosentti: kärki kolmoselta kotiin per yritys.', en: 'Scoring rate: lead runner from third to home, per attempt.' },
+  adv1_plus: { fi: '1 % sarjaindeksinä. 100 = keskitaso.', en: 'The home→1st split as a league index. 100 = average.' },
+  adv2_plus: { fi: '2 % sarjaindeksinä. 100 = keskitaso.', en: 'The 1st→2nd split as a league index. 100 = average.' },
+  adv3_plus: { fi: '3 % sarjaindeksinä. 100 = keskitaso.', en: 'The 2nd→3rd split as a league index. 100 = average.' },
   adv_home_plus: { fi: 'Kotiutus sarjaindeksinä. 100 = keskitaso.', en: 'The scoring split as a league index. 100 = average.' },
-  kl_base0: { fi: 'Kärjen eteneminen ykköseltä kakkoselle per yritys.', en: 'Lead-runner advances from first to second, per attempt.' },
-  kl_base1: { fi: 'Kärjen eteneminen kakkoselta kolmoselle per yritys.', en: 'Lead-runner advances from second to third, per attempt.' },
-  kl_base2: { fi: 'Kärjen eteneminen kolmoselta kotiin per yritys.', en: 'Lead-runner advances from third to home, per attempt.' },
-  kl_base3: { fi: 'Kotiutusprosentti: kärki kotiin per yritys.', en: 'Scoring rate: lead runner home, per attempt.' },
+  kl_base0: { fi: 'Kärjen eteneminen kotipesästä ykköselle per yritys.', en: 'Lead-runner advances from home to first, per attempt.' },
+  kl_base1: { fi: 'Kärjen eteneminen ykköseltä kakkoselle per yritys.', en: 'Lead-runner advances from first to second, per attempt.' },
+  kl_base2: { fi: 'Kärjen eteneminen kakkoselta kolmoselle per yritys.', en: 'Lead-runner advances from second to third, per attempt.' },
+  kl_base3: { fi: 'Kotiutusprosentti: kärki kolmoselta kotiin per yritys.', en: 'Scoring rate: lead runner from third to home, per attempt.' },
   turns_at_bat: { fi: 'Lyöntivuorot. Vastaa baseballin PA-lukua.', en: 'Turns at bat, the same idea as plate appearances.' },
   lra: { fi: 'Päästetyt juoksut lukkariottelua kohden. Vastaa baseballin ERA-lukua.', en: 'Runs allowed per game as lukkari, comparable to ERA.' },
   lra_minus: { fi: 'LRA sarjaindeksinä: 100 = keskitaso, pienempi parempi.', en: 'LRA as a league index: 100 = average, lower is better.' },
@@ -432,9 +432,13 @@ async function showLeaderboard(sid, stat, posFilter) {
 
   // position filter (baseball position); options built from the qualified pool
   const posPresent = POS_ORDER.filter(p => sorted.some(l => posLabel(l.pos) === p));
-  if (posFilter) sorted = sorted.filter(l => posLabel(l.pos) === posFilter);
+  // FIELD = kenttäpelaajat: every player with a recorded fielding position,
+  // i.e. jokers (pos = null → DH) excluded.
+  if (posFilter === 'FIELD') sorted = sorted.filter(l => l.pos != null);
+  else if (posFilter) sorted = sorted.filter(l => posLabel(l.pos) === posFilter);
   const posQ = posFilter ? `&pos=${posFilter}` : '';
-  const posOpts = [`<option value="">Kaikki</option>`].concat(
+  const posOpts = [`<option value="">Kaikki</option>`,
+    `<option value="FIELD"${posFilter==='FIELD'?' selected':''}>Kenttäpelaajat</option>`].concat(
     posPresent.map(p => `<option value="${p}"${p===posFilter?' selected':''}>${p}</option>`)).join('');
   const posSel = `<span class="lab">Paikka</span>
     <select class="sel" onchange="location.hash='/?sid=${sid}&stat=${stat}'+(this.value?'&pos='+this.value:'')">${posOpts}</select>`;
@@ -463,7 +467,7 @@ async function showLeaderboard(sid, stat, posFilter) {
     {key:'team', label:'Joukkue', thClass:'name', get:r=>r.team,
      cell:r=>`<td class="name team"><a href="#/team/${encodeURIComponent(r.team)}?sid=${sid}">${r.team||'—'}</a></td>`},
     {key:'games', label:'O', get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
-    {key:'turns_at_bat', label:'Vuorot', get:r=>r.turns_at_bat, cell:r=>`<td class="num">${r.turns_at_bat}</td>`},
+    {key:'turns_at_bat', label:'LV', get:r=>r.turns_at_bat, cell:r=>`<td class="num">${r.turns_at_bat}</td>`},
     {key:'spark_index', label:'SPARK', get:r=>r.spark_index, cell:r=>barCell(r.spark_index, sparkMax)},
     {key:'teho_plus', label:'TEHO+', get:r=>r.teho_plus, cell:r=>`<td class="num">${r.teho_plus??'—'}</td>`},
   ];
@@ -816,7 +820,7 @@ async function showPlayer(pid) {
           <div class="card" style="padding:0;overflow:hidden">
             <table>
               <thead><tr>
-                <th class="name">Kausi</th><th class="name">Joukkue</th><th>O</th><th>Vuorot</th>
+                <th class="name">Kausi</th><th class="name">Joukkue</th><th>O</th><th>LV</th>
                 <th>VYK</th><th>SPARK</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th>KOTI-KL+</th>
                 <th class="extra">TEHO+</th><th title="kenttäkorjattu">kTEHO+</th>
               </tr></thead>
@@ -846,12 +850,12 @@ async function showPlayer(pid) {
   const ibEl = document.getElementById('index-bars');
   if (ibEl && typeof renderIndexBars === 'function') {
     renderIndexBars(ibEl, [
-      {label:'SPARK',    value: line.spark_index,    full:'SPARK — kärjenrakentajan kokonaisindeksi'},
+      {label:'SPARK',    value: line.spark_index,    full:'SPARK — tilanteenrakentajan indeksi'},
       {label:'ADV+',     value: line.adv_plus,       full:'Etenemisarvo lyöjänä'},
       {label:'RUN+',     value: line.runner_plus,    full:'Etenijän arvo'},
       {label:'OUT+',     value: line.out_avoid_plus, full:'Palojen välttäminen'},
       {label:'KOTI-KL+', value: line.money_kl_plus,  full:'Kotiutuskärkilyönnit'},
-      {label:'TEHO+',    value: line.teho_plus,      full:'Tuotanto per vuoro'},
+      {label:'TEHO+',    value: line.teho_plus,      full:'Tuotanto per lyöntivuoro'},
     ]);
   }
 
@@ -895,7 +899,7 @@ async function showTeam(teamRaw, sid) {
     {key:'name', label:'Pelaaja', thClass:'name', get:r=>r.name,
      cell:r=>`<td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a> <span class="pos">${posLabel(r.pos)}</span></td>`},
     {key:'games', label:'O', get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
-    {key:'turns_at_bat', label:'Vuorot', get:r=>r.turns_at_bat, cell:r=>`<td class="num">${r.turns_at_bat}</td>`},
+    {key:'turns_at_bat', label:'LV', get:r=>r.turns_at_bat, cell:r=>`<td class="num">${r.turns_at_bat}</td>`},
     {key:'spark_index', label:'SPARK', get:r=>r.spark_index, cell:r=>`<td class="num strong">${r.spark_index??'—'}</td>`},
     {key:'adv_plus', label:'ADV+', get:r=>r.adv_plus, cell:r=>`<td class="num">${r.adv_plus??'—'}</td>`},
     {key:'runner_plus', label:'RUN+', get:r=>r.runner_plus, cell:r=>`<td class="num">${r.runner_plus??'—'}</td>`},
@@ -1029,7 +1033,7 @@ function showGlossary() {
           gr('Kunnarit/vuoro','<code>K / V</code>','') +
           gr('Lyödyt/vuoro','<code>L / V</code>','') +
           gr('Tuodut/yritys','<code>T / etenemisyritykset</code>','etenijän tuotto') +
-          gr('Palo-%','<code>palot / V</code>','pienempi parempi') +
+          gr('Palo-%','<code>palot / V</code>','pelaajan omat palot etenijänä; pienempi parempi') +
           gr('Tehot/vuoro','<code>(K + L + T) / V</code>','')
         )}
       </div>
@@ -1038,10 +1042,10 @@ function showGlossary() {
       <div class="card" style="padding:0;overflow-x:auto">
         ${gtable(
           gr('ADV+','<code>100 × ((KL + saatot) / (KLY + saatto-Y)) / sarjataso</code>','lyöjän etenemisarvo ilman K/L/T-toistoa') +
-          gr('RUN+','<code>100 × etenemis-% / sarjataso</code>','pelaajan arvo etenijänä') +
-          gr('OUT+','<code>100 × (1 − palot/vuoro) / sarjataso</code>','palojen välttäminen; yli 100 parempi') +
-          gr('SPARK','<code>0.50·ADV+ + 0.30·RUN+ + 0.20·OUT+</code>','kärjenrakentajan kokonaisindeksi') +
-          gr('1 % / 2 % / 3 % / K %','<code>onnistuneet KL-liikkeet / yritykset</code>','1→2, 2→3, 3→koti ja kotiutus; yksi lyöntivuoro voi tuottaa useita KL:iä') +
+          gr('RUN+','<code>100 × (0.8·kärkietenemis-%/sarjataso + 0.2·takaetenemis-%/sarjataso)</code>','pelaajan arvo etenijänä; kumpikin osa verrataan omaan sarjatasoonsa ja kärkietenemiset painavat eniten, koska takaetenemiset ovat usein vapaita') +
+          gr('OUT+','<code>100 × (1 − palot/vuoro) / sarjataso</code>','omien palojen välttäminen; yli 100 parempi') +
+          gr('SPARK','<code>0.50·ADV+ + 0.30·RUN+ + 0.20·OUT+</code>','tilanteenrakentajan indeksi') +
+          gr('1 % / 2 % / 3 % / K %','<code>onnistuneet KL-liikkeet / yritykset</code>','koti→1, 1→2, 2→3 ja kotiutus; yksi lyöntivuoro voi tuottaa useita KL:iä') +
           gr('1 %+ / 2 %+ / 3 %+ / K %+','<code>100 × split-% / sarjan split-%</code>','sama virallinen split sarjaindeksinä') +
           gr('KOTI-KL+','<code>100 × K % / sarjataso</code>','kotiutus-/juoksuksi muuttavat kärkilyöntiyritykset')
         )}
@@ -1050,9 +1054,9 @@ function showGlossary() {
       <p class="sub">Toisin kuin indeksit (per vuoro), nämä <em>kertyvät</em>: peliaika kasvattaa arvoa. Juoksuarvot johdetaan sarjan omasta juoksuympäristöstä (ridge-regressio joukkuetotaaleista), ei MLB:n painoista.</p>
       <div class="card" style="padding:0;overflow-x:auto">
         ${gtable(
-          gr('JYK','<code>juoksuarvo − korvaajataso × vuorot</code>','Juoksut Yli Korvaajan — juoksut yli vapaasti saatavilla olevan pelaajan') +
+          gr('JYK','<code>juoksuarvo − korvaajataso × lyöntivuorot</code>','Juoksut Yli Korvaajan — vertailutasona korvaajatason pelaaja eli sellainen, jonka joukkue saisi helposti tilalle esimerkiksi Ykköspesiksestä tai penkiltä') +
           gr('VYK','<code>JYK / (juoksut per ottelu)</code>','Voitot Yli Korvaajan — WAR-vastine; kertyvä kokonaisarvo voittoina') +
-          gr('RAA','<code>juoksuarvo − sarjataso × vuorot</code>','juoksut yli sarjan keskiarvon (ei korvaajatasoa)')
+          gr('RAA','<code>juoksuarvo − sarjataso × lyöntivuorot</code>','juoksut yli sarjan keskiarvon (ei korvaajatasoa)')
         )}
         <p class="legend" style="padding:10px 16px">Ensimmäinen versio olemassa olevista koosterivistä; tarkentuu RE24-malliin kun syöttö-syötöltä-data on käytössä.</p>
       </div>

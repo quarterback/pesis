@@ -254,6 +254,13 @@ created by the hitter:
 - **3 %**: success rate from third to home;
 - **K %**: scoring/home advancement situations.
 
+> **Correction (2026-08-03).** The list above is off by one base. The
+> `batpe_*_0..3` buckets are lead-runner advances **to** each base: `1 %` is
+> home→first, `2 %` first→second, `3 %` second→third, and `K %` third→home.
+> The bucket try-counts partition `batpe_total_tries` exactly, which is only
+> possible with home/1st/2nd/3rd as the four start positions. See
+> `docs/aar-mallo-feedback-improvements.md` for the full derivation.
+
 This matters because pesäpallo does not have the one-plate-appearance,
 one-result shape of baseball. During one lyöntivuoro a batter can earn multiple
 kärkilyönnit — up to three advancement hits in one batting turn — and the three

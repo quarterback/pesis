@@ -55,7 +55,7 @@ function _primerBaseballEN() {
       <h2>The traditional stats</h2>
     </div>
     ${_primerList([
-      ['Vuorot (V)','PA','Turns at bat.'],
+      ['Lyöntivuorot (LV)','PA','Turns at bat: every time the player comes to bat.'],
       ['Kärkilyönti (KL)','HIT','A hit that advances the lead runner. This is the basic offensive event, and a single turn at bat can produce more than one.'],
       ['KL%','AVG','Successful advances divided by attempts. This is the sport’s batting average. The league average is around .530, so the numbers run much higher than in baseball.'],
       ['Kunnari (K)','HR','A home run.'],
@@ -70,7 +70,7 @@ function _primerBaseballEN() {
     </div>
     ${_primerList([
       ['TEHO+','wRC+','Production per turn at bat, indexed to the league. 100 is average, and the top hitters land between 250 and 350.'],
-      ['VYK','WAR','Wins above replacement. This is the site’s default leaderboard.'],
+      ['VYK','WAR','Wins above replacement. The baseline is a replacement-level player, one a team could easily bring in from the lower league or its own bench. This is the site’s default leaderboard.'],
       ['JYK','RAR','Runs above replacement, based on run values from this league.'],
       ['SPARK','','A composite rating for table-setters that combines advancing runners, baserunning and avoiding outs.'],
       ['ADV+ / RUN+ / OUT+','','The three components of SPARK, each indexed to a league average of 100.'],
@@ -84,7 +84,7 @@ function _primerBaseballEN() {
     </div>
     ${_primerList([
       ['Lukkari (L)','P','The pitcher, who also anchors the defense at home plate.'],
-      ['Sieppari (S)','C','Covers the area behind the batter.'],
+      ['Sieppari (S)','C','A roving infielder between home base and second. The exact spot changes with the situation.'],
       ['1V / 2V / 3V','1B / 2B / 3B','The basemen.'],
       ['3P / 2P','LSS / RSS','Two shortstops, one on each side of the infield.'],
       ['3K / 2K','LF / RF','The outfielders.'],
@@ -132,7 +132,7 @@ function _primerBaseballFI() {
       <h2>Perinteiset tilastot</h2>
     </div>
     ${_primerList([
-      ['Vuorot (V)','PA','Lyöntivuorot.'],
+      ['Lyöntivuorot (LV)','PA','Montako kertaa pelaaja tulee lyömään.'],
       ['Kärkilyönti (KL)','HIT','Lyönti, joka etenee kärkietenijää. Tämä on hyökkäyksen perustapahtuma, ja yksi lyöntivuoro voi tuottaa useamman.'],
       ['KL%','AVG','Onnistuneet etenemiset jaettuna yrityksillä. Tämä on lajin lyöntikeskiarvo, ja sarjan keskitaso on noin .530.'],
       ['Kunnari (K)','HR','Kunnari.'],
@@ -148,9 +148,9 @@ function _primerBaseballFI() {
     </div>
     ${_primerList([
       ['TEHO+','wRC+','Tuotanto lyöntivuoroa kohden sarjaan indeksoituna. 100 on keskitaso, ja kärkilyöjät liikkuvat välillä 250–350.'],
-      ['VYK','WAR','Voitot yli korvaajatason. Sivuston oletuslista.'],
-      ['JYK','RAR','Juoksut yli korvaajatason, laskettuna tämän sarjan juoksuarvoilla.'],
-      ['SPARK','','Kärjenrakentajan kokonaisluku, joka yhdistää etenemisen lyöjänä, etenijänä ja palojen välttämisen.'],
+      ['VYK','WAR','Voitot yli korvaajatason. Vertailutasona on korvaajatason pelaaja eli sellainen, jonka joukkue saisi helposti tilalle esimerkiksi Ykköspesiksestä tai omalta penkiltään. Sivuston oletuslista.'],
+      ['JYK','RAR','Juoksut yli korvaajatason samalla vertailulla, laskettuna tämän sarjan juoksuarvoilla.'],
+      ['SPARK','','Tilanteenrakentajan indeksi, joka yhdistää etenemisen lyöjänä, etenijänä ja palojen välttämisen.'],
       ['ADV+ / RUN+ / OUT+','','SPARKin kolme osaa, kukin indeksoituna sarjan keskiarvoon 100.'],
       ['KOTI-KL+','','Kuinka usein pelaajan lyönnit tuovat kärjen kotiin asti, suhteessa sarjaan.'],
       ['PARE','Steamer / ZiPS','Ennustejärjestelmä. Se painottaa koko uraa niin, että tuoreet ottelut painavat eniten, ja regressoi kohti sarjan keskitasoa.'],
@@ -162,7 +162,7 @@ function _primerBaseballFI() {
     </div>
     ${_primerList([
       ['Lukkari (L)','P','Syöttäjä, joka johtaa puolustusta kotipesältä.'],
-      ['Sieppari (S)','C','Pelaa lyöjän takana olevan alueen.'],
+      ['Sieppari (S)','C','Liikkuva sisäkenttäpelaaja kotipesän ja kakkospesän välisellä alueella. Paikka vaihtelee tilanteen mukaan.'],
       ['1V / 2V / 3V','1B / 2B / 3B','Pesävahdit.'],
       ['3P / 2P','LSS / RSS','Kaksi polttajaa sisäkentän molemmin puolin.'],
       ['3K / 2K','LF / RF','Kopparit.'],
@@ -206,7 +206,7 @@ function _primerPesisFI() {
       lyöntijärjestyksen loppupään tykeistä. Suuri osa pesäpallosta tapahtuu kuitenkin
       muualla: kärjen etenemisissä, palojen välttämisessä ja etenijän työssä. Mallon mittarit
       antavat arvon myös sille.</p>
-      <p>SPARK nostaa esiin kärjenrakentajat. VYK laskee pelaajan koko arvon voittoina,
+      <p>SPARK nostaa esiin tilanteenrakentajat. VYK laskee pelaajan koko arvon voittoina,
       jolloin eri roolien pelaajia voi vertailla samalla luvulla. PARE arvioi pelaajan
       tämänhetkisen tason koko uran perusteella. Luvut auttavat näkemään, miksi pelinjohtaja
       luottaa pelaajaan, jonka teholuvut näyttävät vaatimattomilta.</p>
@@ -219,9 +219,9 @@ function _primerPesisFI() {
       ['RBI','Lyödyt','Kotiin lyödyt juoksut.'],
       ['R','Tuodut','Itse juostut juoksut.'],
       ['K%','Palo-%','Kuinka suuri osa lyöntivuoroista päättyy omaan paloon. Pienempi on parempi.'],
-      ['PA','Vuorot','Lyöntivuorot.'],
+      ['PA','Lyöntivuorot','Montako kertaa pelaaja tulee lyömään.'],
       ['wRC+','TEHO+','Kokonaistuotanto indeksinä, jossa 100 on keskitaso. Esimerkiksi 147 vastaa MVP-tason kautta.'],
-      ['WAR','VYK','Wins above replacement eli pelaajan kokonaisarvo voittoina verrattuna korvaajatason pelaajaan. Mallon VYK on saman idean toteutus pesäpalloon.'],
+      ['WAR','VYK','Wins above replacement eli pelaajan kokonaisarvo voittoina verrattuna korvaajatason pelaajaan — sellaiseen, jonka joukkue saisi helposti tilalle esimerkiksi Ykköspesiksestä tai penkiltä. Mallon VYK on saman idean toteutus pesäpalloon.'],
       ['ERA / ERA-','LRA / LRA-','Lukkarin päästämät juoksut per ottelu ja sama sarjaindeksinä, jossa 100 on keskitaso ja pienempi on parempi.'],
       ['DH','Jokeri','Lyöjä ilman kenttäpaikkaa.'],
       ['Prosenttipiste','','Pelaajan sijoitus sarjan vakiopelaajien joukossa. Luku 92 tarkoittaa, että pelaaja on parempi kuin 92 prosenttia vertailujoukosta.'],
@@ -237,10 +237,10 @@ function _primerPesisFI() {
       <h2>Mallon omat mittarit</h2>
     </div>
     ${_primerList([
-      ['VYK / JYK','','Kertyvät arvomittarit: voitot ja juoksut yli korvaajatason. Peliaika kasvattaa arvoa.'],
+      ['VYK / JYK','','Kertyvät arvomittarit: voitot ja juoksut yli korvaajatason eli pelaajan, jonka joukkue saisi helposti tilalle. Peliaika kasvattaa arvoa.'],
       ['TEHO+','','Tuotanto lyöntivuoroa kohden. 100 on sarjan keskitaso.'],
-      ['SPARK','','Kärjenrakentajan indeksi, joka yhdistää etenemisen lyöjänä (ADV+), etenijänä (RUN+) ja palojen välttämisen (OUT+).'],
-      ['1 % / 2 % / 3 % / K %','','Viralliset kärkilyöntisplitit pesittäin: ykköseltä kakkoselle, kakkoselta kolmoselle, kolmoselta kotiin ja kotiutukset.'],
+      ['SPARK','','Tilanteenrakentajan indeksi, joka yhdistää etenemisen lyöjänä (ADV+), etenijänä (RUN+) ja palojen välttämisen (OUT+).'],
+      ['1 % / 2 % / 3 % / K %','','Viralliset kärkilyöntisplitit pesittäin: kotipesästä ykköselle, ykköseltä kakkoselle, kakkoselta kolmoselle ja kolmoselta kotiin.'],
       ['PARE','','Ennuste pelaajan tasosta. Koko ura painotettuna niin, että tuoreet ottelut painavat eniten.'],
       ['LRA / RP','','Lukkarin päästämät juoksut per ottelu ja estetyt juoksut yli sarjatason.'],
       ['PF / kTEHO+','','Kenttäkerroin, jossa 100 on neutraali, ja sillä korjattu TEHO+.'],
@@ -288,7 +288,7 @@ function _primerPesisEN() {
       ['RBI','Lyödyt','Runs batted in.'],
       ['R','Tuodut','Runs scored.'],
       ['K%','Palo-%','The share of turns that end in the player’s own out. Lower is better.'],
-      ['PA','Vuorot','Turns at bat.'],
+      ['PA','Lyöntivuorot','Turns at bat: every time the player comes to bat.'],
       ['wRC+','TEHO+','Total production as an index where 100 is average. A 147, for example, is an MVP-level season.'],
       ['WAR','VYK','Wins above replacement, a player’s total value in wins over a replacement-level player. Mallo’s VYK applies the same idea to pesäpallo.'],
       ['ERA / ERA-','LRA / LRA-','Runs allowed per game by the lukkari, and the same figure as a league index where 100 is average and lower is better.'],
@@ -309,7 +309,7 @@ function _primerPesisEN() {
       ['VYK / JYK','','Cumulative value stats: wins and runs above replacement. Playing time adds value.'],
       ['TEHO+','','Production per turn at bat. 100 is the league average.'],
       ['SPARK','','A table-setter index combining advancement as a batter (ADV+), as a runner (RUN+) and out avoidance (OUT+).'],
-      ['1 % / 2 % / 3 % / K %','','The official lead-runner splits by base: first to second, second to third, third to home, and scoring.'],
+      ['1 % / 2 % / 3 % / K %','','The official lead-runner splits by base: home to first, first to second, second to third, and third to home.'],
       ['PARE','','A projection of the player’s level, weighting the whole career with recent games counting most.'],
       ['LRA / RP','','Runs allowed per game by the lukkari, and runs prevented above the league average.'],
       ['PF / kTEHO+','','The park factor, where 100 is neutral, and TEHO+ adjusted with it.'],

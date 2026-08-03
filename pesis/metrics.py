@@ -118,10 +118,12 @@ def _primary_position(raw_rows_json: str | None) -> str | None:
 
 
 def _add_raw_base_splits(line: dict, raw_rows_json: str | None) -> None:
-    """Attach official 1%/2%/3%/K% KL splits from raw rows."""
+    """Attach official 1%/2%/3%/K% KL splits and the lead/trail runner
+    advance split (runpadv_* / runtadv_*) from raw rows."""
     import json as _json
     succ = [0, 0, 0, 0]
     tries = [0, 0, 0, 0]
+    lead_succ = lead_tries = trail_succ = trail_tries = 0
     if raw_rows_json:
         for raw_text in _json.loads(raw_rows_json):
             raw = _json.loads(raw_text or "{}")
@@ -129,6 +131,16 @@ def _add_raw_base_splits(line: dict, raw_rows_json: str | None) -> None:
             for i in range(4):
                 succ[i] += src.get(f"batpe_succeeded_{i}") or 0
                 tries[i] += src.get(f"batpe_tries_{i}") or 0
+            lead_succ += src.get("runpadv_succeeded") or 0
+            lead_tries += src.get("runpadv_tries") or 0
+            trail_succ += src.get("runtadv_succeeded") or 0
+            trail_tries += src.get("runtadv_tries") or 0
+    line["karki_eten"] = lead_succ
+    line["karki_eten_yritykset"] = lead_tries
+    line["taka_eten"] = trail_succ
+    line["taka_eten_yritykset"] = trail_tries
+    line["karki_eten_pct"] = lead_succ / lead_tries if lead_tries else None
+    line["taka_eten_pct"] = trail_succ / trail_tries if trail_tries else None
     for i in range(4):
         line[f"kl_base{i}"] = succ[i] / tries[i] if tries[i] else None
         line[f"kl_base{i}_tries"] = tries[i]
@@ -148,6 +160,16 @@ def _index(value, league):
     return round(100 * value / league) if value is not None and league else None
 
 
+def _run_blend(lead_ratio, trail_ratio):
+    """RUN+ blend: 80 % lead-runner, 20 % trail-runner, each ratio already
+    measured against its own league rate so that near-free trail advances
+    cannot inflate the index. Weights renormalize when a player has attempts
+    in only one role."""
+    if lead_ratio is not None and trail_ratio is not None:
+        return 0.80 * lead_ratio + 0.20 * trail_ratio
+    return lead_ratio if lead_ratio is not None else trail_ratio
+
+
 def _add_analytics_indices(lines: list[dict]) -> None:
     """Add Mallo-only composite analytics (ADV+, RUN+, OUT+, SPARK, base-split plus)."""
     adv_num = sum(l["karkilyonnit"] + l["saatot"] for l in lines)
@@ -158,6 +180,10 @@ def _add_analytics_indices(lines: list[dict]) -> None:
     out_den = sum(l["turns_at_bat"] for l in lines)
     league_adv = _safe_div(adv_num, adv_den)
     league_run = _safe_div(run_num, run_den)
+    league_lead = _safe_div(sum(l.get("karki_eten") or 0 for l in lines),
+                            sum(l.get("karki_eten_yritykset") or 0 for l in lines))
+    league_trail = _safe_div(sum(l.get("taka_eten") or 0 for l in lines),
+                             sum(l.get("taka_eten_yritykset") or 0 for l in lines))
     league_out_avoid = 1 - (out_num / out_den) if out_den else None
     base_leagues = {}
     for i in range(4):
@@ -171,7 +197,14 @@ def _add_analytics_indices(lines: list[dict]) -> None:
                         l["karki_yritykset"] + l["saatto_yritykset"])
         out_avoid = 1 - l["palo_rate"] if l.get("palo_rate") is not None else None
         l["adv_plus"] = _index(adv, league_adv)
-        l["runner_plus"] = _index(l.get("eten_pct"), league_run)
+        blend = _run_blend(_safe_div(l.get("karki_eten_pct"), league_lead),
+                           _safe_div(l.get("taka_eten_pct"), league_trail))
+        if blend is not None:
+            l["runner_plus"] = round(100 * blend)
+        else:
+            # Raw lead/trail fields missing (pre-v1 rows): fall back to the
+            # pooled rate so RUN+ does not vanish for old seasons.
+            l["runner_plus"] = _index(l.get("eten_pct"), league_run)
         l["out_avoid_plus"] = _index(out_avoid, league_out_avoid)
         l["adv1_plus"] = _index(l.get("adv1_pct"), base_leagues[0])
         l["adv2_plus"] = _index(l.get("adv2_pct"), base_leagues[1])
