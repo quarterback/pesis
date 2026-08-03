@@ -73,6 +73,8 @@ The owner clarified a crucial semantics issue: `1%`, `2%`, `3%`, and `K%` are **
 
 This distinction matters because a pesäpallo batting turn can create multiple advancement hits. Do not model these as baseball-style one-plate-appearance outcomes.
 
+> **Correction (2026-08-03).** The table above is wrong by one base. The upstream `batpe_*_0..3` buckets are lead-runner advances **to** 1st / 2nd / 3rd / home, so `1%` is the lead runner going home→first, `2%` first→second, `3%` second→third, and `K%` third→home (kotiutus). This was confirmed two ways: the four buckets exactly partition `batpe_total_tries` (only possible if the four lead-runner start positions are home/1st/2nd/3rd), and `kl_base2` vs `kl_base3` have different attempt counts and rates, so they cannot both be the third-to-home split. `pesis/metrics.py` (`BASE_KL_LABELS`) and `pesis/web/i18n.py` always had the correct labels; the frontend copy written from this table did not. See `docs/aar-mallo-feedback-improvements.md`.
+
 ### New index metrics
 
 | Metric | Meaning | Implementation note |

@@ -16,7 +16,9 @@ Column glossary (Finnish stat line → column):
     etenemiset / eteneminen_yritykset
                   advances as the runner (kärki- + takaeteneminen)
     haavat        wounds (batter-caused outs-in-waiting on own advance)
-    palot         outs (as batter or runner)
+    palot         outs on the player's own advance attempts, as lead or
+                  trailing runner (runpadv_outs + runtadv_out); outs by
+                  other runners during the turn are not included
     turns_at_bat  plate turns — the denominator for per-turn rates
 """
 
