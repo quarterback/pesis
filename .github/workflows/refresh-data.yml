@@ -59,6 +59,12 @@ jobs:
       - name: Ingest the current season
         run: python -m pesis ingest-v1 --year "$(date +%Y)" --series all
 
+      # Play-by-play for played matches of the current season. Matches without
+      # live scoring are marked missing on first attempt and never refetched,
+      # so after the initial season backfill this is a handful of calls a day.
+      - name: Ingest play-by-play for the current season
+        run: python -m pesis ingest-pbp --year "$(date +%Y)"
+
       - name: Re-export the static data
         run: |
           rm -rf site/data

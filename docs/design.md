@@ -26,7 +26,10 @@ verified against live responses:
   position, plus match context (opponent, home/away, **weather, attendance**).
 - **Play-by-play — `/online/{match}/events`:** event stream with a
   `runnersAtBases` array on every event → run-expectancy and win-probability
-  models are buildable.
+  models are buildable. **Ingested since 2026-08 (keyless — no API key
+  needed, contrary to earlier assumptions): see `pesis/pbp.py`,
+  `pesis/defense.py` and `docs/aar-pbp-defense.md`.** Per-hit x/y spray
+  coordinates ride along (y is inverted depth; 3K covers the high-x half).
 - **Also available:** batter–runner pair stats, a spatial **hit-map** endpoint,
   line scores by jakso incl. supervuoro, referees, transfers, disciplinary
   decisions.

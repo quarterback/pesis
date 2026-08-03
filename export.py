@@ -10,7 +10,7 @@ from __future__ import annotations
 import json, re, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
-from pesis import context, db, metrics, projection, simulate, translate
+from pesis import context, db, defense, metrics, projection, simulate, translate
 
 # Mallo-native analytics only — the site is additive to pesistulokset, never a
 # clone of its counting columns (kunnarit/lyodyt/tuodut/tehot) or published rates.
@@ -146,14 +146,13 @@ def main():
             "players": lb_lines,
         })
 
-        # League standings + odds + context
+        # League standings + context (the in-season odds chart was retired:
+        # it repeated what the standings already say)
         same_series = [s["id"] for s in all_seasons if s["series"] == season["series"]]
         table = simulate.standings(conn, sid)
-        history = simulate.odds_history(conn, sid)
         dump(OUT / "league" / f"{sid}.json", {
             "season": season,
             "standings": table,
-            "odds_history": history if len(history.get("dates", [])) > 1 else None,
             "parks": context.park_factors(conn, same_series),
             "weather": context.weather_effects(conn, same_series),
         })
@@ -180,6 +179,19 @@ def main():
         dump(OUT / "lukkari" / f"{sid}.json", {
             "season": season, "lukkarit": metrics.lukkari_lines(conn, sid),
         })
+
+        # Defense (PBP-derived) — only for seasons with play-by-play coverage
+        cov = defense.coverage(conn, sid)
+        if cov["matches_pbp"]:
+            dump(OUT / "defense" / f"{sid}.json", {
+                "season": season,
+                "coverage": cov,
+                "re_table": defense.re_table_export(conn, sid),
+                "teams": defense.team_defense(conn, sid),
+                "of_koppi": defense.of_koppi_board(conn, sid),
+                "lukkari_def": defense.lukkari_defense(conn, sid),
+                "zone_map": defense.team_zone_map(conn, sid),
+            })
 
         # Teams — roster ranked by SPARK (Mallo composite), unqualified players last
         teams = {l["team"] for l in lines if l.get("team")}

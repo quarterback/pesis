@@ -377,7 +377,14 @@ def _add_value_stats(conn: sqlite3.Connection, season_id: int, lines: list[dict]
     """
     if not lines:
         return
-    weights = _empirical_value_weights(conn, season_id)
+    # Seasons with play-by-play coverage use event values measured from the
+    # season's own run-expectancy table; older seasons keep the prior+ridge
+    # scaffold. The attribution (VALUE_EVENTS, replacement level, runs per
+    # win) is identical either way — only the weight magnitudes differ.
+    from . import defense
+    weights = defense.re24_event_values(conn, season_id)
+    if weights is None:
+        weights = _empirical_value_weights(conn, season_id)
     value_events = tuple(weights)
     for line in lines:
         line["run_value"] = sum((line.get(f) or 0) * weights[f] for f in value_events)

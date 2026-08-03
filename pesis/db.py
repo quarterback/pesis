@@ -89,6 +89,75 @@ CREATE TABLE IF NOT EXISTS player_games (
 
 CREATE INDEX IF NOT EXISTS idx_pg_season ON player_games(season_id);
 CREATE INDEX IF NOT EXISTS idx_pg_player_date ON player_games(player_id, date);
+
+-- Play-by-play fetch ledger: one row per match ever attempted, so matches
+-- without live scoring ('missing') are never refetched on the daily run.
+CREATE TABLE IF NOT EXISTS pbp_meta (
+    match_id      INTEGER PRIMARY KEY,     -- == matches.id == upstream match id
+    season_id     INTEGER,
+    fetched_at    TEXT NOT NULL,           -- ISO UTC of the last attempt
+    status        TEXT NOT NULL,           -- 'ok' | 'missing' | 'error' | 'unfinished'
+    finished      INTEGER,                 -- payload finished flag
+    parse_version INTEGER,                 -- pbp.PARSE_VERSION used for the stored plays
+    n_groups      INTEGER,
+    n_plays       INTEGER,
+    n_warnings    INTEGER NOT NULL DEFAULT 0,
+    warnings      TEXT                     -- JSON sample of unrecognized tokens
+);
+
+-- One row per play-by-play sub-event. Parsed form only; the raw JSON is not
+-- kept (the Actions cache holds the DB and raw payloads are ~230 KB/match).
+CREATE TABLE IF NOT EXISTS plays (
+    match_id     INTEGER NOT NULL,
+    seq          INTEGER NOT NULL,          -- order over the whole match
+    season_id    INTEGER NOT NULL,
+    group_id     INTEGER,                   -- upstream event-group id
+    group_type   TEXT NOT NULL,             -- 'o','he','m','is','t','x','osc','doc',...
+    period       INTEGER NOT NULL,          -- 0/1 jakso, 2 supervuoro, 3 scoring contest
+    inning       INTEGER NOT NULL,
+    bat_turn     INTEGER NOT NULL,          -- 0 = opening half, 1 = closing half
+    bat_team_id  INTEGER,                   -- upstream id of the batting team
+    is_home_bat  INTEGER,                   -- 1 when the batting team is the home team
+    batter_id    INTEGER,
+    actor_id     INTEGER,                   -- the player the sub-event is about
+    action       TEXT NOT NULL,             -- see pbp.py action enum
+    from_base    INTEGER,                   -- 0 = home, 1..3
+    to_base      INTEGER,                   -- 1..3, 4 = kotipesä
+    out          INTEGER NOT NULL DEFAULT 0,-- explicit {out:1} events only
+    caught       INTEGER NOT NULL DEFAULT 0,-- koppi: a fielding act, never an out
+    runs         INTEGER NOT NULL DEFAULT 0,
+    hit_x        REAL,                      -- 0-100; NULL when unrecorded (0,0)
+    hit_y        REAL,
+    hit_number   INTEGER,
+    pointhits    INTEGER,                   -- kärkilyönti success base index
+    pointhitf    INTEGER,                   -- kärkilyönti failure base index
+    tailhits     INTEGER,                   -- saatto index on trailing advances
+    outs_before  INTEGER NOT NULL DEFAULT 0,
+    outs_after   INTEGER NOT NULL DEFAULT 0,
+    base_state_before TEXT,                 -- '000'..'111' occupancy of 1st/2nd/3rd
+    base_state_after  TEXT,
+    runners_before    TEXT,                 -- JSON [id|null x3]
+    ts           INTEGER,                   -- seconds from match start
+    PRIMARY KEY (match_id, seq)
+);
+
+CREATE INDEX IF NOT EXISTS idx_plays_season ON plays(season_id, action);
+CREATE INDEX IF NOT EXISTS idx_plays_match  ON plays(match_id);
+
+-- Batting order per team per match; phase 0 = opening order, +1 per change.
+CREATE TABLE IF NOT EXISTS lineups (
+    match_id   INTEGER NOT NULL,
+    team_id    INTEGER NOT NULL,            -- upstream team id
+    is_home    INTEGER,
+    phase      INTEGER NOT NULL,
+    slot       INTEGER NOT NULL,            -- 1..12 (10..12 jokerit in official orders)
+    player_id  INTEGER NOT NULL,
+    pitcher_id INTEGER,                     -- lukkari during this phase
+    source     TEXT NOT NULL,               -- 'reconstructed' | 'substitution'
+    PRIMARY KEY (match_id, team_id, phase, slot)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lineups_player ON lineups(player_id);
 """
 
 
