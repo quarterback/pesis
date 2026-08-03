@@ -112,3 +112,46 @@ at 390 px over the leaderboard (filter, sorting, popovers), Kaava, all four
 primer variants and a player page — no horizontal overflow, no new console
 errors (the two logged errors are the Vercel insights script, absent outside
 Vercel, and a font CDN blocked by the sandbox).
+
+## Follow-up (same day): English mode, kTEHO+ removed from the UI
+
+Second round after the first PR merged.
+
+**English mode.** The site now has a FI/EN toggle in the nav (persisted in
+`localStorage` as `mallo-lang`, FI default). Implementation is a two-argument
+helper — `t(fi, en)` — plus `statLabel(key)` with an English override table
+(`STAT_LABEL_EN`: PA, HR/PA, RBI/PA, Out%, Escort%, Advance%, home→1st splits)
+so Finnish-worded stat labels translate while the shared symbols (VYK, SPARK,
+KL%) stay put. Every page template, table header, filter, popover (selected
+language shown first), the Kaava page, the About prose and the error strings
+went through it; the primer's own language toggle now defaults to the site
+language. No i18n framework — with one language pair and one file, inline
+`t()` keeps every string next to its use site.
+
+**kTEHO+ removed from the UI, TEHO+ kept.** Owner call: park-adjusted TEHO+
+tracks raw TEHO+ too closely to earn a column (park factors are regressed
+toward 100), and without lineup context neither number differentiates roles.
+kTEHO+ is gone from the leaderboard pills, player career table, Kaava and the
+primer lists; `teho_plus_adj` stays in the pipeline, the exported JSON and the
+CSV download. The TEHO+ popover and Kaava note now say plainly that the number
+favors the back of the batting order. The park-factor table on the league page
+stays.
+
+**Pre-existing mobile bug fixed.** Player pages overflowed ~300 px at 390 px
+on main: `.split` grid items default to `min-width:auto`, so the career table
+stretched its column past the viewport instead of scrolling inside its card.
+`.split > div { min-width: 0; }` fixes it.
+
+**Lineup data confirmed.** The owner confirmed (with a live match page,
+`pesistulokset.fi/ottelut/128954`) that box scores list players in batting
+order — 1–9 fielders, 10–12 jokerit — with per-jakso splits, a PBP event feed
+and hit-direction spray data by base situation. Recorded in `design.md`:
+lineup-slot ingest from the match endpoint is the missing input for a
+role-aware TEHO+, and slot-in-order is the stable role signal because in-game
+defensive positions are fluid.
+
+Verification: `node --check`; Playwright at 390 px in both languages over the
+leaderboard (toggle, Fielders filter, popover language order), player page,
+Kaava, league, projections, lukkarit, about and primer — overflow 0
+everywhere, no kTEHO+ anywhere, no new console errors. `sw.js` CACHE bumped to
+mallo-v5 (app.js, primer.js, mallo.css all changed).
