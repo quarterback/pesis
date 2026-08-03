@@ -880,6 +880,35 @@ async function showPlayer(pid) {
     }
   }
 
+  // Defensive numbers for the current season, when the player qualifies for
+  // one of the PBP boards. Infielders and jokers get nothing here on
+  // purpose: zone inference cannot carry individual claims for fluid
+  // infield positions.
+  let defenseHtml = '';
+  try {
+    const defData = await fetchJSON(`data/defense/${line.season_id}.json`);
+    const ofRow = (defData.of_koppi || []).find(r => r.player_id === player.id);
+    const lkRow = (defData.lukkari_def || []).find(r => r.player_id === player.id);
+    if (ofRow || lkRow) {
+      const tiles = [];
+      if (ofRow) tiles.push(`
+        <div class="tile"><div class="label">${t('Koppi-% takakentällä', 'Outfield catch rate')}${infoBtn('of_koppi_rate')}</div>
+          <div class="value">${ofRow.rate} %</div></div>
+        <div class="tile"><div class="label">${t('Kopit / lyönnit', 'Catches / balls')}</div>
+          <div class="value">${ofRow.koppis}/${ofRow.n}</div></div>`);
+      if (lkRow) tiles.push(`
+        <div class="tile"><div class="label">PEJ${infoBtn('lukkari_def_rv')}</div>
+          <div class="value">${lkRow.def_rv > 0 ? '+' : ''}${lkRow.def_rv}</div></div>
+        <div class="tile"><div class="label">${t('Poltot · haavat', 'Outs · wounds')}</div>
+          <div class="value">${lkRow.outs} · ${lkRow.wounds}</div></div>`);
+      defenseHtml = `
+      <h2>${t('Puolustus', 'Defense')} ${line.year}</h2>
+      <div class="tiles">${tiles.join('')}</div>
+      <p class="legend">${t('Pelaajakohtainen jako perustuu lyöntien paikkatietoon — arvio, ei virallinen tilasto.',
+        'The player split is inferred from hit locations — an estimate, not an official stat.')}</p>`;
+    }
+  } catch (e) { /* no play-by-play for this season */ }
+
   let careerRows = '';
   for (const s of career) {
     const teamCell = s.team
@@ -966,6 +995,7 @@ async function showPlayer(pid) {
       ${base_kl ? `
       <h2>${t('KL% pesäkohdittain', 'KL% by target base')} ${line.year} <span class="muted">${t('(kärkilyöntiprosentti per pesa)', '(advance-hit rate per base)')}</span></h2>
       <div class="card">${baseKlBars}</div>` : ''}
+      ${defenseHtml}
       ${careerCharts}
       <div class="split">
         <div>
