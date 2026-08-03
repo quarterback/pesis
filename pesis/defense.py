@@ -382,6 +382,59 @@ def _player_names(conn: sqlite3.Connection, season_id: int) -> dict:
            WHERE pg.season_id = ? GROUP BY pg.player_id""", (season_id,))}
 
 
+ZONES = ("bl", "bc", "br", "ml", "mc", "mr", "fl", "fr")
+
+
+def hit_zone(x: float, y: float) -> str:
+    """Field zone id from hit coordinates: three back and three middle
+    lanes plus two front wedges, mirroring the familiar spray-chart layout.
+    y is inverted depth (0 = back boundary)."""
+    if y < OF_ZONE_MAX_Y:
+        row = "b"
+    elif y < FRONT_ZONE_MIN_Y:
+        row = "m"
+    else:
+        return "fl" if x < 50 else "fr"
+    col = "l" if x < 100 / 3 else ("c" if x < 200 / 3 else "r")
+    return row + col
+
+
+def team_zone_map(conn: sqlite3.Connection, season_id: int) -> dict:
+    """Opponent balls in play binned into field zones per defending team,
+    with catch counts — the data behind the defensive field map."""
+    names = {m["id"]: (m["home_team"], m["away_team"]) for m in conn.execute(
+        "SELECT id, home_team, away_team FROM matches WHERE season_id = ?",
+        (season_id,))}
+    league = {z: [0, 0] for z in ZONES}
+    teams: dict[str, dict] = {}
+    for r in conn.execute(
+            """SELECT match_id, is_home_bat, hit_x, hit_y, caught FROM plays
+               WHERE season_id = ? AND period < 2
+                 AND action IN ('hit', 'koppi')
+                 AND hit_x IS NOT NULL AND hit_y IS NOT NULL
+                 AND is_home_bat IS NOT NULL""", (season_id,)):
+        pair = names.get(r["match_id"])
+        if pair is None:
+            continue
+        defender = pair[0] if not r["is_home_bat"] else pair[1]
+        z = hit_zone(r["hit_x"], r["hit_y"])
+        caught = 1 if r["caught"] else 0
+        league[z][0] += 1
+        league[z][1] += caught
+        tz = teams.setdefault(defender, {z: [0, 0] for z in ZONES})
+        tz[z][0] += 1
+        tz[z][1] += caught
+    return {
+        "league": {z: {"n": n, "koppi_pct": round(100 * k / n, 1) if n else None}
+                   for z, (n, k) in league.items()},
+        "teams": [{"team": team,
+                   "zones": {z: {"n": n, "koppis": k,
+                                 "koppi_pct": round(100 * k / n, 1) if n else None}
+                             for z, (n, k) in tz.items()}}
+                  for team, tz in sorted(teams.items())],
+    }
+
+
 def of_koppi_board(conn: sqlite3.Connection, season_id: int,
                    min_balls: int = _OF_MIN_BALLS) -> list[dict]:
     """Outfielder catch rates on balls hit into the deep zone. The player

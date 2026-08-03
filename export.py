@@ -146,14 +146,13 @@ def main():
             "players": lb_lines,
         })
 
-        # League standings + odds + context
+        # League standings + context (the in-season odds chart was retired:
+        # it repeated what the standings already say)
         same_series = [s["id"] for s in all_seasons if s["series"] == season["series"]]
         table = simulate.standings(conn, sid)
-        history = simulate.odds_history(conn, sid)
         dump(OUT / "league" / f"{sid}.json", {
             "season": season,
             "standings": table,
-            "odds_history": history if len(history.get("dates", [])) > 1 else None,
             "parks": context.park_factors(conn, same_series),
             "weather": context.weather_effects(conn, same_series),
         })
@@ -191,6 +190,7 @@ def main():
                 "teams": defense.team_defense(conn, sid),
                 "of_koppi": defense.of_koppi_board(conn, sid),
                 "lukkari_def": defense.lukkari_defense(conn, sid),
+                "zone_map": defense.team_zone_map(conn, sid),
             })
 
         # Teams — roster ranked by SPARK (Mallo composite), unqualified players last

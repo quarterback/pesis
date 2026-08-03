@@ -111,6 +111,31 @@ def test_re24_event_values_thresholds_and_signs(monkeypatch):
     assert w["haavat"] < 0 and w["palot"] < 0
 
 
+def test_hit_zone_layout():
+    assert defense.hit_zone(10, 10) == "bl"
+    assert defense.hit_zone(50, 10) == "bc"
+    assert defense.hit_zone(90, 25) == "br"
+    assert defense.hit_zone(10, 50) == "ml"
+    assert defense.hit_zone(90, 69) == "mr"
+    assert defense.hit_zone(10, 80) == "fl"
+    assert defense.hit_zone(70, 95) == "fr"
+
+
+def test_team_zone_map_counts():
+    conn = _basic_season(_conn())
+    # give the deliveries coordinates: two deep-left, one front-right
+    conn.execute("UPDATE plays SET hit_x = 10, hit_y = 10 "
+                 "WHERE action = 'hit' AND seq IN (1, 3)")
+    conn.execute("UPDATE plays SET hit_x = 80, hit_y = 90 "
+                 "WHERE action = 'hit' AND seq = 5")
+    zm = defense.team_zone_map(conn, 1)
+    assert zm["league"]["bl"]["n"] == 2
+    team = zm["teams"][0]
+    assert team["team"] == "Kotij"
+    assert team["zones"]["bl"]["n"] == 2
+    assert team["zones"]["fr"]["n"] == 1
+
+
 def test_coverage_counts():
     conn = _basic_season(_conn())
     cov = defense.coverage(conn, 1)

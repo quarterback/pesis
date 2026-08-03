@@ -32,85 +32,102 @@
     return { svg, width, height, m };
   }
 
-  /* ---- playoff odds over the season ------------------------------------ */
+  /* ---- defensive field map (zone chart) --------------------------------
+     Opponent balls in play binned into eight field zones, shaded by the
+     defending team's koppi rate versus the league rate in the same zone.
+     Diverging fill (validated pair per theme), neutral at league average;
+     every zone carries direct ink labels so identity never rides on color. */
 
-  window.renderFangraph = function (container, data, spots = 4) {
-    if (!data.dates || data.dates.length < 2) return;
-    const { svg, width, height, m } = frame(container, 300);
-    const parse = d3.utcParse("%Y-%m-%d");
-    const dates = data.dates.map(parse);
-    const x = d3.scaleUtc(d3.extent(dates), [m.left, width - m.right]);
-    const y = d3.scaleLinear([0, 100], [height - m.bottom, m.top]);
+  const FIELD_ZONES = (() => {
+    const L = 10, R = 350, T = 10, W = R - L, CX = (L + R) / 2;
+    const yB = 105, yM = 228, yA = 320;         // band edges + apex
+    const x3 = [L, L + W / 3, L + 2 * W / 3, R];
+    const rect = (x0, x1, y0, y1) =>
+      [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+    return {
+      bl: rect(x3[0], x3[1], T, yB), bc: rect(x3[1], x3[2], T, yB),
+      br: rect(x3[2], x3[3], T, yB),
+      ml: rect(x3[0], x3[1], yB, yM), mc: rect(x3[1], x3[2], yB, yM),
+      mr: rect(x3[2], x3[3], yB, yM),
+      fl: [[L, yM], [CX, yM], [CX, yA]],
+      fr: [[R, yM], [CX, yM], [CX, yA]],
+    };
+  })();
 
-    svg.append("g").attr("class", "axis")
-      .attr("transform", `translate(0,${height - m.bottom})`)
-      .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0));
-    svg.append("g").attr("class", "axis")
-      .attr("transform", `translate(${m.left},0)`)
-      .call(d3.axisLeft(y).tickValues([0, 50, 100]).tickFormat(d => d + "%")
-        .tickSize(-(width - m.left - m.right)));
+  function zoneCenter(pts) {
+    const n = pts.length;
+    return [d3.sum(pts, p => p[0]) / n, d3.sum(pts, p => p[1]) / n];
+  }
 
-    const ranked = Object.keys(data.teams)
-      .sort((a, b) => d3.sum(data.teams[b]) - d3.sum(data.teams[a]));
-    const byFinal = Object.keys(data.teams)
-      .sort((a, b) => data.teams[b].at(-1) - data.teams[a].at(-1));
-    const color = new Map(byFinal.slice(0, spots).map((t, i) => [t, CAT()[i]]));
+  window.renderFieldMap = function (container, zoneMap, teamName, L) {
+    const el = d3.select(container);
+    el.selectAll("*").remove();
+    const team = (zoneMap.teams || []).find(x => x.team === teamName);
+    if (!team) return;
+    const svg = el.append("svg")
+      .attr("viewBox", "0 0 360 330")
+      .style("max-width", "440px").style("display", "block")
+      .style("margin", "0 auto").attr("width", "100%");
 
-    const line = d3.line()
-      .x((_, i) => x(dates[i]))
-      .y(v => y(v))
-      .curve(d3.curveMonotoneX);
+    const scale = d3.scaleLinear()
+      .domain([-10, 0, 10]).clamp(true)
+      .range([css("--div-neg"), css("--div-mid"), css("--div-pos")])
+      .interpolate(d3.interpolateRgb);
 
-    // muted first, colored on top
-    for (const team of [...ranked].reverse()) {
-      svg.append("path")
-        .attr("class", color.has(team) ? "fg-line" : "fg-line fg-muted")
-        .attr("stroke", color.get(team) || null)
-        .attr("d", line(data.teams[team]));
+    for (const [z, pts] of Object.entries(FIELD_ZONES)) {
+      const tz = team.zones[z] || {};
+      const lg = (zoneMap.league || {})[z] || {};
+      const delta = (tz.koppi_pct != null && lg.koppi_pct != null)
+        ? tz.koppi_pct - lg.koppi_pct : null;
+      svg.append("polygon")
+        .attr("points", pts.map(p => p.join(",")).join(" "))
+        .attr("fill", delta == null ? css("--track") : scale(delta))
+        .attr("fill-opacity", 0.85)
+        .attr("stroke", css("--surface")).attr("stroke-width", 2)
+        .on("mousemove", (ev) => {
+          tooltip().style("opacity", 1)
+            .html(`<div class="d">${teamName}</div>` +
+              `<div>Koppi-% <b>${tz.koppi_pct ?? "—"}</b></div>` +
+              `<div>${L.league} <b>${lg.koppi_pct ?? "—"}</b></div>` +
+              `<div>${tz.n ?? 0} ${L.balls}</div>`)
+            .style("left", (ev.pageX + 14) + "px")
+            .style("top", (ev.pageY - 10) + "px");
+        })
+        .on("mouseleave", () => tooltip().style("opacity", 0));
+      const [cx, cy] = zoneCenter(pts);
+      const ty = z[0] === "f" ? cy - 12 : cy;   // lift labels in the wedges
+      svg.append("text").attr("class", "fm-pct")
+        .attr("x", cx).attr("y", ty).text(
+          tz.koppi_pct != null ? tz.koppi_pct.toFixed(0) + " %" : "—");
+      svg.append("text").attr("class", "fm-n")
+        .attr("x", cx).attr("y", ty + 14).text(tz.n ?? 0);
     }
+  };
 
-    // identity dots + de-collided ink labels for the highlighted teams
-    let prev = -99;
-    const labeled = byFinal.slice(0, spots)
-      .map(t => ({ t, ey: y(data.teams[t].at(-1)) }))
-      .sort((a, b) => a.ey - b.ey);
-    for (const { t, ey } of labeled) {
-      let ly = Math.max(m.top, ey + 4);
-      if (ly - prev < 14) ly = prev + 14;
-      prev = ly;
-      svg.append("circle").attr("cx", x(dates.at(-1))).attr("cy", ey)
-        .attr("r", 3.5).attr("fill", color.get(t)).attr("class", "fg-dot");
-      svg.append("text").attr("class", "fg-label")
-        .attr("x", x(dates.at(-1)) + 9).attr("y", ly).text(t);
+  /* ---- run-expectancy grid ----------------------------------------------
+     The 24-state RE table as a matrix: rows = base states, columns = outs.
+     Sequential single-hue fill (accent at graded opacity), values in ink. */
+
+  window.renderReGrid = function (container, reTable, L) {
+    const el = d3.select(container);
+    el.selectAll("*").remove();
+    const masks = ["000", "100", "010", "001", "110", "101", "011", "111"];
+    const names = { "000": "—", "100": "1", "010": "2", "001": "3",
+                    "110": "1+2", "101": "1+3", "011": "2+3", "111": L.loaded };
+    const max = d3.max(Object.values(reTable)) || 1;
+    let html = `<table class="regrid"><thead><tr><th class="name">${L.bases}</th>`
+      + [0, 1, 2].map(o => `<th>${o} ${L.outs}</th>`).join("") + "</tr></thead><tbody>";
+    for (const mask of masks) {
+      html += `<tr><td class="name">${names[mask]}</td>`;
+      for (const outs of [0, 1, 2]) {
+        const v = reTable[`${mask}_${outs}`];
+        const a = v == null ? 0 : Math.round(55 * v / max);
+        html += `<td style="background:color-mix(in srgb, var(--accent) ${a}%, transparent)">`
+          + (v == null ? "—" : v.toFixed(2)) + "</td>";
+      }
+      html += "</tr>";
     }
-
-    // crosshair + tooltip listing every team at the hovered date
-    const cross = svg.append("line").attr("class", "fg-cross")
-      .attr("y1", m.top).attr("y2", height - m.bottom).style("opacity", 0);
-    svg.append("rect")
-      .attr("x", m.left).attr("y", m.top)
-      .attr("width", width - m.left - m.right)
-      .attr("height", height - m.top - m.bottom)
-      .attr("fill", "transparent")
-      .on("mousemove", (ev) => {
-        const [mx] = d3.pointer(ev);
-        const i = d3.bisectCenter(dates.map(d => x(d)), mx);
-        cross.attr("x1", x(dates[i])).attr("x2", x(dates[i])).style("opacity", 1);
-        const rows = ranked
-          .map(t => ({ t, v: data.teams[t][i] }))
-          .sort((a, b) => b.v - a.v)
-          .map(({ t, v }) =>
-            `<div><span class="k" style="background:${color.get(t) || css("--baseline")}"></span>${t}<b>${v.toFixed(0)}%</b></div>`)
-          .join("");
-        tooltip().style("opacity", 1)
-          .html(`<div class="d">${data.dates[i]}</div>${rows}`)
-          .style("left", (ev.pageX + 14) + "px")
-          .style("top", (ev.pageY - 10) + "px");
-      })
-      .on("mouseleave", () => {
-        cross.style("opacity", 0);
-        tooltip().style("opacity", 0);
-      });
+    el.node().innerHTML = html + "</tbody></table>";
   };
 
   /* ---- Mallo index bars (league-relative, 100 = average) --------------- */

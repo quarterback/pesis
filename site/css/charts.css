@@ -14,6 +14,10 @@
   --baseline: var(--track);
   --axis-ink: var(--label);
   --axis-line: var(--line-hd);
+  /* diverging pair for the defensive field map (validated for CVD/contrast) */
+  --div-pos: #a53860;
+  --div-neg: #4c5dd0;
+  --div-mid: #efe8df;
 }
 
 /* Dark overrides */
@@ -25,6 +29,9 @@
     --cat4: #33b8d4;
     --series-1: var(--accent);
     --baseline: var(--track);
+    --div-pos: #d96f80;
+    --div-neg: #6b74e0;
+    --div-mid: #2a222a;
   }
 }
 :root[data-theme="dark"] {
@@ -34,7 +41,21 @@
   --cat4: #33b8d4;
   --series-1: var(--accent);
   --baseline: var(--track);
+  --div-pos: #d96f80;
+  --div-neg: #6b74e0;
+  --div-mid: #2a222a;
 }
+
+/* ── Defensive field map ────────────────────────────────────────────────── */
+.fm-pct { fill: var(--ink-strong); font: 700 14px var(--font-body); text-anchor: middle; pointer-events: none; }
+.fm-n   { fill: var(--ink3); font: 500 10px var(--font-mono); text-anchor: middle; pointer-events: none; }
+
+/* ── Run-expectancy grid ────────────────────────────────────────────────── */
+.regrid { width: 100%; border-collapse: collapse; }
+.regrid th, .regrid td { padding: 7px 10px; text-align: center; font: 500 13px var(--font-mono); color: var(--ink); }
+.regrid th { color: var(--ink2); font: 600 11px var(--font-body); text-transform: uppercase; letter-spacing: .04em; }
+.regrid td.name, .regrid th.name { text-align: left; font-family: var(--font-body); font-weight: 600; color: var(--ink2); }
+.regrid td { border-bottom: 1px solid var(--line); }
 
 /* ── SVG line chart (playoff odds, career minis) ────────────────────────── */
 .fg-line {

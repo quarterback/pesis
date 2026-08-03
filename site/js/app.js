@@ -680,6 +680,22 @@ async function showDefense(sid) {
     </div>
     <div id="def-table"></div>
     <div class="page" style="padding-top:0">
+      ${(data.zone_map && (data.zone_map.teams || []).length) ? `
+      <h2>${t('Puolustuskartta', 'Defensive field map')}</h2>
+      <p class="sub">${t('Vastustajien lyönnit jaettuna kenttälohkoihin. Väri kertoo joukkueen koppiprosentin eron sarjan keskiarvoon samassa lohkossa, ja jokainen lohko näyttää koppiprosentin ja lyöntien määrän.',
+        'Opponent balls in play by field zone. The color shows the team’s catch rate against the league average in the same zone, and every zone lists the catch rate and the number of balls.')}</p>
+      <div class="filters">
+        <span class="lab">${t('Joukkue', 'Team')}</span>
+        <select class="sel" id="def-map-team">
+          ${data.zone_map.teams.map(z => `<option value="${z.team}">${z.team}</option>`).join('')}
+        </select>
+      </div>
+      <div class="card"><div id="def-map"></div></div>` : ''}
+      ${data.re_table ? `
+      <h2>${t('Tilanneodotukset', 'Run expectancy')}</h2>
+      <p class="sub">${t('Montako juoksua vuoroparin loppuun mennessä keskimäärin syntyy kustakin pesätilanteesta ja palomäärästä. Taulukko on laskettu tämän sarjan omista otteluista, ja se on PEJ-luvun perusta.',
+        'How many runs a half-inning produces on average from each combination of base runners and outs. The table is measured from this league’s own games, and it is the basis of the PEJ number.')}</p>
+      <div class="card" style="padding:0;overflow-x:auto"><div id="re-grid"></div></div>` : ''}
       ${ofBoard}
       ${lkBoard}
     </div>`;
@@ -688,6 +704,21 @@ async function showDefense(sid) {
     columns: cols, rows: teams, sort: { key: 'def_rv', dir: -1 },
     rowClass: (r, gi) => gi === 0 ? 'leader' : '',
   });
+
+  const zm = data.zone_map;
+  if (zm && (zm.teams || []).length && typeof renderFieldMap === 'function') {
+    const sel = document.getElementById('def-map-team');
+    const draw = () => renderFieldMap(document.getElementById('def-map'), zm,
+      sel.value, { league: t('sarja', 'league'), balls: t('lyöntiä', 'balls') });
+    sel.onchange = draw;
+    draw();
+  }
+  if (data.re_table && typeof renderReGrid === 'function') {
+    renderReGrid(document.getElementById('re-grid'), data.re_table, {
+      bases: t('Pesillä', 'On base'), outs: t('paloa', 'out'),
+      loaded: t('täydet', 'loaded'),
+    });
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -742,7 +773,6 @@ async function showLeague(sid) {
   const data = await fetchJSON(`data/league/${sid}.json`);
   const season = data.season;
   const table = data.standings;
-  const history = data.odds_history;
   const parks = data.parks;
   const weather = data.weather;
 
@@ -788,11 +818,6 @@ async function showLeague(sid) {
       <h1>${season.series} ${season.year}</h1>
       <p class="sub">${t('Koko kausi.', 'The full season.')}</p>
     </div>
-    ${history ? `<div class="page" style="padding-top:0">
-      <h2>${t('Pudotuspelitodennäköisyydet kaudella', 'Playoff odds over the season')}</h2>
-      <div class="card" style="padding:0;overflow:hidden">
-        <div id="fangraph" style="width:100%"></div>
-      </div></div>` : ''}
     <div class="page" style="padding-top:0">
       <h2>${t('Sarjataulukko', 'Standings')}</h2>
       <div id="lg-standings"></div>
@@ -823,10 +848,6 @@ async function showLeague(sid) {
     columns: standCols, rows: table, sort: { key: 'points', dir: -1 }, pageSize: 50,
   });
 
-  if (history && typeof renderFangraph === 'function') {
-    const el = document.getElementById('fangraph');
-    if (el) renderFangraph(el, history);
-  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

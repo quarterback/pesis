@@ -93,6 +93,26 @@ legacy scaffold but measurably apart (palot −0.36 vs −0.28, KL 0.15 vs 0.10)
   change means bumping `PARSE_VERSION`, which triggers a refetch pass
   (~10 min per season).
 
+## Follow-up (same day): field map, RE grid, standings cleanup
+
+- **Defensive field map** (`renderFieldMap` in charts.js): opponent balls in
+  play binned into eight zones (three back lanes, three middle lanes, two
+  front wedges — `defense.team_zone_map`), shaded by the team's koppi rate
+  against the league rate in the same zone. Diverging fill pair validated
+  with the dataviz six-check script per theme (light #a53860/#4c5dd0, dark
+  #d96f80/#6b74e0, neutral midpoint); every zone carries direct ink labels
+  and a hover tooltip. Zone aggregation happens at export — raw hit points
+  never ship to the client.
+- **RE24 grid** (`renderReGrid`): the 24-state run-expectancy table as a
+  matrix on the Puolustus view, sequential accent fill at graded opacity,
+  values in ink.
+- **Standings page cleanup** (owner request): the playoff-odds chart was
+  removed (it repeated the standings), and `context.park_factors` now merges
+  rows by normalized stadium name — several home teams share identically
+  named or whitespace-drifted park strings, which showed as duplicate rows.
+- A Playwright pass caught the zone labels intercepting pointer events and
+  blocking the polygon tooltips; fixed with `pointer-events: none`.
+
 ## Operational notes
 
 The daily workflow ingests current-season PBP between the stats ingest and

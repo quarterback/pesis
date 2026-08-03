@@ -41,16 +41,32 @@ def park_factors(conn: sqlite3.Connection,
     road = {r["team"]: r["rpg"] for r in conn.execute(
         f"""SELECT away_team AS team, AVG(home_runs + away_runs) AS rpg
             FROM matches WHERE 1=1 {where} GROUP BY away_team""", params)}
-    out = []
+    # One candidate row per home team first (PF is a home/road comparison),
+    # then merge rows that share a stadium name — several teams play in
+    # identically named parks and upstream strings drift in whitespace, so
+    # an ungrouped list shows visual duplicates.
+    per_team = []
     for team, h in home.items():
         road_rpg = road.get(team)
         if not road_rpg:
             continue
         raw = h["rpg"] / road_rpg
         shrunk = (h["games"] * raw + PF_PRIOR_GAMES * 1.0) / (h["games"] + PF_PRIOR_GAMES)
-        out.append({"stadium": h["stadium"], "team": team, "games": h["games"],
-                    "runs_per_game": round(h["rpg"], 2),
-                    "pf": round(100 * shrunk)})
+        per_team.append({"stadium": " ".join((h["stadium"] or "").split()),
+                         "team": team, "games": h["games"],
+                         "rpg": h["rpg"], "pf100": 100 * shrunk})
+    merged: dict[str, dict] = {}
+    for r in per_team:
+        m = merged.setdefault(r["stadium"].casefold(), {
+            "stadium": r["stadium"], "team": r["team"],
+            "games": 0, "rpg_sum": 0.0, "pf_sum": 0.0})
+        m["games"] += r["games"]
+        m["rpg_sum"] += r["rpg"] * r["games"]
+        m["pf_sum"] += r["pf100"] * r["games"]
+    out = [{"stadium": m["stadium"], "team": m["team"], "games": m["games"],
+            "runs_per_game": round(m["rpg_sum"] / m["games"], 2),
+            "pf": round(m["pf_sum"] / m["games"])}
+           for m in merged.values() if m["games"]]
     out.sort(key=lambda d: d["pf"], reverse=True)
     return out
 
