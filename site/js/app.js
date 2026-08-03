@@ -115,7 +115,7 @@ const STAT_INFO = {
   def_error_cost: { fi: 'Harhaheitoista vastustajalle valuneet juoksut ottelua kohden, tilanneodotuksilla mitattuna.', en: 'Runs handed to the opponent per game through wild throws, measured with run expectancy.' },
   def_arm_hold: { fi: 'Vastustajan lisäetenemiset sarjaindeksinä: kuinka usein etenijä pääsi kaksi pesäväliä tai enemmän. 100 on sarjan keskitaso ja pienempi on parempi.', en: 'Opponent extra advances as a league index: how often a runner gained two or more bases. 100 is league average and lower is better.' },
   of_koppi_rate: { fi: 'Kopit prosentteina takakentän alueelle lyödyistä lyönneistä pelaajan otteluissa. Pelaajakohtainen jako perustuu lyöntien paikkatietoon — arvio, ei virallinen tilasto.', en: 'Catches as a share of balls hit to the outfield zone in the player’s games. The split between players is inferred from hit locations — an estimate, not an official stat.' },
-  lukkari_def_rv: { fi: 'Lukkarin puolustusarvo juoksuina: etukentän lyhyet lyönnit kuuluvat lukkarille, ja arvo lasketaan niiden tilanneodotuksista. Arvio, joka perustuu lyöntien paikkatietoon.', en: 'The lukkari’s defensive value in runs from short front-field plays, measured with run expectancy. Inferred from hit locations.' },
+  lukkari_def_rv: { fi: 'Lukkarin puolustusarvo juoksuina suhteessa sarjan keskimääräiseen lukkariin. Etukentän lyhyet lyönnit kuuluvat lukkarille, ja arvo lasketaan niiden tilanneodotuksista. Arvio, joka perustuu lyöntien paikkatietoon.', en: 'The lukkari’s defensive value in runs versus an average lukkari, from run expectancy on short front-field plays. Inferred from hit locations.' },
 };
 
 function infoBtn(key) {

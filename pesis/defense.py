@@ -343,8 +343,9 @@ FRONT_ZONE_MIN_Y = 70.0  # short front-field plays that belong to the lukkari
 # Which x half the 3K (left) koppari covers. Set empirically: the assignment
 # that makes individual outfielders' catch rates consistent across their own
 # matches is the correct one (a scrambled assignment destroys within-player
-# stickiness). See the calibration note in the AAR.
-OF_3K_LOW_X = True
+# stickiness). On 2026 Superpesis the odd/even-match catch-rate correlation
+# is 0.45 with 3K on the high-x half vs 0.12 mirrored — so False it is.
+OF_3K_LOW_X = False
 
 _OF_MIN_BALLS = 40
 _LK_MIN_PLAYS = 60
@@ -445,6 +446,11 @@ def lukkari_defense(conn: sqlite3.Connection, season_id: int,
                 d["rv"] -= delta
                 d["outs"] += sum(1 for r in play if r["out"])
                 d["wounds"] += sum(1 for r in play if r["action"] == "wound")
+    # Centre on the league-average front-zone play so the number reads as
+    # runs above an average lukkari, not raw accumulation — otherwise
+    # playing time alone drives the board (short hits favor the defense).
+    total_n = sum(d["n"] for d in acc.values())
+    mean_rv = (sum(d["rv"] for d in acc.values()) / total_n) if total_n else 0.0
     board = []
     for pid, d in acc.items():
         if d["n"] < min_plays or pid not in names:
@@ -452,6 +458,6 @@ def lukkari_defense(conn: sqlite3.Connection, season_id: int,
         name, team = names[pid]
         board.append({"player_id": pid, "name": name, "team": team,
                       "n": d["n"], "outs": d["outs"], "wounds": d["wounds"],
-                      "def_rv": round(d["rv"], 1)})
+                      "def_rv": round(d["rv"] - mean_rv * d["n"], 1)})
     board.sort(key=lambda b: b["def_rv"], reverse=True)
     return board
