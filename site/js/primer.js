@@ -77,7 +77,7 @@ function _primerBaseballEN() {
       ['KOTI-KL+','','How often a player’s hits bring the lead runner home, relative to the league.'],
       ['PARE','Steamer / ZiPS','The projection system. It weights a player’s full career with recent games counting most, then regresses toward the league average.'],
       ['LRA / LRA- / RP','ERA / ERA-','Run prevention for the lukkari: runs allowed per game, the same figure as a league index, and total runs prevented.'],
-      ['PF / kTEHO+','Park factor','Ballpark effects, and TEHO+ adjusted for them.'],
+      ['PF','Park factor','Ballpark effects on run scoring.'],
     ])}
     <div class="prose">
       <h2>Positions</h2>
@@ -155,7 +155,7 @@ function _primerBaseballFI() {
       ['KOTI-KL+','','Kuinka usein pelaajan lyönnit tuovat kärjen kotiin asti, suhteessa sarjaan.'],
       ['PARE','Steamer / ZiPS','Ennustejärjestelmä. Se painottaa koko uraa niin, että tuoreet ottelut painavat eniten, ja regressoi kohti sarjan keskitasoa.'],
       ['LRA / LRA- / RP','ERA / ERA-','Lukkarin juoksujenesto: päästetyt juoksut per ottelu, sama lukuna sarjaindeksinä ja estetyt juoksut yhteensä.'],
-      ['PF / kTEHO+','Park factor','Kenttien vaikutus juoksumääriin ja TEHO+ sillä korjattuna.'],
+      ['PF','Park factor','Kenttien vaikutus juoksumääriin.'],
     ])}
     <div class="prose">
       <h2>Pelipaikat</h2>
@@ -243,7 +243,7 @@ function _primerPesisFI() {
       ['1 % / 2 % / 3 % / K %','','Viralliset kärkilyöntisplitit pesittäin: kotipesästä ykköselle, ykköseltä kakkoselle, kakkoselta kolmoselle ja kolmoselta kotiin.'],
       ['PARE','','Ennuste pelaajan tasosta. Koko ura painotettuna niin, että tuoreet ottelut painavat eniten.'],
       ['LRA / RP','','Lukkarin päästämät juoksut per ottelu ja estetyt juoksut yli sarjatason.'],
-      ['PF / kTEHO+','','Kenttäkerroin, jossa 100 on neutraali, ja sillä korjattu TEHO+.'],
+      ['PF','','Kenttäkerroin, jossa 100 on neutraali.'],
     ])}
     <div class="prose">
       <p>Tarkat kaavat ovat <a href="#/glossary">Kaava-sivulla</a>. Taulukoissa ja
@@ -312,7 +312,7 @@ function _primerPesisEN() {
       ['1 % / 2 % / 3 % / K %','','The official lead-runner splits by base: home to first, first to second, second to third, and third to home.'],
       ['PARE','','A projection of the player’s level, weighting the whole career with recent games counting most.'],
       ['LRA / RP','','Runs allowed per game by the lukkari, and runs prevented above the league average.'],
-      ['PF / kTEHO+','','The park factor, where 100 is neutral, and TEHO+ adjusted with it.'],
+      ['PF','','The park factor, where 100 is neutral.'],
     ])}
     <div class="prose">
       <p>Exact formulas are on the <a href="#/glossary">Kaava</a> page. In tables and on
@@ -324,8 +324,11 @@ function _primerPesisEN() {
 
 function showPrimer(aud, lang) {
   aud = aud === 'pesis' ? 'pesis' : 'baseball';
-  // natural defaults: baseball track → EN, pesis track → FI
-  if (lang !== 'en' && lang !== 'fi') lang = aud === 'pesis' ? 'fi' : 'en';
+  // default to the site language (FI/EN toggle in the nav); the page's own
+  // language links still override it per visit
+  if (lang !== 'en' && lang !== 'fi') {
+    lang = (typeof LANG !== 'undefined') ? LANG : (aud === 'pesis' ? 'fi' : 'en');
+  }
 
   const audLabels = lang === 'fi'
     ? { baseball: 'Baseball-fanille', pesis: 'Pesisfanille' }

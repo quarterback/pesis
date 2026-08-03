@@ -30,6 +30,16 @@ verified against live responses:
 - **Also available:** batter–runner pair stats, a spatial **hit-map** endpoint,
   line scores by jakso incl. supervuoro, referees, transfers, disciplinary
   decisions.
+- **Batting order confirmed (owner, 2026-08-03):** the match pages (e.g.
+  `pesistulokset.fi/ottelut/128954`) list each team's box score in batting
+  order — rows 1–9 are the fielding lineup, 10–12 the jokerit — with the
+  official 1%/2%/3%/K% splits per player per game, per-jakso filters, a PBP
+  event feed, and hit-direction spray data by base situation (0/1/2/3-sit).
+  Ingesting the match endpoint would unlock lineup-slot context (the missing
+  input for a role-aware TEHO+), spray charts, and RE24 groundwork. Note the
+  in-game defensive positions are fluid (the same player can shift 2P→2V→3P
+  by situation), so slot-in-order is the stable role signal, not the fielding
+  code.
 
 Nobody has built an analytics layer on any of this. The niche is empty.
 
