@@ -49,6 +49,9 @@ const STAT_LABEL = {
   tehot:'Tehot', kunnarit:'Kunnarit', lyodyt:'Lyödyt', tuodut:'Tuodut',
   turns_at_bat:'Lyöntivuorot', lra:'LRA', lra_minus:'LRA-', lukkari_rp:'RP',
   ekl:'eKL%', esaatto:'eSaatto%', eeten:'eEtenemis%', epalo:'ePalo%', eteho:'eTEHO+',
+  def_rv:'PEJ/O', def_koppi_pct:'Koppi-%', def_out_conv:'Poltto-%',
+  def_error_cost:'HH-kulu', def_arm_hold:'LE-idx',
+  of_koppi_rate:'Koppi-%', lukkari_def_rv:'PEJ',
 };
 
 // English label overrides for Finnish-worded stats; shared symbols stay put.
@@ -106,6 +109,13 @@ const STAT_INFO = {
   eeten: { fi: 'PARE-ennuste etenemisprosentille.', en: 'PARE projection for advancement rate.' },
   epalo: { fi: 'PARE-ennuste paloprosentille. Pienempi on parempi.', en: 'PARE projection for burn rate. Lower is better.' },
   eteho: { fi: 'PARE-ennuste TEHO+:lle eli arvio pelaajan tämänhetkisestä tasosta.', en: 'The PARE projection for TEHO+, an estimate of the player’s current level.' },
+  def_rv: { fi: 'Puolustuksen estämät juoksut ottelua kohden verrattuna sarjan keskiarvoon. Lasketaan tilanneodotuksista: jokaisen lyönnin jälkeen verrataan, montako juoksua tilanteesta yleensä syntyy ja montako oikeasti syntyi.', en: 'Defensive runs saved per game versus the league average, from run expectancy: after every delivery we compare how many runs the situation usually produces with what actually happened.' },
+  def_koppi_pct: { fi: 'Kopit prosentteina kenttään lyödyistä lyönneistä. Koppi on kenttäpelaajan suoritus, ei palo — se haavoittaa lyöjän ja voi tyhjentää pesät ilman paloa.', en: 'Catches as a share of balls hit into play. A koppi is a fielding act, not an out — it wounds the batter and can clear the bases without recording an out.' },
+  def_out_conv: { fi: 'Kuinka suuri osa vastustajan etenemisyrityksistä päättyi polttoon.', en: 'The share of opponent advance attempts that ended in an out.' },
+  def_error_cost: { fi: 'Harhaheitoista vastustajalle valuneet juoksut ottelua kohden, tilanneodotuksilla mitattuna.', en: 'Runs handed to the opponent per game through wild throws, measured with run expectancy.' },
+  def_arm_hold: { fi: 'Vastustajan lisäetenemiset sarjaindeksinä: kuinka usein etenijä pääsi kaksi pesäväliä tai enemmän. 100 on sarjan keskitaso ja pienempi on parempi.', en: 'Opponent extra advances as a league index: how often a runner gained two or more bases. 100 is league average and lower is better.' },
+  of_koppi_rate: { fi: 'Kopit prosentteina takakentän alueelle lyödyistä lyönneistä pelaajan otteluissa. Pelaajakohtainen jako perustuu lyöntien paikkatietoon — arvio, ei virallinen tilasto.', en: 'Catches as a share of balls hit to the outfield zone in the player’s games. The split between players is inferred from hit locations — an estimate, not an official stat.' },
+  lukkari_def_rv: { fi: 'Lukkarin puolustusarvo juoksuina: etukentän lyhyet lyönnit kuuluvat lukkarille, ja arvo lasketaan niiden tilanneodotuksista. Arvio, joka perustuu lyöntien paikkatietoon.', en: 'The lukkari’s defensive value in runs from short front-field plays, measured with run expectancy. Inferred from hit locations.' },
 };
 
 function infoBtn(key) {
@@ -249,7 +259,8 @@ function leaderboardControls(sid, view) {
   const cur = seasons.find(s => s.id === sid) || seasons[0];
   const { sex: curSex, tier: curTier } = parseSeries(cur.series);
   const curYear = cur.year;
-  const vq = view === 'lukkari' ? '&view=lukkari' : '';  // preserve view across series/season switches
+  // preserve view across series/season switches
+  const vq = (view === 'lukkari' || view === 'defense') ? `&view=${view}` : '';
   // Latest season of a league, preferring the year currently shown. META
   // seasons arrive newest-first, so [0] is the league's most recent season.
   const find = (sex, tier) => {
@@ -270,10 +281,11 @@ function leaderboardControls(sid, view) {
   const sarja = `<span class="lab">${t('Sarja', 'League')}</span>
     <select class="sel" onchange="location.hash=this.value.slice(1)">${tierOpts}</select>`;
 
-  // Lyöjät / Lukkarit — batting vs pitching leaderboard
+  // Lyöjät / Lukkarit / Puolustus — batting, pitching and defense boards
   const modeSeg = `<div class="seg">
-    <a href="#/?sid=${sid}"${view!=='lukkari'?' class="on"':''}>${t('Lyöjät', 'Batters')}</a>
+    <a href="#/?sid=${sid}"${view!=='lukkari'&&view!=='defense'?' class="on"':''}>${t('Lyöjät', 'Batters')}</a>
     <a href="#/?sid=${sid}&view=lukkari"${view==='lukkari'?' class="on"':''}>Lukkarit</a>
+    <a href="#/?sid=${sid}&view=defense"${view==='defense'?' class="on"':''}>${t('Puolustus', 'Defense')}</a>
   </div>`;
 
   // Miehet / Naiset segmented — same tier, other sex
@@ -585,6 +597,95 @@ async function showLukkarit(sid) {
 
   if (lk.length) makeTable(document.getElementById('lk-table'), {
     columns: cols, rows: lk, sort: { key: 'lukkari_rp', dir: -1 },
+    rowClass: (r, gi) => gi === 0 ? 'leader' : '',
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DEFENSE — team run prevention + inferred player boards (PBP-derived)
+══════════════════════════════════════════════════════════════════════════ */
+async function showDefense(sid) {
+  let data = null;
+  try { data = await fetchJSON(`data/defense/${sid}.json`); } catch (e) { /* no PBP for this season */ }
+  const season = data?.season
+    || META.seasons.find(s => s.id === sid) || META.seasons[0];
+
+  if (!data || !(data.teams || []).length) {
+    main().innerHTML = `
+      ${leaderboardControls(sid, 'defense')}
+      <div class="page">
+        <h1>${season.series} ${season.year} <span class="muted">· ${t('Puolustus', 'Defense')}</span></h1>
+        <p class="sub">${t('Puolustustilastot lasketaan syöttökohtaisesta ottelodatasta, jota on vasta nykyisiltä kausilta. Tälle kaudelle sitä ei ole.',
+          'Defensive stats are computed from play-by-play data, which exists only for recent seasons. None is available for this season.')}</p>
+      </div>`;
+    return;
+  }
+
+  const cov = data.coverage || {};
+  const teams = data.teams;
+  const maxRv = Math.max(...teams.map(x => Math.abs(x.def_rv || 0)), 1e-9);
+
+  const cols = [
+    {key:'rank', label:'#', sortable:false, get:()=>0, cell:(r,i)=>`<td><span class="rank">${i+1}</span></td>`},
+    {key:'team', label:t('Joukkue', 'Team'), thClass:'name', get:r=>r.team,
+     cell:r=>`<td class="name"><a href="#/team/${encodeURIComponent(r.team)}?sid=${sid}">${r.team}</a></td>`},
+    {key:'games', label:t('O', 'G'), get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
+    {key:'def_rv', label:'PEJ/O', get:r=>r.def_rv, cell:r=>{
+      const w = Math.min(Math.abs(r.def_rv||0)/maxRv*100,100);
+      return `<td><div class="teho-cell"><span class="val">${r.def_rv>0?'+':''}${r.def_rv??'—'}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
+    }},
+    {key:'def_koppi_pct', label:'Koppi-%', get:r=>r.koppi_pct, cell:r=>`<td class="num">${r.koppi_pct??'—'}</td>`},
+    {key:'def_out_conv', label:'Poltto-%', get:r=>r.out_conv, cell:r=>`<td class="num">${r.out_conv??'—'}</td>`},
+    {key:'def_error_cost', label:'HH-kulu', get:r=>r.error_cost, cell:r=>`<td class="num">${r.error_cost??'—'}</td>`},
+    {key:'def_arm_hold', label:'LE-idx', get:r=>r.arm_hold, cell:r=>`<td class="num">${r.arm_hold??'—'}</td>`},
+  ];
+
+  const boards = (rows, keyRate) => rows.map((r,i) => `<tr>
+      <td><span class="rank">${i+1}</span></td>
+      <td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a></td>
+      <td class="name team">${r.team||'—'}</td>
+      <td class="num">${r.n??'—'}</td>
+      <td class="num strong">${r[keyRate]??'—'}</td>
+    </tr>`).join('');
+
+  const ofBoard = (data.of_koppi || []).length ? `
+      <h2>${t('Kopparit: koppiprosentti', 'Outfielders: catch rate')}</h2>
+      <p class="sub">${t('Takakentän alueelle lyödyt lyönnit jaettu kopparille lyöntien paikkatiedon perusteella. Arvio, ei virallinen tilasto.',
+        'Balls hit to the outfield zone are assigned to an outfielder from hit locations. An estimate, not an official stat.')}</p>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>#</th><th class="name">${t('Pelaaja', 'Player')}</th><th class="name">${t('Joukkue', 'Team')}</th><th>${t('Lyönnit', 'Balls')}</th><th>Koppi-%${infoBtn('of_koppi_rate')}</th></tr></thead>
+          <tbody>${boards(data.of_koppi, 'rate')}</tbody>
+        </table>
+      </div>` : '';
+
+  const lkBoard = (data.lukkari_def || []).length ? `
+      <h2>${t('Lukkarit: etukentän puolustus', 'Lukkaris: front-field defense')}</h2>
+      <p class="sub">${t('Etukentän lyhyet lyönnit kuuluvat lukkarille. Arvo lasketaan tilanneodotuksista; jako perustuu lyöntien paikkatietoon.',
+        'Short front-field plays belong to the lukkari. Value comes from run expectancy; the split is inferred from hit locations.')}</p>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>#</th><th class="name">${t('Pelaaja', 'Player')}</th><th class="name">${t('Joukkue', 'Team')}</th><th>${t('Lyönnit', 'Balls')}</th><th>PEJ${infoBtn('lukkari_def_rv')}</th></tr></thead>
+          <tbody>${boards(data.lukkari_def, 'def_rv')}</tbody>
+        </table>
+      </div>` : '';
+
+  main().innerHTML = `
+    ${leaderboardControls(sid, 'defense')}
+    <div class="page" style="padding-bottom:6px">
+      <h1>${season.series} ${season.year} <span class="muted">· ${t('Puolustus', 'Defense')}</span></h1>
+      <p class="sub">${t('PEJ/O = puolustuksen estämät juoksut ottelua kohden suhteessa sarjan keskiarvoon, laskettuna tilanneodotuksista. Koppi on kenttäpelaajan suoritus, ei palo.',
+        'PEJ/O = defensive runs saved per game versus the league average, from run expectancy. A koppi is a fielding act, not an out.')}
+        ${t('Perustuu', 'Based on play-by-play from')} ${cov.matches_pbp ?? '?'}/${cov.matches_total ?? '?'} ${t('ottelun syöttödataan.', 'matches.')}</p>
+    </div>
+    <div id="def-table"></div>
+    <div class="page" style="padding-top:0">
+      ${ofBoard}
+      ${lkBoard}
+    </div>`;
+
+  makeTable(document.getElementById('def-table'), {
+    columns: cols, rows: teams, sort: { key: 'def_rv', dir: -1 },
     rowClass: (r, gi) => gi === 0 ? 'leader' : '',
   });
 }
@@ -1126,6 +1227,17 @@ function showGlossary() {
         )}
         <p class="legend" style="padding:10px 16px">${t('ERA-tyylinen silta olemassa olevista otteluriveistä; tarkentuu kun syöttö-syötöltä-data on käytössä.', 'An ERA-style bridge from the existing game rows; it will sharpen once play-by-play data is in use.')}</p>
       </div>
+      <h2>${t('Puolustus', 'Defense')} <span class="muted">${t('— syöttökohtaisesta datasta', '— from play-by-play data')}</span></h2>
+      <div class="card" style="padding:0;overflow-x:auto">
+        ${gtable(
+          gr('PEJ/O',`<code>${t('Σ(tilanneodotus ennen − toteuma jälkeen − juoksut) / puolustetut vuoroparit × 8', 'Σ(expected before − actual after − runs on play) / halves defended × 8')}</code>`,t('puolustuksen estämät juoksut per ottelu; 0 = sarjan keskitaso', 'defensive runs saved per game; 0 = league average')) +
+          gr('Koppi-%','<code>kopit / kenttään lyödyt lyönnit</code>',t('koppi on kenttäpelaajan suoritus, ei palo', 'a koppi is a fielding act, not an out')) +
+          gr('Poltto-%','<code>poltot / vastustajan etenemisyritykset</code>',t('viralliset palot; haavat eivät sisälly', 'official outs only; wounds are not included')) +
+          gr('HH-kulu',`<code>${t('harhaheittotilanteiden juoksuarvo / ottelut', 'run value of wild-throw plays / games')}</code>`,t('pienempi parempi', 'lower is better')) +
+          gr('LE-idx',`<code>${t('100 × lisäetenemiset / sarjataso', '100 × extra advances allowed / league rate')}</code>`,t('etenijä kaksi pesäväliä tai enemmän; pienempi parempi', 'runner gains two or more bases; lower is better')) +
+          gr(t('Tilanneodotus (RE)', 'Run expectancy (RE)'),`<code>${t('juoksuodote (pesätilanne, palot) vuoroparin loppuun', 'expected runs to the end of the half from (bases, outs)')}</code>`,t('laskettu sarjan omista syöttökohtaisista tapahtumista; vuoropari päättyy myös kierrossäännöllä', 'measured from the league’s own play-by-play; halves can also end by the round rule'))
+        )}
+      </div>
       <h2>${t('Paikat', 'Positions')} <span class="muted">— pesäpallo → baseball</span></h2>
       <div class="card" style="padding:0;overflow-x:auto">
         ${gtable(
@@ -1172,6 +1284,8 @@ async function route() {
       const sid = parseInt(params.sid || defaultSid, 10);
       if (params.view === 'lukkari') {
         await showLukkarit(sid);
+      } else if (params.view === 'defense') {
+        await showDefense(sid);
       } else {
         await showLeaderboard(sid, params.stat || 'vyk', params.pos || '');
       }

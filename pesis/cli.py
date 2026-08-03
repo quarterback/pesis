@@ -51,6 +51,36 @@ def cmd_ingest_v1(args) -> None:
             _time.sleep(1)  # be polite on multi-season backfills
 
 
+def cmd_ingest_pbp(args) -> None:
+    from . import pbp
+    conn = db.connect(args.db)
+    pbp.ingest_pbp(conn, year=args.year, season_id=args.season_id,
+                   since=args.since, limit=args.limit,
+                   retry_errors=args.retry_errors, force=args.force)
+
+
+def cmd_pbp_check(args) -> None:
+    from . import pbp as _pbp  # noqa: F401  (schema side effects via db.connect)
+    conn = db.connect(args.db)
+    rows = conn.execute(
+        """SELECT p.match_id,
+                  SUM(CASE WHEN p.is_home_bat = 1 THEN p.runs ELSE 0 END) AS h,
+                  SUM(CASE WHEN p.is_home_bat = 0 THEN p.runs ELSE 0 END) AS a,
+                  m.home_runs, m.away_runs
+           FROM plays p JOIN matches m ON m.id = p.match_id
+           WHERE p.period < 2 AND (? IS NULL OR p.season_id = ?)
+           GROUP BY p.match_id""",
+        (args.season_id, args.season_id)).fetchall()
+    bad = [r for r in rows
+           if r["home_runs"] is not None
+           and (r["h"] != r["home_runs"] or r["a"] != r["away_runs"])]
+    print(f"pbp-check: {len(rows)} matches with plays, "
+          f"{len(bad)} with run totals off the box score")
+    for r in bad[:args.limit]:
+        print(f"  match {r['match_id']}: pbp {r['h']}-{r['a']} "
+              f"vs box {r['home_runs']}-{r['away_runs']}")
+
+
 def _season_id(conn, year: int | None) -> int:
     row = conn.execute(
         "SELECT id FROM seasons WHERE (? IS NULL OR year = ?) ORDER BY year DESC LIMIT 1",
@@ -187,6 +217,26 @@ def main(argv=None) -> None:
                         "or any exact series name from the catalog")
     p.add_argument("--phase", type=int, default=1, help="1 = runkosarja")
     p.set_defaults(func=cmd_ingest_v1)
+
+    p = sub.add_parser("ingest-pbp",
+                       help="fetch play-by-play events for played matches "
+                            "(keyless; matches without live scoring are "
+                            "marked missing and never refetched)")
+    p.add_argument("--year", type=int, default=None)
+    p.add_argument("--season-id", type=int, default=None)
+    p.add_argument("--since", default=None, help="only matches on/after this date")
+    p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--retry-errors", action="store_true")
+    p.add_argument("--force", action="store_true",
+                   help="refetch even matches already stored or marked missing")
+    p.set_defaults(func=cmd_ingest_pbp)
+
+    p = sub.add_parser("pbp-check",
+                       help="validate stored play-by-play run totals against "
+                            "the box scores")
+    p.add_argument("--season-id", type=int, default=None)
+    p.add_argument("--limit", type=int, default=20)
+    p.set_defaults(func=cmd_pbp_check)
 
     p = sub.add_parser("leaderboard", help="print a season leaderboard")
     p.add_argument("--stat", default="teho_plus")
