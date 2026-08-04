@@ -79,5 +79,11 @@ jobs:
             echo "No data changes today."
           else
             git commit -m "Daily data refresh ($(date -u +%F))"
-            git push
+            # main may have moved while the (long) ingest ran; the commit
+            # only touches site/data, so rebasing onto the new tip is safe
+            for i in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push attempt $i failed, retrying"
+              sleep 10
+            done
           fi
