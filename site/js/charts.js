@@ -87,7 +87,7 @@
         .on("mousemove", (ev) => {
           tooltip().style("opacity", 1)
             .html(`<div class="d">${teamName}</div>` +
-              `<div>Koppi-% <b>${tz.koppi_pct ?? "—"}</b></div>` +
+              `<div>${L.koppi} <b>${tz.koppi_pct ?? "—"}</b></div>` +
               `<div>${L.league} <b>${lg.koppi_pct ?? "—"}</b></div>` +
               `<div>${tz.n ?? 0} ${L.balls}</div>`)
             .style("left", (ev.pageX + 14) + "px")
