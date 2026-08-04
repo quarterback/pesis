@@ -10,13 +10,13 @@ from __future__ import annotations
 import json, re, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
-from pesis import context, db, defense, metrics, projection, simulate, translate
+from pesis import context, db, defense, metrics, projection, simulate, situational, translate
 
 # Mallo-native analytics only — the site is additive to pesistulokset, never a
 # clone of its counting columns (kunnarit/lyodyt/tuodut/tehot) or published rates.
 # VYK/JYK are the value stats (wins/runs above replacement — the WAR analog).
 LEADERBOARD_STATS = [
-    "vyk", "jyk", "spark_index", "lyodyt_oe", "moved_pct",
+    "vyk", "jyk", "spark_index", "lyodyt_oe", "reach_pct", "moved_pct",
     "adv_plus", "runner_plus", "out_avoid_plus", "money_kl_plus",
     "adv1_pct", "adv2_pct", "adv3_pct", "adv_home_pct",
     "adv1_plus", "adv2_plus", "adv3_plus", "adv_home_plus",
@@ -158,6 +158,8 @@ def main():
             "standings": table,
             "parks": context.park_factors(conn, same_series),
             "weather": context.weather_effects(conn, same_series),
+            # how far batters get, league-wide (None without play-by-play)
+            "reach": situational.reach_distribution(conn, sid),
         })
 
         # Projections (PARE) — forward-looking, only meaningful for the current

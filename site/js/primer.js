@@ -72,8 +72,8 @@ function _primerBaseballEN() {
       ['TEHO+','wRC+','Production per turn at bat, indexed to the league. 100 is average, and the top hitters land between 250 and 350.'],
       ['VYK','WAR','Wins above replacement. The baseline is a replacement-level player, one a team could easily bring in from the lower league or its own bench. This is the site’s default leaderboard.'],
       ['JYK','RAR','Runs above replacement, based on run values from this league.'],
-      ['SPARK','','A composite rating for table-setters that combines advancing runners, baserunning and avoiding outs.'],
-      ['ADV+ / RUN+ / OUT+','','The three components of SPARK, each indexed to a league average of 100.'],
+      ['SETUP+','','A composite rating for the players who set up scoring chances that combines advancing runners, baserunning and avoiding outs.'],
+      ['ADV+ / RUN+ / OUT+','','The three components of SETUP+, each indexed to a league average of 100.'],
       ['KOTI-KL+','','How often a player’s hits bring the lead runner home, relative to the league.'],
       ['PEJ','DRS','Defensive runs saved per game, measured with run expectancy from play-by-play data.'],
       ['PARE','Steamer / ZiPS','The projection system. It weights a player’s full career with recent games counting most, then regresses toward the league average.'],
@@ -151,8 +151,8 @@ function _primerBaseballFI() {
       ['TEHO+','wRC+','Tuotanto lyöntivuoroa kohden sarjaan indeksoituna. 100 on keskitaso, ja kärkilyöjät liikkuvat välillä 250–350.'],
       ['VYK','WAR','Voitot yli korvaajatason. Vertailutasona on korvaajatason pelaaja eli sellainen, jonka joukkue saisi helposti tilalle esimerkiksi Ykköspesiksestä tai omalta penkiltään. Sivuston oletuslista.'],
       ['JYK','RAR','Juoksut yli korvaajatason samalla vertailulla, laskettuna tämän sarjan juoksuarvoilla.'],
-      ['SPARK','','Tilanteenrakentajan indeksi, joka yhdistää etenemisen lyöjänä, etenijänä ja palojen välttämisen.'],
-      ['ADV+ / RUN+ / OUT+','','SPARKin kolme osaa, kukin indeksoituna sarjan keskiarvoon 100.'],
+      ['SETUP+','','Tilanteenrakentajan indeksi, joka yhdistää etenemisen lyöjänä, etenijänä ja palojen välttämisen.'],
+      ['ADV+ / RUN+ / OUT+','','SETUP+:n kolme osaa, kukin indeksoituna sarjan keskiarvoon 100.'],
       ['KOTI-KL+','','Kuinka usein pelaajan lyönnit tuovat kärjen kotiin asti, suhteessa sarjaan.'],
       ['PEJ','DRS','Puolustuksen estämät juoksut ottelua kohden, laskettuna syöttökohtaisen datan tilanneodotuksista.'],
       ['PARE','Steamer / ZiPS','Ennustejärjestelmä. Se painottaa koko uraa niin, että tuoreet ottelut painavat eniten, ja regressoi kohti sarjan keskitasoa.'],
@@ -208,7 +208,7 @@ function _primerPesisFI() {
       lyöntijärjestyksen loppupään tykeistä. Suuri osa pesäpallosta tapahtuu kuitenkin
       muualla: kärjen etenemisissä, palojen välttämisessä ja etenijän työssä. Mallon mittarit
       antavat arvon myös sille.</p>
-      <p>SPARK nostaa esiin tilanteenrakentajat. VYK laskee pelaajan koko arvon voittoina,
+      <p>SETUP+ nostaa esiin tilanteenrakentajat. VYK laskee pelaajan koko arvon voittoina,
       jolloin eri roolien pelaajia voi vertailla samalla luvulla. PARE arvioi pelaajan
       tämänhetkisen tason koko uran perusteella. Luvut auttavat näkemään, miksi pelinjohtaja
       luottaa pelaajaan, jonka teholuvut näyttävät vaatimattomilta.</p>
@@ -241,7 +241,7 @@ function _primerPesisFI() {
     ${_primerList([
       ['VYK / JYK','','Kertyvät arvomittarit: voitot ja juoksut yli korvaajatason eli pelaajan, jonka joukkue saisi helposti tilalle. Peliaika kasvattaa arvoa.'],
       ['TEHO+','','Tuotanto lyöntivuoroa kohden. 100 on sarjan keskitaso.'],
-      ['SPARK','','Tilanteenrakentajan indeksi, joka yhdistää etenemisen lyöjänä (ADV+), etenijänä (RUN+) ja palojen välttämisen (OUT+).'],
+      ['SETUP+','','Tilanteenrakentajan indeksi, joka yhdistää etenemisen lyöjänä (ADV+), etenijänä (RUN+) ja palojen välttämisen (OUT+).'],
       ['1 % / 2 % / 3 % / K %','','Viralliset kärkilyöntisplitit pesittäin: kotipesästä ykköselle, ykköseltä kakkoselle, kakkoselta kolmoselle ja kolmoselta kotiin.'],
       ['PEJ','','Puolustuksen estämät juoksut ottelua kohden suhteessa sarjan keskiarvoon. Lasketaan syöttökohtaisesta ottelodatasta.'],
       ['PARE','','Ennuste pelaajan tasosta. Koko ura painotettuna niin, että tuoreet ottelut painavat eniten.'],
@@ -278,7 +278,7 @@ function _primerPesisEN() {
       power hitters at the back of the order. A large share of pesäpallo happens elsewhere:
       in advancing the lead runner, avoiding outs and doing the running. Mallo's metrics put
       a value on that work too.</p>
-      <p>SPARK identifies the table-setters. VYK counts a player's total value in wins, so
+      <p>SETUP+ identifies the players who set up scoring chances. VYK counts a player's total value in wins, so
       players in different roles can be compared with one number. PARE estimates a player's
       current level from the whole career. The numbers help explain why a manager keeps
       trusting a player whose traditional line looks modest.</p>
@@ -311,7 +311,7 @@ function _primerPesisEN() {
     ${_primerList([
       ['VYK / JYK','','Cumulative value stats: wins and runs above replacement. Playing time adds value.'],
       ['TEHO+','','Production per turn at bat. 100 is the league average.'],
-      ['SPARK','','A table-setter index combining advancement as a batter (ADV+), as a runner (RUN+) and out avoidance (OUT+).'],
+      ['SETUP+','','A setup index combining advancement as a batter (ADV+), as a runner (RUN+) and out avoidance (OUT+).'],
       ['1 % / 2 % / 3 % / K %','','The official lead-runner splits by base: home to first, first to second, second to third, and third to home.'],
       ['PEJ','','Defensive runs saved per game versus the league average, from play-by-play data.'],
       ['PARE','','A projection of the player’s level, weighting the whole career with recent games counting most.'],

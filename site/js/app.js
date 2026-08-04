@@ -35,12 +35,12 @@ window.setLang = function (l) {
 };
 
 const STAT_LABEL = {
-  spark_index:'SPARK', adv_plus:'ADV+', runner_plus:'RUN+',
+  spark_index:'SETUP+', adv_plus:'ADV+', runner_plus:'RUN+',
   out_avoid_plus:'OUT+', money_kl_plus:'KOTI-KL+',
   adv1_pct:'1 %', adv2_pct:'2 %', adv3_pct:'3 %', adv_home_pct:'K %',
   adv1_plus:'1 %+', adv2_plus:'2 %+', adv3_plus:'3 %+', adv_home_plus:'K %+',
   kl_pct:'KL%', saatto_pct:'Saatto%', eten_pct:'Etenemis%',
-  moved_pct:'KL+saatto%',
+  moved_pct:'KL+saatto%', reach_pct:'Pesälle%',
   kunnari_rate:'Kunnarit/vuoro', lyoty_rate:'Lyödyt/vuoro',
   palo_rate:'Palo%', tehot_per_turn:'Tehot/vuoro',
   kl_base0:'1 % (koti→1)', kl_base1:'2 % (1→2)',
@@ -63,7 +63,7 @@ const STAT_LABEL_EN = {
   money_kl_plus:'HOME-AH+',
   // Action-oriented in English: what the batter did, not which runner it was.
   kl_pct:'AVG', saatto_pct:'MOVED% (trail)', eten_pct:'TAKEN%',
-  moved_pct:'MOVED%',
+  moved_pct:'MOVED%', reach_pct:'OBP%',
   kunnari_rate:'HR/PA', lyoty_rate:'RBI/PA',
   palo_rate:'Out%', tehot_per_turn:'R+RBI/PA', tehot:'R+RBI',
   kunnarit:'HR', lyodyt:'RBI', tuodut:'R', turns_at_bat:'PA',
@@ -110,6 +110,7 @@ const STAT_INFO = {
   teho_plus: { fi: 'Tuotanto lyöntivuoroa kohden, 100 on sarjan keskitaso. Luku suosii lyöntijärjestyksen loppupään lyöjiä, koska lyödyt ja tuodut syntyvät tilanteista. Vastaa baseballin wRC+:aa.', en: 'Production per turn at bat, where 100 is league average. The number favors the back of the batting order, because runs batted home and runs scored depend on opportunities. It is comparable to wRC+ in baseball.' },
   kl_pct: { fi: 'Kärkilyönnit jaettuna yrityksillä eli lajin lyöntikeskiarvo. Sarjan keskitaso on noin .530.', en: 'Batting average — the same idea as in baseball, but it counts only the times the batter moved the lead runner along. The league average is about .530, so the numbers run far higher than an MLB average.' },
   saatto_pct: { fi: 'Saatot per yritys: takaetenijän vieminen lyönnillä.', en: 'How often the batter moves a runner behind the lead runner, per chance. The lead runner is the one closest to home; everyone behind is a trailing runner.' },
+  reach_pct: { fi: 'Kuinka suuri osa lyöntivuoroista päättyy niin, että lyöjä itse on pesällä. Tämä on pesäpallon OBP eli pesäprosentti: sitä ei ole virallisessa pöytäkirjassa, mutta se saadaan syöttökohtaisesta datasta. Sarjan keskitaso on noin .580.', en: 'On-base percentage: the share of batting turns that end with the batter safe on a base. It works exactly as it does in baseball, and it exists in pesäpallo too — the official stat line simply does not carry it, so it is derived from the play-by-play data. The league average is about .580.' },
   moved_pct: { fi: 'Kärkilyönnit ja saatot yhteensä jaettuna yrityksillä: kuinka usein lyöjä vie etenijää eteenpäin.', en: 'How often the batter moves a runner along, counting every runner, per chance. Use the Lead and Trail views to split it: Lead is the runner closest to home, Trail is anyone behind them.' },
   eten_pct: { fi: 'Onnistuneet etenemiset per yritys pelaajan juostessa itse, kärki- ja takaetenemiset yhteenlaskettuina.', en: 'Bases taken: how often the player advances safely when running the bases himself, per attempt. This is his own running, not what a batter did for him.' },
   kunnari_rate: { fi: 'Kunnarit per lyöntivuoro.', en: 'Home runs per turn.' },
@@ -539,7 +540,7 @@ async function showLeaderboard(sid, stat, posFilter, movedView) {
       `<a href="#/?sid=${sid}&stat=moved_pct&moved=${v}${posQ}"${v===movedView?' class="on"':''}>${label}</a>`
     ).join('') + `</div>`;
 
-  // SPARK + TEHO+ are the always-on anchors; the sorted stat gets its own
+  // SETUP+ and TEHO+ are the always-on anchors; the sorted stat gets its own
   // highlighted column unless it is already one of the anchors.
   const featuredStat = stat;
   const ANCHOR_STATS = ['spark_index', 'teho_plus'];
@@ -560,7 +561,7 @@ async function showLeaderboard(sid, stat, posFilter, movedView) {
      cell:r=>`<td class="name team"><a href="#/team/${encodeURIComponent(r.team)}?sid=${sid}">${r.team||'—'}</a></td>`},
     {key:'games', label:t('O', 'G'), get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
     {key:'turns_at_bat', label:t('LV', 'PA'), get:r=>r.turns_at_bat, cell:r=>`<td class="num">${r.turns_at_bat}</td>`},
-    {key:'spark_index', label:'SPARK', get:r=>r.spark_index, cell:r=>barCell(r.spark_index, sparkMax)},
+    {key:'spark_index', label:'SETUP+', get:r=>r.spark_index, cell:r=>barCell(r.spark_index, sparkMax)},
     {key:'teho_plus', label:'TEHO+', get:r=>r.teho_plus, cell:r=>`<td class="num">${r.teho_plus??'—'}</td>`},
   ];
   if (showFeat) cols.push({key:stat, label:featTh, get:r=>r[stat], cell:r=>{
@@ -836,6 +837,7 @@ async function showLeague(sid) {
   const table = data.standings;
   const parks = data.parks;
   const weather = data.weather;
+  const reach = data.reach;
 
   const standCols = [
     {key:'rank', label:'#', sortable:false, get:()=>0, cell:(r,i)=>`<td>${i+1}</td>`},
@@ -892,6 +894,28 @@ async function showLeague(sid) {
           <tbody>${parkRows}</tbody>
         </table>
       </div>
+      ${reach ? `
+      <h2>${t('Miten pitkälle lyöjä pääsee', 'How far the batter gets')}</h2>
+      <div class="card" style="padding:0;overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th class="name">${t('Lyöntivuoron lopputulos', 'Outcome of the batting turn')}</th>
+            <th>${t('Osuus', 'Share')}</th><th>${t('Vuoroja', 'Turns')}</th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="name">${t('Lyöjä ykköspesälle', 'Batter reaches first')}</td>
+                <td class="num">${reach.reach1_pct} %</td><td class="num">${reach.reach1}</td></tr>
+            <tr><td class="name">${t('Lyöjä kakkospesälle', 'Batter reaches second')}</td>
+                <td class="num">${reach.reach2_pct} %</td><td class="num">${reach.reach2}</td></tr>
+            <tr><td class="name">${t('Kunnari (lyöjä kolmospesälle)', 'Kunnari (batter reaches third)')}</td>
+                <td class="num">${reach.reach3_pct} %</td><td class="num">${reach.reach3}</td></tr>
+            <tr><td class="name"><strong>${t('Lyöjä pesälle yhteensä', 'Batter safe on a base')}</strong></td>
+                <td class="num extra">${reach.reach_pct} %</td><td class="num">${reach.turns}</td></tr>
+          </tbody>
+        </table>
+        <p class="legend" style="padding:10px 16px">${t('Pesäpallossa on ykkös- ja kakkospesälyöntejä samaan tapaan kuin baseballissa, mutta niitä ei kirjata omina tilastoinaan: lyöjä voi käyttää kolme lyöntiään etenijöiden viemiseen, joten lyönnin ja pesän suhde ei ole yksi yhteen. Nämä luvut on johdettu syöttökohtaisesta datasta. Kunnari on käytännössä kolmen pesän lyönti.',
+          'Pesäpallo has first- and second-base hits much as baseball does, but they are not recorded as their own categories: a batter may spend three strikes moving runners, so the hit-to-base relationship is not one to one. These figures are derived from the play-by-play data. A kunnari is in effect a three-base hit.')}</p>
+      </div>` : ''}
       <h2>${t('Tuuli ja kunnarit', 'Wind and home runs')}</h2>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
@@ -1045,7 +1069,7 @@ async function showPlayer(pid) {
       <div class="tiles">
         <div class="tile"><div class="label">${t('Ottelut', 'Games')}</div><div class="value">${line.games}</div></div>
         <div class="tile hero"><div class="label">${statLabel('vyk')}${infoBtn('vyk')}</div><div class="value">${statNum('vyk', line.vyk)}</div></div>
-        <div class="tile"><div class="label">SPARK${infoBtn('spark_index')}</div><div class="value">${line.spark_index??'—'}</div></div>
+        <div class="tile"><div class="label">SETUP+${infoBtn('spark_index')}</div><div class="value">${line.spark_index??'—'}</div></div>
         <div class="tile"><div class="label">TEHO+${infoBtn('teho_plus')}</div><div class="value">${line.teho_plus||'—'}</div></div>
         ${lyoTile}
         ${projTile}
@@ -1069,7 +1093,7 @@ async function showPlayer(pid) {
             <table>
               <thead><tr>
                 <th class="name">${t('Kausi', 'Season')}</th><th class="name">${t('Joukkue', 'Team')}</th><th>${t('O', 'G')}</th><th>${t('LV', 'PA')}</th>
-                <th>${statLabel('vyk')}</th><th>SPARK</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th>${statLabel('money_kl_plus')}</th>
+                <th>${statLabel('vyk')}</th><th>SETUP+</th><th>ADV+</th><th>RUN+</th><th>OUT+</th><th>${statLabel('money_kl_plus')}</th>
                 <th class="extra">TEHO+</th>
               </tr></thead>
               <tbody>${careerRows}</tbody>
@@ -1098,7 +1122,7 @@ async function showPlayer(pid) {
   const ibEl = document.getElementById('index-bars');
   if (ibEl && typeof renderIndexBars === 'function') {
     renderIndexBars(ibEl, [
-      {label:'SPARK',    value: line.spark_index,    full:t('SPARK — tilanteenrakentajan indeksi', 'SPARK — table-setter index')},
+      {label:'SETUP+',   value: line.spark_index,    full:t('SETUP+ — tilanteenrakentajan indeksi', 'SETUP+ — the player who sets up the scoring chance')},
       {label:'ADV+',     value: line.adv_plus,       full:t('Etenemisarvo lyöjänä', 'Advancement value as a batter')},
       {label:'RUN+',     value: line.runner_plus,    full:t('Etenijän arvo', 'Value as a runner')},
       {label:'OUT+',     value: line.out_avoid_plus, full:t('Palojen välttäminen', 'Out avoidance')},
@@ -1148,7 +1172,7 @@ async function showTeam(teamRaw, sid) {
      cell:r=>`<td class="name"><a class="player" href="#/player/${r.player_id}">${r.name}</a> <span class="pos">${posLabel(r.pos)}</span></td>`},
     {key:'games', label:t('O', 'G'), get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
     {key:'turns_at_bat', label:t('LV', 'PA'), get:r=>r.turns_at_bat, cell:r=>`<td class="num">${r.turns_at_bat}</td>`},
-    {key:'spark_index', label:'SPARK', get:r=>r.spark_index, cell:r=>`<td class="num strong">${r.spark_index??'—'}</td>`},
+    {key:'spark_index', label:'SETUP+', get:r=>r.spark_index, cell:r=>`<td class="num strong">${r.spark_index??'—'}</td>`},
     {key:'adv_plus', label:'ADV+', get:r=>r.adv_plus, cell:r=>`<td class="num">${r.adv_plus??'—'}</td>`},
     {key:'runner_plus', label:'RUN+', get:r=>r.runner_plus, cell:r=>`<td class="num">${r.runner_plus??'—'}</td>`},
     {key:'out_avoid_plus', label:'OUT+', get:r=>r.out_avoid_plus, cell:r=>`<td class="num">${r.out_avoid_plus??'—'}</td>`},
@@ -1287,6 +1311,7 @@ function showGlossary() {
         ${gtable(
           gr(statLabel('tehot'),'<code>K + L + T</code>',t('perinteinen tuotantoluku', 'the traditional production stat (tehot)')) +
           gr(statLabel('kl_pct'),'<code>kärkilyönnit / KLY</code>',t('kärjen eteneminen per yritys', 'advance hits: moving the lead runner, per attempt')) +
+          gr(statLabel('reach_pct'),'<code>' + t('lyöntivuorot joissa lyöjä pääsi pesälle / lyöntivuorot', 'turns where the batter reached a base / turns at bat') + '</code>',t('pesäpallon OBP; johdettu syöttökohtaisesta datasta, ei virallisessa pöytäkirjassa', 'on-base percentage; derived from play-by-play, not in the official stat line')) +
           gr(statLabel('moved_pct'),'<code>(kärkilyönnit + saatot) / yritykset</code>',t('kuinka usein lyöjä vie etenijää eteenpäin', 'how often the batter moves a runner along, lead or trailing')) +
           gr(statLabel('saatto_pct'),'<code>saatot / saattoyritykset</code>',t('takaetenijän vieminen lyöjänä', 'moving a runner behind the lead runner')) +
           gr(statLabel('eten_pct'),'<code>etenemiset / etenemisyritykset</code>',t('kärki- + takaetenemiset etenijänä', 'bases taken by the player running himself')) +
@@ -1304,7 +1329,7 @@ function showGlossary() {
           gr('ADV+','<code>100 × ((KL + saatot) / (KLY + saatto-Y)) / sarjataso</code>',t('lyöjän etenemisarvo ilman K/L/T-toistoa', 'the batter’s advancement value without repeating K/L/T')) +
           gr('RUN+','<code>100 × (0.8·kärkietenemis-%/sarjataso + 0.2·takaetenemis-%/sarjataso)</code>',t('pelaajan arvo etenijänä; kumpikin osa verrataan omaan sarjatasoonsa ja kärkietenemiset painavat eniten, koska takaetenemiset ovat usein vapaita', 'value as a runner; each part is compared with its own league rate, and lead-runner advances weigh most because trailing advances are often free')) +
           gr('OUT+','<code>100 × (1 − palot/vuoro) / sarjataso</code>',t('omien palojen välttäminen; yli 100 parempi', 'avoiding the player’s own outs; higher than 100 is better')) +
-          gr('SPARK','<code>0.50·ADV+ + 0.30·RUN+ + 0.20·OUT+</code>',t('tilanteenrakentajan indeksi', 'the table-setter index')) +
+          gr('SETUP+','<code>0.50·ADV+ + 0.30·RUN+ + 0.20·OUT+</code>',t('tilanteenrakentajan indeksi', 'the table-setter index')) +
           gr('1 % / 2 % / 3 % / K %','<code>onnistuneet KL-liikkeet / yritykset</code>',t('koti→1, 1→2, 2→3 ja kotiutus; yksi lyöntivuoro voi tuottaa useita KL:iä', 'home→1st, 1st→2nd, 2nd→3rd and scoring; one turn at bat can produce several advance hits')) +
           gr('1 %+ / 2 %+ / 3 %+ / K %+','<code>100 × split-% / sarjan split-%</code>',t('sama virallinen split sarjaindeksinä', 'the same official split as a league index')) +
           gr(statLabel('money_kl_plus'),'<code>100 × K % / sarjataso</code>',t('kotiutus-/juoksuksi muuttavat kärkilyöntiyritykset', 'advance-hit attempts that turn into runs')) +
