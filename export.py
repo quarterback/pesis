@@ -16,7 +16,7 @@ from pesis import context, db, defense, metrics, projection, simulate, translate
 # clone of its counting columns (kunnarit/lyodyt/tuodut/tehot) or published rates.
 # VYK/JYK are the value stats (wins/runs above replacement — the WAR analog).
 LEADERBOARD_STATS = [
-    "vyk", "jyk", "spark_index", "lyodyt_oe",
+    "vyk", "jyk", "spark_index", "lyodyt_oe", "moved_pct",
     "adv_plus", "runner_plus", "out_avoid_plus", "money_kl_plus",
     "adv1_pct", "adv2_pct", "adv3_pct", "adv_home_pct",
     "adv1_plus", "adv2_plus", "adv3_plus", "adv_home_plus",
@@ -49,8 +49,10 @@ ROSTER_FIELDS = ["player_id", "name", "games", "turns_at_bat", "pos",
 CAREER_FIELDS = ["year", "season_id", "team", "age", "games", "turns_at_bat",
                  "vyk", "spark_index", "adv_plus", "runner_plus", "out_avoid_plus",
                  "money_kl_plus", "teho_plus", "teho_plus_adj"]
+# kl_pct/saatto_pct/eten_pct back the MOVED% lead/trail toggle client-side.
 LEADERBOARD_PLAYER_FIELDS = (["player_id", "name", "team", "games", "turns_at_bat",
-                              "pos", "raa"] + LEADERBOARD_STATS)
+                              "pos", "raa", "kl_pct", "saatto_pct", "eten_pct"]
+                             + LEADERBOARD_STATS)
 
 
 def slim(d: dict, fields) -> dict:

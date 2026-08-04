@@ -40,6 +40,7 @@ const STAT_LABEL = {
   adv1_pct:'1 %', adv2_pct:'2 %', adv3_pct:'3 %', adv_home_pct:'K %',
   adv1_plus:'1 %+', adv2_plus:'2 %+', adv3_plus:'3 %+', adv_home_plus:'K %+',
   kl_pct:'KL%', saatto_pct:'Saatto%', eten_pct:'Etenemis%',
+  moved_pct:'KL+saatto%',
   kunnari_rate:'Kunnarit/vuoro', lyoty_rate:'Lyödyt/vuoro',
   palo_rate:'Palo%', tehot_per_turn:'Tehot/vuoro',
   kl_base0:'1 % (koti→1)', kl_base1:'2 % (1→2)',
@@ -60,13 +61,15 @@ const STAT_LABEL = {
 const STAT_LABEL_EN = {
   vyk:'VYK (WAR)', jyk:'JYK (RAR)', lyodyt_oe:'LYO (RBI-OE)',
   money_kl_plus:'HOME-AH+',
-  kl_pct:'AH%', saatto_pct:'Escort%', eten_pct:'Advance%',
+  // Action-oriented in English: what the batter did, not which runner it was.
+  kl_pct:'AVG', saatto_pct:'MOVED% (trail)', eten_pct:'TAKEN%',
+  moved_pct:'MOVED%',
   kunnari_rate:'HR/PA', lyoty_rate:'RBI/PA',
   palo_rate:'Out%', tehot_per_turn:'R+RBI/PA', tehot:'R+RBI',
   kunnarit:'HR', lyodyt:'RBI', tuodut:'R', turns_at_bat:'PA',
   kl_base0:'1 % (home→1st)', kl_base1:'2 % (1st→2nd)',
   kl_base2:'3 % (2nd→3rd)', kl_base3:'K % (scoring)',
-  ekl:'eAH%', esaatto:'eEscort%', eeten:'eAdvance%', epalo:'eOut%',
+  ekl:'eAVG', esaatto:'eMOVED%', eeten:'eTAKEN%', epalo:'eOut%',
   def_rv:'DRS/G', def_koppi_pct:'Catch%', def_out_conv:'Out conv.',
   def_error_cost:'Error runs', def_arm_hold:'Extra adv.',
   of_koppi_rate:'Catch%', lukkari_def_rv:'DRS',
@@ -100,14 +103,15 @@ const STAT_INFO = {
   raa: { fi: 'Juoksut yli sarjan keskitason.', en: 'Runs above league average.' },
   lyodyt_oe: { fi: 'Lyödyt Yli Odotetun. Montako juoksua pelaaja löi kotiin enemmän tai vähemmän kuin hänen kohtaamistaan pesätilanteista keskimäärin syntyy. Tyhjillä pesillä lyöntivuoro tuottaa lähes nolla lyötyä ja täysillä pesillä lähes puoli juoksua, joten pelkkä lyötyjen määrä kertoo enemmän tilanteista kuin lyöjästä. Positiivinen luku tarkoittaa, että pelaaja teki saamillaan tilanteilla enemmän kuin sarja keskimäärin.', en: 'Runs batted home above expectation: how many more (or fewer) runs the player drove home than their base situations typically produce. A plate appearance with the bases empty yields almost no runs batted home and one with the bases loaded nearly half a run, so the raw total says more about the situations than the hitter. It is the pesäpallo version of hitting with runners in scoring position, measured across all 24 base-and-out states.' },
   spark_index: { fi: 'Tilanteenrakentajan indeksi, joka yhdistää etenemisen lyöjänä, etenijänä ja palojen välttämisen. 100 on sarjan keskitaso.', en: 'A table-setter index combining advancement, baserunning and out avoidance. 100 is league average.' },
-  adv_plus: { fi: 'Kärkilyönnit ja saatot jaettuna yrityksillä, sarjaan indeksoituna.', en: 'Lead-runner hits and escorts per attempt, indexed to the league.' },
+  adv_plus: { fi: 'Kärkilyönnit ja saatot jaettuna yrityksillä, sarjaan indeksoituna.', en: 'How often the batter moves runners along, indexed to the league. 100 is average and higher is better.' },
   runner_plus: { fi: 'Onnistuneet etenemiset per yritys suhteessa sarjaan, kun pelaaja juoksee itse. Kärkietenemiset painavat 80 prosenttia ja takaetenemiset 20 prosenttia.', en: 'Successful advances per attempt relative to the league, as a runner. Advances as the lead runner count for 80 percent and advances as a trailing runner for 20 percent.' },
   out_avoid_plus: { fi: 'Palojen välttäminen: pelaajan omat palot etenijänä suhteessa sarjaan. Yli 100 = palaa keskivertoa harvemmin.', en: 'Out avoidance, based on the player’s own burns as a runner. Over 100 means fewer burns than average.' },
   money_kl_plus: { fi: 'Kotiuttavat kärkilyönnit suhteessa sarjaan.', en: 'Scoring advances relative to the league.' },
   teho_plus: { fi: 'Tuotanto lyöntivuoroa kohden, 100 on sarjan keskitaso. Luku suosii lyöntijärjestyksen loppupään lyöjiä, koska lyödyt ja tuodut syntyvät tilanteista. Vastaa baseballin wRC+:aa.', en: 'Production per turn at bat, where 100 is league average. The number favors the back of the batting order, because runs batted home and runs scored depend on opportunities. It is comparable to wRC+ in baseball.' },
-  kl_pct: { fi: 'Kärkilyönnit jaettuna yrityksillä eli lajin lyöntikeskiarvo. Sarjan keskitaso on noin .530.', en: 'Lead-runner hits divided by attempts, the sport’s batting average. The league average is around .530.' },
-  saatto_pct: { fi: 'Saatot per yritys: takaetenijän vieminen lyönnillä.', en: 'Escorts per attempt: moving the trailing runner with a hit.' },
-  eten_pct: { fi: 'Onnistuneet etenemiset per yritys pelaajan juostessa itse, kärki- ja takaetenemiset yhteenlaskettuina.', en: 'Successful advances per attempt as a runner, lead and trailing advances combined.' },
+  kl_pct: { fi: 'Kärkilyönnit jaettuna yrityksillä eli lajin lyöntikeskiarvo. Sarjan keskitaso on noin .530.', en: 'Batting average — the same idea as in baseball, but it counts only the times the batter moved the lead runner along. The league average is about .530, so the numbers run far higher than an MLB average.' },
+  saatto_pct: { fi: 'Saatot per yritys: takaetenijän vieminen lyönnillä.', en: 'How often the batter moves a runner behind the lead runner, per chance. The lead runner is the one closest to home; everyone behind is a trailing runner.' },
+  moved_pct: { fi: 'Kärkilyönnit ja saatot yhteensä jaettuna yrityksillä: kuinka usein lyöjä vie etenijää eteenpäin.', en: 'How often the batter moves a runner along, counting every runner, per chance. Use the Lead and Trail views to split it: Lead is the runner closest to home, Trail is anyone behind them.' },
+  eten_pct: { fi: 'Onnistuneet etenemiset per yritys pelaajan juostessa itse, kärki- ja takaetenemiset yhteenlaskettuina.', en: 'Bases taken: how often the player advances safely when running the bases himself, per attempt. This is his own running, not what a batter did for him.' },
   kunnari_rate: { fi: 'Kunnarit per lyöntivuoro.', en: 'Home runs per turn.' },
   lyoty_rate: { fi: 'Kotiin lyödyt juoksut lyöntivuoroa kohden. Vastaa baseballin RBI:tä.', en: 'Runs batted home per turn, comparable to RBI.' },
   palo_rate: { fi: 'Pelaajan omat palot etenijänä per lyöntivuoro. Muiden etenijöiden palot vuoron aikana eivät sisälly lukuun. Pienempi on parempi.', en: 'The player’s own burns as a runner per turn at bat. Outs by other runners during the turn are not included. Lower is better.' },
@@ -128,9 +132,9 @@ const STAT_INFO = {
   lra: { fi: 'Päästetyt juoksut lukkariottelua kohden. Vastaa baseballin ERA-lukua.', en: 'Runs allowed per game as lukkari, comparable to ERA.' },
   lra_minus: { fi: 'LRA sarjaindeksinä: 100 = keskitaso, pienempi parempi.', en: 'LRA as a league index: 100 = average, lower is better.' },
   lukkari_rp: { fi: 'Estetyt juoksut yli sarjan keskitason. Peliaika kasvattaa lukua.', en: 'Runs prevented above the league average. Playing time adds to it.' },
-  ekl: { fi: 'PARE-ennuste KL%:lle. Koko ura painotettuna niin, että tuoreet ottelut painavat eniten.', en: 'The PARE projection for KL%, weighting the whole career with recent games counting most.' },
-  esaatto: { fi: 'PARE-ennuste saattoprosentille.', en: 'PARE projection for escort rate.' },
-  eeten: { fi: 'PARE-ennuste etenemisprosentille.', en: 'PARE projection for advancement rate.' },
+  ekl: { fi: 'PARE-ennuste KL%:lle. Koko ura painotettuna niin, että tuoreet ottelut painavat eniten.', en: 'The PARE projection for batting average, weighting the whole career with recent games counting most.' },
+  esaatto: { fi: 'PARE-ennuste saattoprosentille.', en: 'The PARE projection for moving trailing runners.' },
+  eeten: { fi: 'PARE-ennuste etenemisprosentille.', en: 'The PARE projection for bases taken as a runner.' },
   epalo: { fi: 'PARE-ennuste paloprosentille. Pienempi on parempi.', en: 'PARE projection for burn rate. Lower is better.' },
   eteho: { fi: 'PARE-ennuste TEHO+:lle eli arvio pelaajan tämänhetkisestä tasosta.', en: 'The PARE projection for TEHO+, an estimate of the player’s current level.' },
   def_rv: { fi: 'Puolustuksen estämät juoksut ottelua kohden verrattuna sarjan keskiarvoon. Lasketaan tilanneodotuksista: jokaisen lyönnin jälkeen verrataan, montako juoksua tilanteesta yleensä syntyy ja montako oikeasti syntyi.', en: 'Defensive runs saved per game versus the league average, from run expectancy: after every delivery we compare how many runs the situation usually produces with what actually happened.' },
@@ -465,8 +469,17 @@ function makeTable(mount, cfg) {
 /* ══════════════════════════════════════════════════════════════════════════
    LEADERBOARD
 ══════════════════════════════════════════════════════════════════════════ */
-async function showLeaderboard(sid, stat, posFilter) {
+// MOVED% is one idea with three views: every runner the batter moved, just
+// the lead runner, or just the runners behind him. They have different
+// denominators, so each view is its own stat under one header.
+const MOVED_VIEWS = { all: 'moved_pct', lead: 'kl_pct', trail: 'saatto_pct' };
+
+async function showLeaderboard(sid, stat, posFilter, movedView) {
   posFilter = posFilter || '';
+  movedView = MOVED_VIEWS[movedView] ? movedView : 'all';
+  // the toggle rewrites which stat the board is actually sorted on
+  const onMoved = Object.values(MOVED_VIEWS).includes(stat);
+  if (onMoved) stat = MOVED_VIEWS[movedView];
   const data = await fetchJSON(`data/leaderboard/${sid}.json`);
   const season = data.season;
   const players = data.players;
@@ -477,7 +490,10 @@ async function showLeaderboard(sid, stat, posFilter) {
     'adv1_plus','adv2_plus','adv3_plus','adv_home_plus','teho_plus'])
     .filter(s => s !== 'teho_plus_adj');
 
-  if (!stat || !STATS.includes(stat)) stat = STATS[0];
+  // the lead/trail views are reachable through the toggle, not the pills, so
+  // they are valid sort keys even though they are not in the pill list
+  const SORTABLE = new Set([...STATS, ...Object.values(MOVED_VIEWS)]);
+  if (!stat || !SORTABLE.has(stat)) stat = STATS[0];
 
   // every Mallo metric is "higher = better" (indices centred on 100)
   const LOWER_BETTER = new Set();
@@ -505,12 +521,23 @@ async function showLeaderboard(sid, stat, posFilter) {
   const posOpts = [`<option value="">${t('Kaikki', 'All')}</option>`,
     `<option value="FIELD"${posFilter==='FIELD'?' selected':''}>${t('Kenttäpelaajat', 'Fielders')}</option>`].concat(
     posPresent.map(p => `<option value="${p}"${p===posFilter?' selected':''}>${p}</option>`)).join('');
+  // keep the MOVED% view when the position filter rewrites the hash
+  const statQ = onMoved ? `stat=moved_pct&moved=${movedView}` : `stat=${stat}`;
   const posSel = `<span class="lab">${t('Paikka', 'Position')}</span>
-    <select class="sel" onchange="location.hash='/?sid=${sid}&stat=${stat}'+(this.value?'&pos='+this.value:'')">${posOpts}</select>`;
+    <select class="sel" onchange="location.hash='/?sid=${sid}&${statQ}'+(this.value?'&pos='+this.value:'')">${posOpts}</select>`;
 
   const pills = STATS.map(s =>
     `<a href="#/?sid=${sid}&stat=${s}${posQ}"
        class="${s===stat?'active':''}">${statLabel(s)}</a>`).join('');
+
+  // Lead / Trail split, shown only while the board is on a MOVED% view
+  const movedSeg = !onMoved ? '' : `<span class="lab">${statLabel('moved_pct')}</span>
+    <div class="seg">` + [
+      ['all', t('Kaikki', 'All')], ['lead', t('Kärki', 'Lead')],
+      ['trail', t('Taka', 'Trail')],
+    ].map(([v, label]) =>
+      `<a href="#/?sid=${sid}&stat=moved_pct&moved=${v}${posQ}"${v===movedView?' class="on"':''}>${label}</a>`
+    ).join('') + `</div>`;
 
   // SPARK + TEHO+ are the always-on anchors; the sorted stat gets its own
   // highlighted column unless it is already one of the anchors.
@@ -546,6 +573,9 @@ async function showLeaderboard(sid, stat, posFilter) {
   const subText = ['vyk','jyk','raa'].includes(stat)
     ? t('VYK = voitot yli korvaajan (pesäpallon WAR-vastine), JYK = juoksut yli korvaajan — kertyviä arvomittareita. Vähintään 40 lyöntivuoroa.',
         'VYK = wins above replacement (pesäpallo’s WAR), JYK = runs above replacement — cumulative value stats. Minimum 40 turns at bat.')
+    : onMoved
+    ? t('Kuinka usein lyöjä vie etenijää eteenpäin. Kärki on kotipesää lähinnä oleva etenijä, taka kaikki hänen takanaan. Vähintään 40 lyöntivuoroa.',
+        'How often the batter moves a runner along. Lead is the runner closest to home, Trail is anyone behind them. Minimum 40 turns at bat.')
     : stat === 'lyodyt_oe'
     ? t('LYO = lyödyt yli odotetun: montako juoksua pelaaja löi kotiin enemmän kuin hänen kohtaamistaan pesätilanteista keskimäärin syntyy. Vähintään 40 lyöntivuoroa.',
         'LYO = runs batted home above expectation: how many more the player drove home than their base situations typically produce. Minimum 40 turns at bat.')
@@ -566,7 +596,9 @@ async function showLeaderboard(sid, stat, posFilter) {
     <div class="filters">
       <span class="lab">${t('Järjestä', 'Sort')}</span>
       ${pills}
-      <span class="spacer"></span>
+    </div>
+    ${movedSeg ? `<div class="filters">${movedSeg}</div>` : ''}
+    <div class="filters">
       ${posSel}
       <a href="#" onclick="dlLB(${sid},'${stat}');return false;">↓ CSV</a>
     </div>
@@ -579,7 +611,8 @@ async function showLeaderboard(sid, stat, posFilter) {
 
   window.dlLB = function(sid, stat) {
     const cols = ['name','team','games','turns_at_bat','vyk','jyk','raa',
-                  'spark_index','lyodyt_oe','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
+                  'spark_index','lyodyt_oe','moved_pct','kl_pct','saatto_pct','eten_pct',
+                  'adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
                   'adv1_pct','adv2_pct','adv3_pct','adv_home_pct','teho_plus','teho_plus_adj'];
     downloadCSV(sorted, cols, `${season.series}-${season.year}-${stat}.csv`);
   };
@@ -1254,8 +1287,9 @@ function showGlossary() {
         ${gtable(
           gr(statLabel('tehot'),'<code>K + L + T</code>',t('perinteinen tuotantoluku', 'the traditional production stat (tehot)')) +
           gr(statLabel('kl_pct'),'<code>kärkilyönnit / KLY</code>',t('kärjen eteneminen per yritys', 'advance hits: moving the lead runner, per attempt')) +
-          gr(t('Saatto-%', 'Escort%'),'<code>saatot / saattoyritykset</code>',t('takaetenijän vieminen lyöjänä', 'moving a trailing runner as the batter')) +
-          gr(t('Etenemis-%', 'Advance%'),'<code>etenemiset / etenemisyritykset</code>',t('kärki- + takaetenemiset etenijänä', 'lead + trailing advances as a runner')) +
+          gr(statLabel('moved_pct'),'<code>(kärkilyönnit + saatot) / yritykset</code>',t('kuinka usein lyöjä vie etenijää eteenpäin', 'how often the batter moves a runner along, lead or trailing')) +
+          gr(statLabel('saatto_pct'),'<code>saatot / saattoyritykset</code>',t('takaetenijän vieminen lyöjänä', 'moving a runner behind the lead runner')) +
+          gr(statLabel('eten_pct'),'<code>etenemiset / etenemisyritykset</code>',t('kärki- + takaetenemiset etenijänä', 'bases taken by the player running himself')) +
           gr(t('Kunnarit/vuoro', 'HR/PA'),'<code>K / V</code>','') +
           gr(t('Lyödyt/vuoro', 'RBI/PA'),'<code>L / V</code>','') +
           gr(t('Tuodut/yritys', 'R/attempt'),'<code>T / etenemisyritykset</code>',t('etenijän tuotto', 'production as a runner')) +
@@ -1372,7 +1406,8 @@ async function route() {
       } else if (params.view === 'defense') {
         await showDefense(sid);
       } else {
-        await showLeaderboard(sid, params.stat || 'vyk', params.pos || '');
+        await showLeaderboard(sid, params.stat || 'vyk', params.pos || '',
+                              params.moved || 'all');
       }
 
     } else if (page === 'projections') {
