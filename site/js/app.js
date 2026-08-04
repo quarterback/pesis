@@ -1119,7 +1119,8 @@ async function showTeam(teamRaw, sid) {
 ══════════════════════════════════════════════════════════════════════════ */
 async function showBaseball(pid) {
   const data = await fetchJSON(`data/players/${pid}.json`);
-  const {player, line, translation: t, pitching: pit} = data;
+  // NB: not `translation: t` — `t` is the global language helper t(fi, en)
+  const {player, line, translation: tr, pitching: pit} = data;
   if (!t && !pit) {
     main().innerHTML = `<div class="page"><h1>${player.name}</h1>
       <p class="sub"><a href="#/player/${pid}">${t('← takaisin', '← back')}</a> · ${t('ei baseball-käännöstä (liian vähän pelattu tältä kaudelta).', 'no baseball translation (not enough playing time this season).')}</p></div>`;
@@ -1129,14 +1130,14 @@ async function showBaseball(pid) {
   const tbl = (head, body) => `<div class="card" style="padding:0;overflow:hidden"><table>
     <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
 
-  const batting = !t ? '' : `
-    <h2>Lyönti → MLB <span class="muted">(same percentile, MLB scale)</span></h2>
+  const batting = !tr ? '' : `
+    <h2>${t('Lyönti', 'Batting')} → MLB <span class="muted">(same percentile, MLB scale)</span></h2>
     <div class="callrow">
-      ${callout('wRC+ equivalent', t.wrc_plus ?? '—', 'accent')}
-      ${callout('Reads like', t.tier ?? '—')}
+      ${callout('wRC+ equivalent', tr.wrc_plus ?? '—', 'accent')}
+      ${callout('Reads like', tr.tier ?? '—')}
     </div>
     ${tbl(`<th class="name">Pesäpallo</th><th>${t('Arvo', 'Value')}</th><th>Pctile</th><th>MLB</th><th class="extra">${t('Käännös', 'Translation')}</th>`,
-      t.rows.map(r => `<tr>
+      tr.rows.map(r => `<tr>
         <td class="name">${r.pesis_label}</td><td class="num">${rate(r.pesis_value)}</td>
         <td class="num">${r.percentile}</td><td class="num">${r.mlb_stat}</td>
         <td class="num extra">${r.mlb_value}</td>
