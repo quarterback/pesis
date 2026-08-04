@@ -45,7 +45,7 @@ const STAT_LABEL = {
   kl_base0:'1 % (koti→1)', kl_base1:'2 % (1→2)',
   kl_base2:'3 % (2→3)', kl_base3:'K % (kotiutus)',
   teho_plus:'TEHO+',
-  vyk:'VYK', jyk:'JYK', raa:'RAA',
+  vyk:'VYK', jyk:'JYK', raa:'RAA', lyodyt_oe:'LYO',
   tehot:'Tehot', kunnarit:'Kunnarit', lyodyt:'Lyödyt', tuodut:'Tuodut',
   turns_at_bat:'Lyöntivuorot', lra:'LRA', lra_minus:'LRA-', lukkari_rp:'RP',
   ekl:'eKL%', esaatto:'eSaatto%', eeten:'eEtenemis%', epalo:'ePalo%', eteho:'eTEHO+',
@@ -58,7 +58,7 @@ const STAT_LABEL = {
 // into its baseball counterpart (AH = advance hit) or paired with one
 // (VYK (WAR)). Shared symbols stay put.
 const STAT_LABEL_EN = {
-  vyk:'VYK (WAR)', jyk:'JYK (RAR)',
+  vyk:'VYK (WAR)', jyk:'JYK (RAR)', lyodyt_oe:'LYO (RBI-OE)',
   money_kl_plus:'HOME-AH+',
   kl_pct:'AH%', saatto_pct:'Escort%', eten_pct:'Advance%',
   kunnari_rate:'HR/PA', lyoty_rate:'RBI/PA',
@@ -83,6 +83,7 @@ const STAT_INFO = {
   vyk: { fi: 'Voitot Yli Korvaajan. Pelaajan kokonaisarvo voittoina verrattuna korvaajatason pelaajaan. Korvaajatason pelaaja tarkoittaa pelaajaa, jonka joukkue saisi helposti tilalle esimerkiksi Ykköspesiksestä tai oman joukkueen penkiltä. Taso lasketaan tämän sarjan tuloksista.', en: 'Wins above replacement, a player’s total value in wins compared with a replacement-level player: one a team could easily bring in from the lower league or its own bench. It is the same idea as WAR in baseball.' },
   jyk: { fi: 'Juoksut Yli Korvaajan. Sama vertailu kuin VYK, mitattuna juoksuina: kuinka monta juoksua enemmän pelaaja tuotti kuin korvaajatason pelaaja olisi tuottanut samoilla lyöntivuoroilla.', en: 'Runs above replacement: how many more runs the player produced than a replacement-level player would have in the same turns at bat. VYK measured in runs.' },
   raa: { fi: 'Juoksut yli sarjan keskitason.', en: 'Runs above league average.' },
+  lyodyt_oe: { fi: 'Lyödyt Yli Odotetun. Montako juoksua pelaaja löi kotiin enemmän tai vähemmän kuin hänen kohtaamistaan pesätilanteista keskimäärin syntyy. Tyhjillä pesillä lyöntivuoro tuottaa lähes nolla lyötyä ja täysillä pesillä lähes puoli juoksua, joten pelkkä lyötyjen määrä kertoo enemmän tilanteista kuin lyöjästä. Positiivinen luku tarkoittaa, että pelaaja teki saamillaan tilanteilla enemmän kuin sarja keskimäärin.', en: 'Runs batted home above expectation: how many more (or fewer) runs the player drove home than their base situations typically produce. A plate appearance with the bases empty yields almost no runs batted home and one with the bases loaded nearly half a run, so the raw total says more about the situations than the hitter. It is the pesäpallo version of hitting with runners in scoring position, measured across all 24 base-and-out states.' },
   spark_index: { fi: 'Tilanteenrakentajan indeksi, joka yhdistää etenemisen lyöjänä, etenijänä ja palojen välttämisen. 100 on sarjan keskitaso.', en: 'A table-setter index combining advancement, baserunning and out avoidance. 100 is league average.' },
   adv_plus: { fi: 'Kärkilyönnit ja saatot jaettuna yrityksillä, sarjaan indeksoituna.', en: 'Lead-runner hits and escorts per attempt, indexed to the league.' },
   runner_plus: { fi: 'Onnistuneet etenemiset per yritys suhteessa sarjaan, kun pelaaja juoksee itse. Kärkietenemiset painavat 80 prosenttia ja takaetenemiset 20 prosenttia.', en: 'Successful advances per attempt relative to the league, as a runner. Advances as the lead runner count for 80 percent and advances as a trailing runner for 20 percent.' },
@@ -468,7 +469,7 @@ async function showLeaderboard(sid, stat, posFilter) {
   // stats shown as plain numbers (indices + value stats), not .xxx rates
   const INDEX_STATS = new Set(['spark_index','adv_plus','runner_plus','out_avoid_plus',
     'money_kl_plus','adv1_plus','adv2_plus','adv3_plus','adv_home_plus',
-    'teho_plus','vyk','jyk','raa']);
+    'teho_plus','vyk','jyk','raa','lyodyt_oe']);
 
   let sorted = [...players].filter(p => p.turns_at_bat >= 40)
     .sort((a,b) => {
@@ -530,6 +531,9 @@ async function showLeaderboard(sid, stat, posFilter) {
   const subText = ['vyk','jyk','raa'].includes(stat)
     ? t('VYK = voitot yli korvaajan (pesäpallon WAR-vastine), JYK = juoksut yli korvaajan — kertyviä arvomittareita. Vähintään 40 lyöntivuoroa.',
         'VYK = wins above replacement (pesäpallo’s WAR), JYK = runs above replacement — cumulative value stats. Minimum 40 turns at bat.')
+    : stat === 'lyodyt_oe'
+    ? t('LYO = lyödyt yli odotetun: montako juoksua pelaaja löi kotiin enemmän kuin hänen kohtaamistaan pesätilanteista keskimäärin syntyy. Vähintään 40 lyöntivuoroa.',
+        'LYO = runs batted home above expectation: how many more the player drove home than their base situations typically produce. Minimum 40 turns at bat.')
     : ['spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
        'adv1_plus','adv2_plus','adv3_plus','adv_home_plus'].includes(stat)
     ? t('Mallo-mittarit: 100 = sarjan keskiarvo, yli 100 parempi. Vähintään 40 lyöntivuoroa.',
@@ -560,7 +564,7 @@ async function showLeaderboard(sid, stat, posFilter) {
 
   window.dlLB = function(sid, stat) {
     const cols = ['name','team','games','turns_at_bat','vyk','jyk','raa',
-                  'spark_index','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
+                  'spark_index','lyodyt_oe','adv_plus','runner_plus','out_avoid_plus','money_kl_plus',
                   'adv1_pct','adv2_pct','adv3_pct','adv_home_pct','teho_plus','teho_plus_adj'];
     downloadCSV(sorted, cols, `${season.series}-${season.year}-${stat}.csv`);
   };
@@ -871,6 +875,9 @@ async function showPlayer(pid) {
 
   const projTile = proj?.teho_plus_proj
     ? `<div class="tile"><div class="label">${t('PARE enn.', 'PARE proj.')}</div><div class="value">${proj.teho_plus_proj}</div></div>` : '';
+  const lyoTile = line.lyodyt_oe != null
+    ? `<div class="tile"><div class="label">${statLabel('lyodyt_oe')}${infoBtn('lyodyt_oe')}</div>
+         <div class="value">${line.lyodyt_oe > 0 ? '+' : ''}${line.lyodyt_oe}</div></div>` : '';
 
   let pctBars = '';
   for (const stat of PCT_STATS) {
@@ -992,6 +999,7 @@ async function showPlayer(pid) {
         <div class="tile hero"><div class="label">${statLabel('vyk')}${infoBtn('vyk')}</div><div class="value">${line.vyk??'—'}</div></div>
         <div class="tile"><div class="label">SPARK${infoBtn('spark_index')}</div><div class="value">${line.spark_index??'—'}</div></div>
         <div class="tile"><div class="label">TEHO+${infoBtn('teho_plus')}</div><div class="value">${line.teho_plus||'—'}</div></div>
+        ${lyoTile}
         ${projTile}
       </div>
       <h2>${t('Mallo-indeksit', 'Mallo indices')} ${line.year} <span class="muted">${t('(100 = sarjan keskiarvo)', '(100 = league average)')}</span></h2>
@@ -1250,7 +1258,8 @@ function showGlossary() {
           gr('SPARK','<code>0.50·ADV+ + 0.30·RUN+ + 0.20·OUT+</code>',t('tilanteenrakentajan indeksi', 'the table-setter index')) +
           gr('1 % / 2 % / 3 % / K %','<code>onnistuneet KL-liikkeet / yritykset</code>',t('koti→1, 1→2, 2→3 ja kotiutus; yksi lyöntivuoro voi tuottaa useita KL:iä', 'home→1st, 1st→2nd, 2nd→3rd and scoring; one turn at bat can produce several advance hits')) +
           gr('1 %+ / 2 %+ / 3 %+ / K %+','<code>100 × split-% / sarjan split-%</code>',t('sama virallinen split sarjaindeksinä', 'the same official split as a league index')) +
-          gr(statLabel('money_kl_plus'),'<code>100 × K % / sarjataso</code>',t('kotiutus-/juoksuksi muuttavat kärkilyöntiyritykset', 'advance-hit attempts that turn into runs'))
+          gr(statLabel('money_kl_plus'),'<code>100 × K % / sarjataso</code>',t('kotiutus-/juoksuksi muuttavat kärkilyöntiyritykset', 'advance-hit attempts that turn into runs')) +
+          gr(statLabel('lyodyt_oe'),`<code>${t('lyödyt − Σ(sarjan lyödyt samasta pesä- ja palotilanteesta)', 'lyödyt − Σ(league lyödyt from the same base-and-out state)')}</code>`,t('Lyödyt Yli Odotetun: mitä pelaaja teki saamillaan tilanteilla. Tyhjillä pesillä lyöntivuoro tuottaa 0,001 lyötyä, täysillä 0,434 — pelkkä lyötyjen summa kertoo enemmän tilanteista kuin lyöjästä', 'runs batted home above expectation: what the player did with the chances they got. A plate appearance with the bases empty yields 0.001 runs batted home and one with the bases loaded 0.434, so the raw total says more about the situations than the hitter'))
         )}
       </div>
       <h2>${t('Arvo', 'Value')} <span class="muted">${t('— WAR-tyyliset kertyvät mittarit', '— WAR-style cumulative stats')}</span></h2>

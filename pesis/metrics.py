@@ -97,6 +97,8 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
     _add_analytics_indices(lines)
     _add_value_stats(conn, season_id, lines)
     _add_park_adjusted(conn, season_id, lines)
+    from . import situational
+    situational.add_situational(conn, season_id, lines)
     return lines
 
 
