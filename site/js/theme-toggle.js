@@ -54,8 +54,33 @@
     if (lbl) lbl.textContent = theme === "dark" ? "Tumma" : "Vaalea";
   }
 
-  // Set the effective theme up front (avoids a flash).
+  /* ── Palette ────────────────────────────────────────────────────────────
+     A second, independent axis: the colour scheme, on top of light/dark.
+     "" is the original berry skin; the others are defined in mallo.css. */
+  var PKEY = "mallo-palette";
+  var PALETTES = ["", "warm", "electric"];
+  var PALETTE_NAMES = { "": "Mallo", warm: "Uuni", electric: "Sähkö" };
+
+  function storedPalette() {
+    try {
+      var p = localStorage.getItem(PKEY);
+      return PALETTES.indexOf(p) >= 0 ? p : "";
+    } catch (e) { return ""; }
+  }
+
+  function applyPalette(p) {
+    if (p) root.setAttribute("data-palette", p);
+    else root.removeAttribute("data-palette");
+    var btn = document.getElementById("paletteToggle");
+    if (btn) {
+      btn.textContent = PALETTE_NAMES[p] || PALETTE_NAMES[""];
+      btn.setAttribute("title", "Väriteema: " + (PALETTE_NAMES[p] || PALETTE_NAMES[""]));
+    }
+  }
+
+  // Set the effective theme and palette up front (avoids a flash).
   apply(current());
+  applyPalette(storedPalette());
 
   document.addEventListener("DOMContentLoaded", function () {
     paint(current());
@@ -65,6 +90,15 @@
         var next = current() === "dark" ? "light" : "dark";
         try { localStorage.setItem(KEY, next); } catch (e) {}
         apply(next);
+      });
+    }
+    applyPalette(storedPalette());
+    var pbtn = document.getElementById("paletteToggle");
+    if (pbtn) {
+      pbtn.addEventListener("click", function () {
+        var next = PALETTES[(PALETTES.indexOf(storedPalette()) + 1) % PALETTES.length];
+        try { localStorage.setItem(PKEY, next); } catch (e) {}
+        applyPalette(next);
       });
     }
     // If the user hasn't chosen, keep following the OS live.

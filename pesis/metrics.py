@@ -97,6 +97,8 @@ def season_lines(conn: sqlite3.Connection, season_id: int) -> list[dict]:
     _add_analytics_indices(lines)
     _add_value_stats(conn, season_id, lines)
     _add_park_adjusted(conn, season_id, lines)
+    from . import situational
+    situational.add_situational(conn, season_id, lines)
     return lines
 
 
@@ -195,6 +197,9 @@ def _add_analytics_indices(lines: list[dict]) -> None:
     for l in lines:
         adv = _safe_div(l["karkilyonnit"] + l["saatot"],
                         l["karki_yritykset"] + l["saatto_yritykset"])
+        # the raw blended rate behind ADV+: every runner the batter moved,
+        # lead and trailing together, per attempt
+        l["moved_pct"] = adv
         out_avoid = 1 - l["palo_rate"] if l.get("palo_rate") is not None else None
         l["adv_plus"] = _index(adv, league_adv)
         blend = _run_blend(_safe_div(l.get("karki_eten_pct"), league_lead),
