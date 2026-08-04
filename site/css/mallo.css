@@ -134,10 +134,14 @@ header nav a[aria-current="page"]{ color:var(--nav-on); font-weight:700; }
    ---------------------------------------------------------------------------- */
 main{ max-width:1080px; margin:0 auto; padding:0; }         /* header/table draw their own gutters */
 .page{ padding:22px 26px 40px; }
-h1{ font-family:var(--font-display); font-weight:800; font-size:27px; letter-spacing:-.02em; margin:0 0 7px; }
+/* The page title frames the table; it should not compete with the data. */
+h1{ font-family:var(--font-display); font-weight:700; font-size:25px; letter-spacing:-.015em;
+    color:var(--ink); margin:0 0 8px; }
 h2{ font:700 11px var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--ink); margin:26px 0 12px; }
 h2 .muted{ font-weight:400; font-family:var(--font-body); text-transform:none; letter-spacing:0; font-size:11px; color:var(--ink3); }
-.sub{ color:var(--ink3); font-size:12.5px; margin:0 0 14px; line-height:1.45; }
+/* Explanatory line under a heading. ink3 on the page ground is ~2.6:1 and
+   fails WCAG AA at this size, so this text uses ink2 and reads at 13.5px. */
+.sub{ color:var(--ink2); font-size:13.5px; margin:0 0 16px; line-height:1.55; max-width:78ch; }
 .sub.note{ color:var(--accent-soft); }
 
 /* ----------------------------------------------------------------------------
@@ -179,20 +183,32 @@ select.sel{ font:600 12.5px var(--font-body); padding:7px 30px 7px 13px; border-
 /* ----------------------------------------------------------------------------
    TABLES  (leaderboard, career, projections, standings)
    ---------------------------------------------------------------------------- */
-table{ width:100%; border-collapse:collapse; }
+/* Every figure on the site is tabular so columns of digits line up when the
+   eye runs down them — the single biggest readability difference between a
+   stat table that scans and one that drifts. */
+table{ width:100%; border-collapse:collapse;
+       font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
 thead th{ font:600 9.5px var(--font-mono); letter-spacing:.09em; text-transform:uppercase;
           text-align:right; color:var(--label); background:var(--thbg);
-          border-bottom:1px solid var(--line-hd); padding:11px; white-space:nowrap; }
-tbody td{ text-align:right; padding:8px 11px; font-size:13px; color:var(--ink2);
-          border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; white-space:nowrap; }
+          border-bottom:1px solid var(--line-hd); padding:11px 13px; white-space:nowrap; }
+/* NB: no position:sticky on these headers. .tbl-card needs overflow-x:auto for
+   wide stat tables, and a horizontal scroll container forces the vertical axis
+   to a non-visible overflow, which stops sticky from tracking the page scroll.
+   Pagination keeps boards to 20-50 rows, so the header stays close anyway. */
+tbody td{ text-align:right; padding:11px 13px; font-size:13px; color:var(--ink2);
+          border-bottom:1px solid var(--line);
+          font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
+          white-space:nowrap; }
 th.name, td.name{ text-align:left; }
-td.num{ font-family:var(--font-mono); font-size:12.5px; }
+/* Numeric hierarchy, quietest to loudest:
+   .num  supporting counts · .extra the sorted stat · .teho-cell .val the headline */
+td.num{ font-family:var(--font-mono); font-size:12.5px; font-weight:500; }
 tbody tr:hover td{ background:var(--hover); }
-td .player{ color:var(--ink-strong); font-weight:600; }
+td .player{ color:var(--ink-strong); font-weight:600; font-size:13.5px; }
 td .player:hover{ color:var(--accent); }
 td.team{ color:var(--ink3); font-size:12px; }
 th.extra, td.extra{ color:var(--accent); font-weight:700; }   /* the sorted stat pulled to the last column */
-td.extra{ font-family:var(--font-mono); }
+td.extra{ font-family:var(--font-mono); font-size:13px; }
 
 /* baseball position badge next to a player name */
 .pos{ display:inline-block; font:700 9.5px var(--font-mono); letter-spacing:.03em;
@@ -206,10 +222,14 @@ tr.leader td{ background:var(--topbg); }
 tr.leader .rank{ background:var(--rank-top-bg); color:var(--rank-top-ink);
                  padding:var(--rank-top-pad); border-radius:var(--rank-top-radius); font-weight:700; }
 
-/* in-cell TEHO+ bar */
-.teho-cell{ display:flex; align-items:center; gap:9px; justify-content:flex-end; }
-.teho-cell .val{ font-family:var(--font-mono); font-weight:700; font-size:13px; min-width:26px; text-align:right; color:var(--ink-strong); }
-.teho-cell .bar{ width:56px; height:6px; border-radius:3px; background:var(--tehobar-bg); }
+/* in-cell TEHO+ / SPARK bar — the row's headline number.
+   The value box is a fixed width, not min-width: with min-width the bars
+   start at a different x on every row and the column visibly drifts. */
+.teho-cell{ display:flex; align-items:center; gap:10px; justify-content:flex-end; }
+.teho-cell .val{ font-family:var(--font-mono); font-weight:700; font-size:13.5px;
+                 width:38px; text-align:right; color:var(--ink-strong);
+                 font-variant-numeric:tabular-nums; flex:none; }
+.teho-cell .bar{ width:56px; height:7px; border-radius:4px; background:var(--tehobar-bg); flex:none; }
 .teho-cell .bar > i{ display:block; height:100%; border-radius:3px; background:var(--tehobar-fill); box-shadow:var(--tehobar-glow); }
 
 /* stats table sits on its own surface panel, lifted off the page background */
@@ -243,15 +263,18 @@ th.sorted{ color:var(--accent); }
        border-radius:11px; padding:13px 15px; }
 .tile.hero{ background:var(--tile-hero-bg); border-color:var(--tile-hero-line); }
 .tile .label{ font:600 9px var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--label); }
-.tile .value{ font-family:var(--font-mono); font-weight:700; font-size:26px; margin-top:5px; letter-spacing:-.01em; color:var(--ink-strong); }
+.tile .value{ font-family:var(--font-mono); font-weight:700; font-size:26px; margin-top:5px;
+              letter-spacing:-.01em; color:var(--ink-strong);
+              font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
 .tile.hero .value{ font-size:28px; color:var(--tile-hero-ink); }
 
 /* ----------------------------------------------------------------------------
    PERCENTILE SLIDERS  (Savant-style; buckets b0..b6 come from pct_bucket())
    ---------------------------------------------------------------------------- */
 .pctrow{ display:grid; grid-template-columns:150px 1fr 52px; gap:14px; align-items:center; padding:6px 0; }
-.pctrow .label{ font-size:12.5px; color:var(--ink2); text-align:left; }
-.pctrow .value{ font-family:var(--font-mono); font-size:12.5px; text-align:right; color:var(--ink); }
+.pctrow .label{ font-size:13px; color:var(--ink2); text-align:left; }
+.pctrow .value{ font-family:var(--font-mono); font-size:13px; text-align:right; color:var(--ink);
+                font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
 .track{ position:relative; height:9px; border-radius:5px; background:var(--track); }
 .fill{ position:absolute; inset:0 auto 0 0; border-radius:5px; }
 .badge{ position:absolute; top:50%; transform:translate(-50%,-50%); min-width:23px; height:23px; padding:0 3px;
@@ -327,7 +350,9 @@ th .ib{ vertical-align:0; }
 .callout{ background:var(--surface); border:1px solid var(--surface-line); border-radius:13px;
           padding:18px 20px; box-shadow:var(--card-shadow); }
 .callout .k{ font:600 9px var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--label); }
-.callout .v{ font-family:var(--font-display); font-weight:800; font-size:26px; letter-spacing:-.02em; color:var(--ink-strong); margin-top:5px; }
+.callout .v{ font-family:var(--font-display); font-weight:800; font-size:26px; letter-spacing:-.02em;
+             color:var(--ink-strong); margin-top:5px;
+             font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
 .callout .v.accent{ color:var(--accent); }
 .callrow{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin:16px 0 8px; }
 

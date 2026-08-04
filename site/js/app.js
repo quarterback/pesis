@@ -75,6 +75,21 @@ function statLabel(key) {
   return (LANG === 'en' && STAT_LABEL_EN[key]) || STAT_LABEL[key] || key;
 }
 
+// Stats carrying decimals need a fixed number of them, or 2.60 prints as
+// "2.6" and the decimal points stop lining up down the column.
+const STAT_DECIMALS = {
+  vyk:2, jyk:1, raa:1, lyodyt_oe:1, lyodyt_exp:1,
+  def_rv:2, def_error_cost:2, lukkari_def_rv:1, of_koppi_rate:1,
+  def_koppi_pct:1, def_out_conv:1, lra:2,
+};
+function statNum(key, v) {
+  if (v === null || v === undefined) return '—';
+  const d = STAT_DECIMALS[key];
+  if (d === undefined) return v;
+  const s = Number(v).toFixed(d);
+  return (key === 'lyodyt_oe' && v > 0) ? '+' + s : s;
+}
+
 /* ── Stat helpers — ⓘ popovers ──────────────────────────────────────────────
    One-tap explainer for every stat: what it measures and why it exists.
    infoBtn(key) renders the button anywhere; a capture-phase click handler
@@ -523,7 +538,7 @@ async function showLeaderboard(sid, stat, posFilter) {
   ];
   if (showFeat) cols.push({key:stat, label:featTh, get:r=>r[stat], cell:r=>{
     const fv=r[stat], isIdx=INDEX_STATS.has(stat);
-    const shown = fv==null?'—':isIdx?fv:rate(fv);
+    const shown = fv==null?'—':isIdx?statNum(stat, fv):rate(fv);
     const w = fv==null?0:Math.min(Math.abs(fv)/maxFeat*100,100);
     return `<td><div class="teho-cell"><span class="val">${shown}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
   }});
@@ -644,7 +659,7 @@ async function showDefense(sid) {
     {key:'games', label:t('O', 'G'), get:r=>r.games, cell:r=>`<td class="num">${r.games}</td>`},
     {key:'def_rv', label:statLabel('def_rv'), get:r=>r.def_rv, cell:r=>{
       const w = Math.min(Math.abs(r.def_rv||0)/maxRv*100,100);
-      return `<td><div class="teho-cell"><span class="val">${r.def_rv>0?'+':''}${r.def_rv??'—'}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
+      return `<td><div class="teho-cell"><span class="val">${r.def_rv>0?'+':''}${statNum('def_rv', r.def_rv)}</span><span class="bar"><i style="width:${w}%"></i></span></div></td>`;
     }},
     {key:'def_koppi_pct', label:statLabel('def_koppi_pct'), get:r=>r.koppi_pct, cell:r=>`<td class="num">${r.koppi_pct??'—'}</td>`},
     {key:'def_out_conv', label:statLabel('def_out_conv'), get:r=>r.out_conv, cell:r=>`<td class="num">${r.out_conv??'—'}</td>`},
@@ -877,7 +892,7 @@ async function showPlayer(pid) {
     ? `<div class="tile"><div class="label">${t('PARE enn.', 'PARE proj.')}</div><div class="value">${proj.teho_plus_proj}</div></div>` : '';
   const lyoTile = line.lyodyt_oe != null
     ? `<div class="tile"><div class="label">${statLabel('lyodyt_oe')}${infoBtn('lyodyt_oe')}</div>
-         <div class="value">${line.lyodyt_oe > 0 ? '+' : ''}${line.lyodyt_oe}</div></div>` : '';
+         <div class="value">${statNum('lyodyt_oe', line.lyodyt_oe)}</div></div>` : '';
 
   let pctBars = '';
   for (const stat of PCT_STATS) {
@@ -934,7 +949,7 @@ async function showPlayer(pid) {
       <td class="name">${s.year}</td>
       <td class="name">${teamCell}</td>
       <td class="num">${s.games}</td><td class="num">${s.turns_at_bat}</td>
-      <td class="num strong">${s.vyk??'—'}</td>
+      <td class="num strong">${statNum('vyk', s.vyk)}</td>
       <td class="num">${s.spark_index??'—'}</td>
       <td class="num">${s.adv_plus??'—'}</td>
       <td class="num">${s.runner_plus??'—'}</td>
@@ -996,7 +1011,7 @@ async function showPlayer(pid) {
       ${(translation || pitching) ? `<a class="bb-toggle" href="#/baseball/${pid}" title="${t('Käännä baseball-termeille', 'Translate to baseball terms')}" aria-label="Baseball">⚾</a>` : ''}
       <div class="tiles">
         <div class="tile"><div class="label">${t('Ottelut', 'Games')}</div><div class="value">${line.games}</div></div>
-        <div class="tile hero"><div class="label">${statLabel('vyk')}${infoBtn('vyk')}</div><div class="value">${line.vyk??'—'}</div></div>
+        <div class="tile hero"><div class="label">${statLabel('vyk')}${infoBtn('vyk')}</div><div class="value">${statNum('vyk', line.vyk)}</div></div>
         <div class="tile"><div class="label">SPARK${infoBtn('spark_index')}</div><div class="value">${line.spark_index??'—'}</div></div>
         <div class="tile"><div class="label">TEHO+${infoBtn('teho_plus')}</div><div class="value">${line.teho_plus||'—'}</div></div>
         ${lyoTile}
