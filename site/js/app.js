@@ -1337,14 +1337,16 @@ function showGlossary() {
         )}
       </div>
       <h2>${t('Arvo', 'Value')} <span class="muted">${t('— WAR-tyyliset kertyvät mittarit', '— WAR-style cumulative stats')}</span></h2>
-      <p class="sub">${t('Toisin kuin indeksit (per vuoro), nämä <em>kertyvät</em>: peliaika kasvattaa arvoa. Juoksuarvot johdetaan sarjan omasta juoksuympäristöstä (ridge-regressio joukkuetotaaleista), ei MLB:n painoista.', 'Unlike the per-turn indices, these <em>accumulate</em>: playing time adds value. Run values are derived from the league’s own run environment (ridge regression on team totals), not from MLB weights.')}</p>
+      <p class="sub">${t('Toisin kuin indeksit (per vuoro), nämä <em>kertyvät</em>: peliaika kasvattaa arvoa. Juoksuarvot johdetaan sarjan omasta juoksuympäristöstä, ei MLB:n painoista. Kausilla joilta on syöttökohtaista dataa jokaisen tapahtuman arvo mitataan tilanneodotuksista (RE24); vanhemmilla kausilla käytetään joukkuetotaaleihin sovitettuja painoja.',
+        'Unlike the per-turn indices, these <em>accumulate</em>: playing time adds value. Run values come from the league’s own run environment, not from MLB weights. For seasons with play-by-play, every event is valued from run expectancy (RE24); older seasons fall back to weights fitted on team totals.')}</p>
       <div class="card" style="padding:0;overflow-x:auto">
         ${gtable(
           gr(statLabel('jyk'),'<code>juoksuarvo − korvaajataso × lyöntivuorot</code>',t('Juoksut Yli Korvaajan — vertailutasona korvaajatason pelaaja eli sellainen, jonka joukkue saisi helposti tilalle esimerkiksi Ykköspesiksestä tai penkiltä', 'runs above replacement — the baseline is a replacement-level player, one a team could easily bring in from Ykköspesis or its own bench')) +
           gr(statLabel('vyk'),'<code>JYK / (juoksut per ottelu)</code>',t('Voitot Yli Korvaajan — WAR-vastine; kertyvä kokonaisarvo voittoina', 'wins above replacement — the WAR analog; cumulative total value in wins')) +
           gr('RAA','<code>juoksuarvo − sarjataso × lyöntivuorot</code>',t('juoksut yli sarjan keskiarvon (ei korvaajatasoa)', 'runs above the league average (no replacement level)'))
         )}
-        <p class="legend" style="padding:10px 16px">${t('Ensimmäinen versio olemassa olevista koosterivistä; tarkentuu RE24-malliin kun syöttö-syötöltä-data on käytössä.', 'A first version built from the existing box-score rows; it will sharpen into an RE24 model once play-by-play data is in use.')}</p>
+        <p class="legend" style="padding:10px 16px">${t('Arvo lasketaan vain taitotapahtumista: kunnarit, kärkilyönnit, saatot, etenemiset, haavat ja palot. Lyödyt ja tuodut on jätetty pois, koska ne riippuvat siitä, ketä pesillä sattuu olemaan — muuten luvusta tulisi RBI-laskuri. Korvaajataso on 0,75 keskihajontaa sarjan keskitason alapuolella.',
+          'Value counts only skill events: kunnarit, advance hits, escorts, advances, wounds and outs. Lyödyt and tuodut are excluded because they depend on who happens to be on base — including them would make this an RBI counter. Replacement level sits 0.75 standard deviations below the league rate.')}</p>
       </div>
       <h2>${t('Indeksit', 'Indices')}</h2>
       <div class="card" style="padding:0;overflow-x:auto">
@@ -1369,7 +1371,8 @@ function showGlossary() {
           gr('LRA-','<code>100 × LRA / sarjan LRA</code>',t('100 = keskiarvo, pienempi parempi', '100 = average, lower is better')) +
           gr('RP','<code>(sarjan LRA − LRA) × lukkariottelut</code>',t('juoksut estetty yli keskiarvon; kertyvä, suurempi parempi', 'runs prevented above average; cumulative, higher is better'))
         )}
-        <p class="legend" style="padding:10px 16px">${t('ERA-tyylinen silta olemassa olevista otteluriveistä; tarkentuu kun syöttö-syötöltä-data on käytössä.', 'An ERA-style bridge from the existing game rows; it will sharpen once play-by-play data is in use.')}</p>
+        <p class="legend" style="padding:10px 16px">${t('Lasketaan otteluriveistä: lukkarille luetaan hänen joukkueensa päästämät juoksut niissä otteluissa, joissa hän oli lukkarina. Syöttökohtaista dataa ei ole vielä valjastettu tähän, joten luku ei erottele lukkarin ja kenttäpelaajien osuutta.',
+          'Computed from the game rows: a lukkari is charged the runs his team allowed in the matches he played there. The play-by-play data is not yet used here, so the number does not separate the lukkari’s share from the fielders’.')}</p>
       </div>
       <h2>${t('Puolustus', 'Defense')} <span class="muted">${t('— syöttökohtaisesta datasta', '— from play-by-play data')}</span></h2>
       <div class="card" style="padding:0;overflow-x:auto">
